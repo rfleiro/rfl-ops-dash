@@ -39,9 +39,10 @@ let errMsg  = "";
 let BRIEF   = null;
 let J       = null;        // journal (server)
 let J_SHA   = null;        // journal file sha, null when it doesn't exist yet
-let S       = {ch:{},nt:[],rm:[]};   // local, unpushed
+let S       = {ch:{},nt:[],rm:[],bd:[],bdrm:[]};   // local, unpushed
 let panels  = {};
 let showNF  = false;
+let showBD  = false;
 let saving  = false;
 let saveRes = null;
 let lastLoad= null;
@@ -81,13 +82,14 @@ function fd(d){ if(!d) return ""; const p=String(d).split("-"); return p[2]+"/"+
 function hhmm(d){ return d.toLocaleTimeString("en-GB",{hour:"2-digit",minute:"2-digit"}); }
 function tc(t){ return (M.topicColors && M.topicColors[t]) || {bg:"#eee",tx:"#555"}; }
 function ttag(t){ const c=tc(t); return "<span class='tag' style='background:"+c.bg+";color:"+c.tx+"'>"+esc(t)+"</span>"; }
-function emptyJournal(date){ return {date:date, updated:null, changes:{}, created:[]}; }
+function emptyJournal(date){ return {date:date, updated:null, changes:{}, created:[], braindump:[]}; }
 
 // ── local layer ──────────────────────────────────────────────────────────────
 function localKey(){ return K("local:" + (BRIEF ? BRIEF.date : "none")); }
 function loadLocal(){
-  try{ S = JSON.parse(ls(localKey())) || {ch:{},nt:[],rm:[]}; }catch(e){ S = {ch:{},nt:[],rm:[]}; }
+  try{ S = JSON.parse(ls(localKey())) || {}; }catch(e){ S = {}; }
   S.ch = S.ch || {}; S.nt = S.nt || []; S.rm = S.rm || [];
+  S.bd = S.bd || []; S.bdrm = S.bdrm || [];
 }
 function saveLocal(){ lsSet(localKey(), JSON.stringify(S)); }
 
@@ -105,6 +107,12 @@ function eff(n){
     else out[f] = v;
   });
   return out;
+}
+function effBraindump(){
+  const fromJ = (J ? J.braindump : []).filter(b => S.bdrm.indexOf(b.id) === -1)
+                                      .map(b => Object.assign({}, b, {queued:true}));
+  const fromL = S.bd.map(b => Object.assign({}, b, {queued:false}));
+  return fromJ.concat(fromL).sort((a,b) => String(b.ts).localeCompare(String(a.ts)));
 }
 function effCreated(){
   const fromJ = (J ? J.created : []).filter(c => S.rm.indexOf(c.cid) === -1)
@@ -124,14 +132,14 @@ function localCount(){
       else if(j[f] !== v) n++;
     });
   });
-  return n + S.nt.length + S.rm.length;
+  return n + S.nt.length + S.rm.length + S.bd.length + S.bdrm.length;
 }
 // how many edits are in the journal, waiting for Claude
 function queuedCount(){
   if(!J) return 0;
   let n = 0;
   Object.keys(J.changes).forEach(k => { n += Object.keys(J.changes[k]).filter(f=>FIELDS.indexOf(f)>=0).length; });
-  return n + J.created.length;
+  return n + J.created.length + J.braindump.length;
 }
 function setCh(n,p){
   const key = String(n);
@@ -190,8 +198,9 @@ async function fetchJournal(){
     const f = await api("/repos/"+REPO+"/contents/"+M.changesPath+"?ref=HEAD&t="+Date.now());
     J_SHA = f.sha;
     const parsed = JSON.parse(b64utf8(f.content));
-    parsed.changes = parsed.changes || {};
-    parsed.created = parsed.created || [];
+    parsed.changes   = parsed.changes   || {};
+    parsed.created   = parsed.created   || [];
+    parsed.braindump = parsed.braindump || [];
     // a journal left over from an earlier day is not ours — start clean
     J = (parsed.date === BRIEF.date) ? parsed : emptyJournal(BRIEF.date);
   }catch(e){
@@ -237,6 +246,11 @@ function mergeLocalInto(j){
   S.nt.forEach(function(t){
     if(!j.created.some(c => c.cid === t.cid)) j.created.push(t);
   });
+  j.braindump = (j.braindump || []).filter(b => S.bdrm.indexOf(b.id) === -1);
+  S.bd.forEach(function(b){
+    if(!j.braindump.some(x => x.id === b.id)) j.braindump.push(b);
+  });
+  j.braindump.sort((a,b) => String(a.ts).localeCompare(String(b.ts)));
   j.date = BRIEF.date;
   j.updated = new Date().toISOString();
   return j;
@@ -258,7 +272,7 @@ async function push(){
     const res = await api("/repos/"+REPO+"/contents/"+M.changesPath, "PUT", body);
     J_SHA = res.content.sha;
     J = merged;
-    S = {ch:{},nt:[],rm:[]};
+    S = {ch:{},nt:[],rm:[],bd:[],bdrm:[]};
     saveLocal();
     saveRes = {ok:true, queued:queuedCount()};
   }catch(e){
@@ -281,6 +295,26 @@ function addTask(){
     note:  document.getElementById("nt-n").value.trim() || null
   });
   showNF = false; saveLocal(); render();
+}
+function toggleBD(){ showBD = !showBD; render(); }
+function addBraindump(){
+  const ta = document.getElementById("bd-t");
+  const text = ta ? ta.value.trim() : "";
+  if(!text){ document.getElementById("bd-err").textContent = "Nothing to add."; return; }
+  const kindEl = document.getElementById("bd-k");
+  S.bd.push({
+    id:   "b-" + Date.now().toString(36) + "-" + Math.random().toString(36).slice(2,7),
+    ts:   new Date().toISOString(),
+    kind: kindEl ? kindEl.value : "note",
+    text: text
+  });
+  showBD = false; saveLocal(); render();
+}
+function rmBraindump(id){
+  const i = S.bd.findIndex(b => b.id === id);
+  if(i >= 0){ S.bd.splice(i,1); }
+  else if(S.bdrm.indexOf(id) === -1){ S.bdrm.push(id); }
+  saveLocal(); render();
 }
 function rmTask(c){
   const i = S.nt.findIndex(t => t.cid === c);
@@ -502,6 +536,39 @@ function render(){
     h += "</div>";
   });
 
+  if(M.braindump){
+    const bd = effBraindump();
+    h += "<div class='sec'><div class='sec-hdr'><span class='sec-label'>Braindump</span>"
+       + "<button class='sec-add' onclick='DashCore.toggleBD()'>"+IC.plus+" add</button></div>";
+    if(showBD){
+      h += "<div class='nform'>"
+        + "<div class='field'><label>Thought, note or meeting log</label>"
+        + "<textarea id='bd-t' style='min-height:76px' placeholder='Whatever\u2019s in your head\u2026'></textarea></div>"
+        + "<div class='grid'><div class='field'><label>Kind</label><select id='bd-k'>"
+        + "<option value='note'>note</option><option value='meeting'>meeting</option>"
+        + "<option value='idea'>idea</option><option value='decision'>decision</option>"
+        + "</select></div><div class='field'><label>Timestamp</label>"
+        + "<input type='text' value='"+hhmm(new Date())+" \u00b7 now' disabled></div></div>"
+        + "<p class='err' id='bd-err'></p>"
+        + "<div class='pbtns' style='margin-top:8px'><button class='btn' onclick='DashCore.toggleBD()'>Cancel</button>"
+        + "<button class='btn btn-p' onclick='DashCore.addBraindump()'>Add</button></div></div>";
+    }
+    if(bd.length){
+      h += bd.map(function(b){
+        const t = new Date(b.ts);
+        return "<div class='bd-item'>"
+          + "<div class='bd-head'><span class='bd-ts'>"+esc(isNaN(t)?b.ts:hhmm(t))+"</span>"
+          + "<span class='bd-kind bd-"+esc(b.kind||"note")+"'>"+esc(b.kind||"note")+"</span>"
+          + (b.queued?"<span class='chip queued'>queued</span>":"<span class='chip unsaved'>unsaved</span>")
+          + "<button class='act rm' onclick='DashCore.rmBraindump(\""+esc(b.id)+"\")' title='Remove'>"+IC.x+"</button></div>"
+          + "<div class='bd-text'>"+esc(b.text).replace(/\n/g,"<br>")+"</div></div>";
+      }).join("");
+    } else if(!showBD){
+      h += "<div class='bd-empty'>Nothing dumped today. Anything captured here gets reviewed at end of day.</div>";
+    }
+    h += "</div>";
+  }
+
   h += "<div class='foot'><span>"+esc(BRIEF.date)+(lastLoad?" \u00b7 "+hhmm(lastLoad):"")+"</span>"
      + "<button class='lnk' onclick='DashCore.resetConfig()'>change repo/token</button></div></div>";
 
@@ -534,6 +601,7 @@ return {
   start, loadBrief, saveConfig, resetConfig,
   setCh, toggleP, saveLog, saveDate,
   addTask, rmTask, toggleNew:function(){ showNF=!showNF; render(); },
+  toggleBD, addBraindump, rmBraindump,
   push, toggleHide, closeModal
 };
 })();
