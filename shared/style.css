@@ -137,3 +137,7 @@
   .hdr-id{font-size:10px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--accent);background:var(--accent-bg);border:1px solid var(--accent-border);padding:1px 6px;border-radius:10px;vertical-align:middle;margin-left:7px}
   .back{display:inline-flex;align-items:center;gap:4px;font-size:11px;color:var(--text-3);text-decoration:none;margin-bottom:14px}
   .back:hover{color:var(--accent)}
+
+  /* Hidden-until-synced reveal row */
+  .hidden-row{font-size:11px;color:var(--text-3);padding:7px 12px;background:var(--surface2);border:1px dashed var(--border);border-radius:var(--r);margin-bottom:6px;display:flex;align-items:center;gap:6px}
+  .btn.on{background:var(--accent-bg);color:var(--accent);border-color:var(--accent-border)}

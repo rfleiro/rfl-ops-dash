@@ -53,7 +53,8 @@ const IC = {
   warn:`<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>`,
   refresh:`<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>`,
   up:`<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>`,
-  trash:`<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6"/></svg>`,
+  eye:`<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>`,
+  eyeOff:`<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>`,
   ok:`<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>`,
   bad:`<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>`,
   dot:`<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/></svg>`,
@@ -204,14 +205,17 @@ async function retryFailed(){
   syncing = false; renderModal(); render();
 }
 
-// ── clear pending ────────────────────────────────────────────────────────────
-function clearPending(){
-  const n = actions().length;
-  if(!n) return;
-  if(!confirm("Descartar " + n + " cambio" + (n===1?"":"s") + " sin sincronizar?\n\nNo afecta a nada ya guardado en GitHub.")) return;
-  S = {ch:{},nt:[]};
-  panels = {}; showNF = false;
-  save(); render();
+// ── hide settled items until synced ───────────────────────────────────────────
+// An item counts as "settled" once it's been ticked done or given a new date —
+// the decision is made, it's just waiting to be pushed. Logging a note doesn't
+// settle anything, so logged items stay visible.
+let hideSettled = true;   // set per-dashboard in start()
+function isSettled(item){ const c = ch(item.number); return !!(c.done || c.newDate); }
+function settledCount(){ return BRIEF ? BRIEF.items.filter(isSettled).length : 0; }
+function toggleHide(){
+  hideSettled = !hideSettled;
+  lsSet(K("hide"), hideSettled ? "1" : "0");
+  render();
 }
 
 // ── new item form ────────────────────────────────────────────────────────────
@@ -361,6 +365,7 @@ function render(){
 
   const meta = BRIEF.meta, cal = BRIEF.calendar, items = BRIEF.items;
   const n = actions().length;
+  const nSettled = settledCount();
 
   let h = "<div class='wrap'>";
   h += "<a class='back' href='../'>"+IC.back+" dashboards</a>";
@@ -368,7 +373,9 @@ function render(){
      + "<div class='hdr-date'>"+esc(new Date().toLocaleDateString("es-ES",{weekday:"long",day:"numeric",month:"long"}))+"</div></div>"
      + "<div class='hdr-r'>"
      + "<button class='btn btn-icon' onclick='DashCore.loadBrief()' title='Recargar'>"+IC.refresh+"</button>"
-     + (n ? "<button class='btn btn-icon' onclick='DashCore.clearPending()' title='Descartar "+n+" cambio(s) sin sincronizar'>"+IC.trash+"</button>" : "")
+     + (nSettled ? "<button class='btn btn-icon"+(hideSettled?" on":"")+"' onclick='DashCore.toggleHide()' title='"
+         + (hideSettled ? "Mostrar "+nSettled+" resuelto(s)" : "Ocultar "+nSettled+" resuelto(s) hasta sincronizar")
+         + "'>"+(hideSettled?IC.eyeOff:IC.eye)+"</button>" : "")
      + "<button class='btn "+(n?"btn-p pulse":"")+"' onclick='DashCore.runSync()' "+(n?"":"disabled")+">"
      + IC.up + (n?" Sync ("+n+")":" Sync") + "</button></div></div>";
 
@@ -384,8 +391,10 @@ function render(){
   }
 
   (M.sections||[]).forEach(function(sec){
-    const list = items.filter(sec.filter);
-    if(!list.length && !sec.allowNew) return;
+    const all    = items.filter(sec.filter);
+    const hidden = hideSettled ? all.filter(isSettled) : [];
+    const list   = hideSettled ? all.filter(i=>!isSettled(i)) : all;
+    if(!all.length && !sec.allowNew) return;
     h += "<div class='sec'><div class='sec-hdr'><span class='sec-label'>"+esc(sec.label)+"</span>"
        + (sec.allowNew?"<button class='sec-add' onclick='DashCore.toggleNew()'>"+IC.plus+" nuevo</button>":"")
        + "</div>";
@@ -411,6 +420,10 @@ function render(){
           + (t.note?"<div class='cnote'>"+esc(t.note)+"</div>":"")+"</div>";
       }).join("");
     }
+    if(hidden.length){
+      h += "<div class='hidden-row'>"+hidden.length+" oculto"+(hidden.length===1?"":"s")
+         + " hasta sincronizar <button class='lnk' onclick='DashCore.toggleHide()'>mostrar</button></div>";
+    }
     h += "</div>";
   });
 
@@ -429,6 +442,8 @@ function start(manifest){
   }, manifest);
   REPO  = ls(K("repo")) || "";
   TOKEN = ls(K("pat"))  || "";
+  const hv = ls(K("hide"));
+  hideSettled = (hv === null) ? true : (hv === "1");
   document.title = M.title;
   document.getElementById("overlay").addEventListener("click", function(e){
     if(e.target.id==="overlay") closeModal();
@@ -443,6 +458,6 @@ return {
   start, loadBrief, saveConfig, resetConfig,
   setCh, toggleP, saveLog, saveDate,
   addTask, rmTask, toggleNew:function(){ showNF=!showNF; render(); },
-  runSync, retryFailed, clearPending, closeModal
+  runSync, retryFailed, toggleHide, closeModal
 };
 })();
