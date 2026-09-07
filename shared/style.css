@@ -167,3 +167,8 @@
   .panel .field label{font-size:11px;color:var(--text-3);display:block;margin-bottom:3px}
   .panel .field input,.panel .field select,.panel .field textarea{width:100%;font-size:12px;border:1px solid var(--border);border-radius:var(--rs);padding:5px 8px;background:var(--bg);color:var(--text);font-family:inherit}
   .panel .field textarea{min-height:40px;resize:vertical}
+
+  /* Deadline chip — distinct from the reminder chip */
+  .chip.dl{background:transparent;border:1px solid var(--border-strong);color:var(--text-2);font-size:10.5px}
+  .chip.dl.overdue{border-color:var(--danger-border);color:var(--danger)}
+  .chip.dl.today{border-color:var(--warning-border);color:var(--warning)}

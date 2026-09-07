@@ -94,7 +94,7 @@ function loadLocal(){
 function saveLocal(){ lsSet(localKey(), JSON.stringify(S)); }
 
 // ── effective state: journal overlaid with local ─────────────────────────────
-const FIELDS = ["done","log","newDate"];
+const FIELDS = ["done","log","reminder","deadline"];
 function jch(n){ return (J && J.changes[String(n)]) || {}; }
 function lch(n){ return S.ch[String(n)] || {}; }
 function eff(n){
@@ -164,7 +164,7 @@ function setCh(n,p){
 }
 
 // ── settled / hide ───────────────────────────────────────────────────────────
-function isSettled(item){ const c = eff(item.number); return !!(c.done || c.newDate); }
+function isSettled(item){ const c = eff(item.number); return !!(c.done || c.reminder); }
 function settledCount(){ return BRIEF ? BRIEF.items.filter(isSettled).length : 0; }
 function toggleHide(){
   hideSettled = !hideSettled;
@@ -385,9 +385,10 @@ function saveLog(n){
   setCh(n,{log: v || false});
 }
 function saveDate(n){
-  const v=document.getElementById("dt-"+n).value;
+  const rv=document.getElementById("dt-"+n).value;
+  const dv=document.getElementById("dl-"+n).value;
   panels[n]={};
-  setCh(n,{newDate: v || false});
+  setCh(n,{reminder: rv || false, deadline: dv || false});
 }
 
 // ── config ───────────────────────────────────────────────────────────────────
@@ -439,7 +440,8 @@ function renderModal(){
 // ── render ───────────────────────────────────────────────────────────────────
 function card(item){
   const n=item.number, c=eff(n), l=lch(n), p=panels[n]||{};
-  const dd=c.newDate||item.due, dcs=dc(dd), done=!!c.done;
+  const dd=c.reminder||item.reminder||item.due, dcs=dc(dd), done=!!c.done;
+  const ddl=c.deadline||item.deadline;
   const isTask=item.type==="task", isPerson=item.type==="person";
   const dlabel = isPerson ? M.dateField.person : M.dateField.default;
   // is any part of this card's state still only on this device?
@@ -455,7 +457,8 @@ function card(item){
     + "<button class='act"+(p.date?" on":"")+"' onclick='DashCore.toggleP("+n+",\"date\")' title='"+dlabel+"'>"+IC.cal+"</button>"
     + (item.url?"<a class='act' href='"+esc(item.url)+"' target='_blank' rel='noopener' title='GitHub'>"+IC.ext+"</a>":"")
     + "</div></div><div class='card-meta'>"+ttag(item.topic)
-    + (dd?"<span class='chip "+dcs+"'>"+(dcs==="overdue"?"overdue · ":"")+fd(dd)+(c.newDate?" \u2713":"")+"</span>":"")
+    + (dd?"<span class='chip "+dcs+"'>"+(dcs==="overdue"?"overdue · ":"")+fd(dd)+(c.reminder?" \u2713":"")+"</span>":"")
+    + (ddl?"<span class='chip dl "+dc(ddl)+"'>deadline "+fd(ddl)+(c.deadline?" \u2713":"")+"</span>":"")
     + (c.log?"<span class='chip logged'>"+IC.msg+" note</span>":"")
     + (unsaved?"<span class='chip unsaved'>unsaved</span>":(Object.keys(c).length?"<span class='chip queued'>queued</span>":""))
     + "</div>"
@@ -463,8 +466,9 @@ function card(item){
     + (p.log?"<div class='panel'><textarea id='lt-"+n+"' placeholder='Note\u2026'>"+esc(c.log||"")+"</textarea>"
        + "<div class='pbtns'><button class='btn' onclick='DashCore.toggleP("+n+",\"log\")'>Cancel</button>"
        + "<button class='btn btn-p' onclick='DashCore.saveLog("+n+")'>Save</button></div></div>":"")
-    + (p.date?"<div class='panel'><div class='pfield'><label>"+dlabel+"</label>"
-       + "<input type='date' id='dt-"+n+"' value='"+(dd||"")+"'></div>"
+    + (p.date?"<div class='panel'><div class='grid' style='display:grid;grid-template-columns:1fr 1fr;gap:8px'>"
+       + "<div class='field'><label>Reminder</label><input type='date' id='dt-"+n+"' value='"+(dd||"")+"'></div>"
+       + "<div class='field'><label>Deadline</label><input type='date' id='dl-"+n+"' value='"+(ddl||"")+"'></div></div>"
        + "<div class='pbtns'><button class='btn' onclick='DashCore.toggleP("+n+",\"date\")'>Cancel</button>"
        + "<button class='btn btn-p' onclick='DashCore.saveDate("+n+")'>Set</button></div></div>":"")
     + "</div>";
