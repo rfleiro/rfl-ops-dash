@@ -172,3 +172,35 @@
   .chip.dl{background:transparent;border:1px solid var(--border-strong);color:var(--text-2);font-size:10.5px}
   .chip.dl.overdue{border-color:var(--danger-border);color:var(--danger)}
   .chip.dl.today{border-color:var(--warning-border);color:var(--warning)}
+
+  /* ── Starred ───────────────────────────────────────────────────────────── */
+  .act.on-star{background:#FEF3C7;color:#B45309;border-color:#FCD34D}
+  @media(prefers-color-scheme:dark){.act.on-star{background:#2A1F00;color:#FCD34D;border-color:#713F12}}
+  .card.starred{box-shadow:inset 0 0 0 1px var(--accent-border);background:linear-gradient(90deg,var(--accent-bg) 0%,var(--surface) 60%)}
+  .card.starred .card-title{font-weight:600}
+
+  /* ── Responsive: one column on phones, multi-column on wider screens ───── */
+  .cols{display:block}
+
+  @media(min-width:840px){
+    .wrap{max-width:1040px;padding:24px 24px 80px}
+    .cols{display:grid;grid-template-columns:1fr 1fr;gap:0 22px;align-items:start}
+    .hdr{padding-bottom:18px}
+    .hdr h1{font-size:18px}
+    .summary{font-size:13px}
+    .sec-hdr{padding:14px 0 6px}
+  }
+
+  @media(min-width:1320px){
+    .wrap{max-width:1440px;padding:28px 32px 80px}
+    .cols{grid-template-columns:1fr 1fr 1fr;gap:0 24px}
+    /* the top strip reads better constrained rather than stretched to 1440px */
+    .summary,.warn,.queue{max-width:960px}
+  }
+
+  /* Wider screens have room for the calendar beside the summary */
+  @media(min-width:840px){
+    .topgrid{display:grid;grid-template-columns:minmax(0,1.4fr) minmax(0,1fr);gap:0 22px;align-items:start}
+    .topgrid .summary{margin-bottom:0}
+  }
+  .topgrid{display:block}

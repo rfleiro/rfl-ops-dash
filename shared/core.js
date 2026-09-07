@@ -72,6 +72,8 @@ const IC = {
   bad:`<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>`,
   load:`<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg>`,
   back:`<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>`,
+  star:`<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>`,
+  starOn:`<svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>`,
   clock:`<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><polyline points="12 7 12 12 15 14"/></svg>`,
 };
 
@@ -94,7 +96,10 @@ function loadLocal(){
 function saveLocal(){ lsSet(localKey(), JSON.stringify(S)); }
 
 // ── effective state: journal overlaid with local ─────────────────────────────
-const FIELDS = ["done","log","reminder","deadline"];
+const FIELDS = ["done","log","reminder","deadline","star"];
+// star is a toggle against a baseline in the brief, so `false` is a real value
+// rather than "clear this field" the way it is for the others.
+const BOOL_FIELDS = ["star"];
 function jch(n){ return (J && J.changes[String(n)]) || {}; }
 function lch(n){ return S.ch[String(n)] || {}; }
 function eff(n){
@@ -103,10 +108,20 @@ function eff(n){
   FIELDS.forEach(function(f){
     if(!(f in l)) return;
     const v = l[f];
+    if(BOOL_FIELDS.indexOf(f) >= 0){ out[f] = v; return; }
     if(v === false || v === null || v === "") delete out[f];
     else out[f] = v;
   });
   return out;
+}
+function briefItem(n){ return BRIEF ? BRIEF.items.find(i => String(i.number) === String(n)) : null; }
+function baseStar(n){ const it = briefItem(n); return !!(it && it.starred); }
+function isStarred(n){ const c = eff(n); return ("star" in c) ? !!c.star : baseStar(n); }
+function toggleStar(n){
+  const key = String(n);
+  const l = Object.assign({}, lch(key));
+  l.star = !isStarred(key);
+  S.ch[key] = l; saveLocal(); render();
 }
 // inbox items come from the brief and have no issue number; the journal records
 // only what was decided about them: converted to a task, or dismissed.
@@ -137,6 +152,11 @@ function localCount(){
     const j = jch(k), l = S.ch[k];
     FIELDS.forEach(function(f){
       if(!(f in l)) return;
+      if(BOOL_FIELDS.indexOf(f) >= 0){
+        const jv = (f in j) ? j[f] : baseStar(k);
+        if(l[f] !== jv) n++;
+        return;
+      }
       const v = l[f], had = (f in j);
       if(v === false || v === null || v === ""){ if(had) n++; }
       else if(j[f] !== v) n++;
@@ -254,6 +274,10 @@ function mergeLocalInto(j){
     FIELDS.forEach(function(f){
       if(!(f in src)) return;
       const v = src[f];
+      if(BOOL_FIELDS.indexOf(f) >= 0){
+        if(v === baseStar(key)) delete dst[f]; else dst[f] = v;
+        return;
+      }
       if(v === false || v === null || v === "") delete dst[f];
       else dst[f] = v;
     });
@@ -450,8 +474,10 @@ function card(item){
     const v=l[f], j=jch(n);
     return (v===false||v===null||v==="") ? (f in j) : (j[f] !== v);
   });
-  return "<div class='card "+dcs+(done?" done":"")+"'>"
+  const star = isStarred(n);
+  return "<div class='card "+dcs+(done?" done":"")+(star?" starred":"")+"'>"
     + "<div class='card-row'><span class='card-title"+(done?" struck":"")+"'>"+esc(item.title)+"</span><div class='acts'>"
+    + "<button class='act"+(star?" on-star":"")+"' onclick='DashCore.toggleStar("+n+")' title='"+(star?"Unstar":"Star \u2014 mark as important or active")+"'>"+(star?IC.starOn:IC.star)+"</button>"
     + (isTask?"<button class='act"+(done?" on-green":"")+"' onclick='DashCore.setCh("+n+",{done:"+(!done)+"})' title='"+(done?"Undo":"Done")+"'>"+IC.check+"</button>":"")
     + "<button class='act"+(p.log?" on":"")+(c.log&&!p.log?" on-green":"")+"' onclick='DashCore.toggleP("+n+",\"log\")' title='Log a note'>"+IC.msg+"</button>"
     + "<button class='act"+(p.date?" on":"")+"' onclick='DashCore.toggleP("+n+",\"date\")' title='"+dlabel+"'>"+IC.cal+"</button>"
@@ -534,6 +560,7 @@ function render(){
   if(BRIEF.date !== TODAY)
     h += "<div class='warn'>"+IC.warn+" This data is from "+fd(BRIEF.date)+". Ask Claude to refresh it.</div>";
   meta.warnings.forEach(function(w){ h += "<div class='warn'>"+IC.warn+" "+esc(w)+"</div>"; });
+  h += "<div class='topgrid'>";
   if(meta.summary) h += "<div class='summary'>"+esc(meta.summary)+"</div>";
 
   if(nQueued || nLocal){
@@ -549,12 +576,16 @@ function render(){
       + cal.map(e=>"<div class='cal-row'><span class='cal-time'>"+(e.allDay?"":esc(e.time))+"</span><span class='cal-ev'>"+esc(e.title)+"</span>"+(e.allDay?"<span class='cal-ad'>all day</span>":"")+"</div>").join("")
       + "</div></div>";
   }
+  h += "</div>";   // .topgrid
 
+  h += "<div class='cols'>";
   const created = effCreated();
   (M.sections||[]).forEach(function(sec){
     const all    = items.filter(sec.filter);
     const hidden = hideSettled ? all.filter(isSettled) : [];
-    const list   = hideSettled ? all.filter(i=>!isSettled(i)) : all;
+    let   list   = hideSettled ? all.filter(i=>!isSettled(i)) : all;
+    // starred first, original order preserved within each group
+    list = list.filter(i=>isStarred(i.number)).concat(list.filter(i=>!isStarred(i.number)));
     if(!all.length && !sec.allowNew) return;
     h += "<div class='sec'><div class='sec-hdr'><span class='sec-label'>"+esc(sec.label)+"</span>"
        + (sec.allowNew?"<button class='sec-add' onclick='DashCore.toggleNew()'>"+IC.plus+" new</button>":"")
@@ -670,6 +701,7 @@ function render(){
     h += "</div>";
   }
 
+  h += "</div>";   // .cols
   h += "<div class='foot'><span>"+esc(BRIEF.date)+(lastLoad?" \u00b7 "+hhmm(lastLoad):"")+"</span>"
      + "<button class='lnk' onclick='DashCore.resetConfig()'>change repo/token</button></div></div>";
 
@@ -704,6 +736,6 @@ return {
   addTask, rmTask, toggleNew:function(){ showNF=!showNF; render(); },
   toggleBD, addBraindump, rmBraindump,
   dismissInbox, undoInbox, toggleIB, convertInbox,
-  push, toggleHide, closeModal
+  toggleStar, push, toggleHide, closeModal
 };
 })();
