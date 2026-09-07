@@ -39,7 +39,7 @@ let errMsg  = "";
 let BRIEF   = null;
 let J       = null;        // journal (server)
 let J_SHA   = null;        // journal file sha, null when it doesn't exist yet
-let S       = {ch:{},nt:[],rm:[],bd:[],bdrm:[]};   // local, unpushed
+let S       = {ch:{},nt:[],rm:[],bd:[],bdrm:[],ib:{}};   // local, unpushed
 let panels  = {};
 let showNF  = false;
 let showBD  = false;
@@ -82,14 +82,14 @@ function fd(d){ if(!d) return ""; const p=String(d).split("-"); return p[2]+"/"+
 function hhmm(d){ return d.toLocaleTimeString("en-GB",{hour:"2-digit",minute:"2-digit"}); }
 function tc(t){ return (M.topicColors && M.topicColors[t]) || {bg:"#eee",tx:"#555"}; }
 function ttag(t){ const c=tc(t); return "<span class='tag' style='background:"+c.bg+";color:"+c.tx+"'>"+esc(t)+"</span>"; }
-function emptyJournal(date){ return {date:date, updated:null, changes:{}, created:[], braindump:[]}; }
+function emptyJournal(date){ return {date:date, updated:null, changes:{}, created:[], braindump:[], inbox:{}}; }
 
 // ── local layer ──────────────────────────────────────────────────────────────
 function localKey(){ return K("local:" + (BRIEF ? BRIEF.date : "none")); }
 function loadLocal(){
   try{ S = JSON.parse(ls(localKey())) || {}; }catch(e){ S = {}; }
   S.ch = S.ch || {}; S.nt = S.nt || []; S.rm = S.rm || [];
-  S.bd = S.bd || []; S.bdrm = S.bdrm || [];
+  S.bd = S.bd || []; S.bdrm = S.bdrm || []; S.ib = S.ib || {};
 }
 function saveLocal(){ lsSet(localKey(), JSON.stringify(S)); }
 
@@ -108,6 +108,16 @@ function eff(n){
   });
   return out;
 }
+// inbox items come from the brief and have no issue number; the journal records
+// only what was decided about them: converted to a task, or dismissed.
+function jib(id){ return (J && J.inbox && J.inbox[id]) || null; }
+function lib(id){ return (id in S.ib) ? S.ib[id] : undefined; }
+function effIb(id){
+  const l = lib(id);
+  if(l === undefined) return jib(id);
+  return (l === null) ? null : l;          // explicit null = undo the decision
+}
+function inboxItems(){ return (BRIEF && BRIEF.inbox) || []; }
 function effBraindump(){
   const fromJ = (J ? J.braindump : []).filter(b => S.bdrm.indexOf(b.id) === -1)
                                       .map(b => Object.assign({}, b, {queued:true}));
@@ -132,14 +142,20 @@ function localCount(){
       else if(j[f] !== v) n++;
     });
   });
-  return n + S.nt.length + S.rm.length + S.bd.length + S.bdrm.length;
+  let ib = 0;
+  Object.keys(S.ib).forEach(function(id){
+    const l = S.ib[id], j = jib(id);
+    if(l === null){ if(j) ib++; }
+    else if(!j || j.status !== l.status) ib++;
+  });
+  return n + S.nt.length + S.rm.length + S.bd.length + S.bdrm.length + ib;
 }
 // how many edits are in the journal, waiting for Claude
 function queuedCount(){
   if(!J) return 0;
   let n = 0;
   Object.keys(J.changes).forEach(k => { n += Object.keys(J.changes[k]).filter(f=>FIELDS.indexOf(f)>=0).length; });
-  return n + J.created.length + J.braindump.length;
+  return n + J.created.length + J.braindump.length + Object.keys(J.inbox||{}).length;
 }
 function setCh(n,p){
   const key = String(n);
@@ -201,6 +217,7 @@ async function fetchJournal(){
     parsed.changes   = parsed.changes   || {};
     parsed.created   = parsed.created   || [];
     parsed.braindump = parsed.braindump || [];
+    parsed.inbox     = parsed.inbox     || {};
     // a journal left over from an earlier day is not ours — start clean
     J = (parsed.date === BRIEF.date) ? parsed : emptyJournal(BRIEF.date);
   }catch(e){
@@ -251,6 +268,11 @@ function mergeLocalInto(j){
     if(!j.braindump.some(x => x.id === b.id)) j.braindump.push(b);
   });
   j.braindump.sort((a,b) => String(a.ts).localeCompare(String(b.ts)));
+  j.inbox = j.inbox || {};
+  Object.keys(S.ib).forEach(function(id){
+    const l = S.ib[id];
+    if(l === null) delete j.inbox[id]; else j.inbox[id] = l;
+  });
   j.date = BRIEF.date;
   j.updated = new Date().toISOString();
   return j;
@@ -272,7 +294,7 @@ async function push(){
     const res = await api("/repos/"+REPO+"/contents/"+M.changesPath, "PUT", body);
     J_SHA = res.content.sha;
     J = merged;
-    S = {ch:{},nt:[],rm:[],bd:[],bdrm:[]};
+    S = {ch:{},nt:[],rm:[],bd:[],bdrm:[],ib:{}};
     saveLocal();
     saveRes = {ok:true, queued:queuedCount()};
   }catch(e){
@@ -295,6 +317,34 @@ function addTask(){
     note:  document.getElementById("nt-n").value.trim() || null
   });
   showNF = false; saveLocal(); render();
+}
+function dismissInbox(id){
+  const cur = effIb(id);
+  S.ib[id] = (cur && cur.status === "dismissed") ? null
+           : {status:"dismissed", ts:new Date().toISOString()};
+  saveLocal(); render();
+}
+function undoInbox(id){ S.ib[id] = null; saveLocal(); render(); }
+function toggleIB(id){
+  const cur = panels["ib-"+id] || {};
+  panels["ib-"+id] = {open: !cur.open};
+  render();
+}
+function convertInbox(id){
+  const t = document.getElementById("ib-t-"+id);
+  const title = t ? t.value.trim() : "";
+  if(!title){ document.getElementById("ib-err-"+id).textContent = "Title is required."; return; }
+  S.nt.push({
+    cid:   "c-" + Date.now().toString(36) + "-" + Math.random().toString(36).slice(2,7),
+    title: title,
+    topic: document.getElementById("ib-tp-"+id).value,
+    due:   document.getElementById("ib-d-"+id).value || null,
+    note:  document.getElementById("ib-n-"+id).value.trim() || null,
+    from:  "inbox:" + id
+  });
+  S.ib[id] = {status:"task", ts:new Date().toISOString()};
+  panels["ib-"+id] = {};
+  saveLocal(); render();
 }
 function toggleBD(){ showBD = !showBD; render(); }
 function addBraindump(){
@@ -536,6 +586,53 @@ function render(){
     h += "</div>";
   });
 
+  if(M.inbox && inboxItems().length){
+    const all    = inboxItems();
+    const decided= all.filter(x => !!effIb(x.id));
+    const list   = hideSettled ? all.filter(x => !effIb(x.id)) : all;
+    h += "<div class='sec'><div class='sec-hdr'><span class='sec-label'>Inbox</span>"
+       + "<span class='sec-note'>from email \u00b7 not issues yet</span></div>";
+    h += list.map(function(x){
+      const st = effIb(x.id);
+      const l  = lib(x.id);
+      const unsaved = (l !== undefined) && (l === null ? !!jib(x.id) : (!jib(x.id) || jib(x.id).status !== l.status));
+      const p  = panels["ib-"+x.id] || {};
+      const done = st && st.status === "dismissed";
+      const tasked = st && st.status === "task";
+      return "<div class='card ib"+(done?" done":"")+"'>"
+        + "<div class='card-row'><span class='card-title"+(done?" struck":"")+"'>"+esc(x.subject)+"</span>"
+        + "<div class='acts'>"
+        + "<button class='act"+(p.open?" on":"")+(tasked?" on-green":"")+"' onclick='DashCore.toggleIB(\""+esc(x.id)+"\")' title='Turn into a task'>"+IC.plus+"</button>"
+        + "<button class='act"+(done?" on":"")+"' onclick='DashCore.dismissInbox(\""+esc(x.id)+"\")' title='"+(done?"Undo dismiss":"Dismiss")+"'>"+IC.x+"</button>"
+        + (x.url?"<a class='act' href='"+esc(x.url)+"' target='_blank' rel='noopener' title='Open message'>"+IC.ext+"</a>":"")
+        + "</div></div>"
+        + "<div class='card-meta'>"
+        + "<span class='chip src'>"+esc(x.source||"email")+"</span>"
+        + (x.from?"<span class='chip'>"+esc(x.from)+"</span>":"")
+        + (x.received?"<span class='chip'>"+fd(String(x.received).slice(0,10))+"</span>":"")
+        + (tasked?"<span class='chip logged'>\u2192 task</span>":"")
+        + (unsaved?"<span class='chip unsaved'>unsaved</span>":(st?"<span class='chip queued'>queued</span>":""))
+        + "</div>"
+        + (x.note?"<div class='cnote'>"+esc(x.note)+"</div>":"")
+        + (p.open?"<div class='panel'>"
+            + "<div class='field'><label>Task title</label><input id='ib-t-"+esc(x.id)+"' type='text' value='"+esc(x.suggest||x.subject)+"'></div>"
+            + "<div class='grid' style='display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:8px 0'>"
+            + "<div class='field'><label>Topic</label><select id='ib-tp-"+esc(x.id)+"'>"
+            + (M.topics||[]).map(t=>"<option"+(t===(x.topic||"")?" selected":"")+">"+esc(t)+"</option>").join("")+"</select></div>"
+            + "<div class='field'><label>Due date</label><input id='ib-d-"+esc(x.id)+"' type='date' value='"+esc(x.suggestDue||TODAY)+"'></div></div>"
+            + "<div class='field'><label>Note (optional)</label><textarea id='ib-n-"+esc(x.id)+"'>"+esc(x.note||"")+"</textarea></div>"
+            + "<p class='err' id='ib-err-"+esc(x.id)+"'></p>"
+            + "<div class='pbtns'><button class='btn' onclick='DashCore.toggleIB(\""+esc(x.id)+"\")'>Cancel</button>"
+            + "<button class='btn btn-p' onclick='DashCore.convertInbox(\""+esc(x.id)+"\")'>Create task</button></div></div>":"")
+        + "</div>";
+    }).join("");
+    if(hideSettled && decided.length){
+      h += "<div class='hidden-row'>"+decided.length+" handled"
+         + " <button class='lnk' onclick='DashCore.toggleHide()'>show</button></div>";
+    }
+    h += "</div>";
+  }
+
   if(M.braindump){
     const bd = effBraindump();
     h += "<div class='sec'><div class='sec-hdr'><span class='sec-label'>Braindump</span>"
@@ -602,6 +699,7 @@ return {
   setCh, toggleP, saveLog, saveDate,
   addTask, rmTask, toggleNew:function(){ showNF=!showNF; render(); },
   toggleBD, addBraindump, rmBraindump,
+  dismissInbox, undoInbox, toggleIB, convertInbox,
   push, toggleHide, closeModal
 };
 })();
