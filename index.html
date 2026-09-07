@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="es">
+<html lang="en">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
@@ -19,21 +19,21 @@
 // ─── registry ─────────────────────────────────────────────────────────────────
 // To add a dashboard: copy ops/ to <id>/, edit its manifest, add a row here.
 const DASHBOARDS = [
-  { id:"ops",    name:"ops",    desc:"Operaciones \u00b7 tasks, people, projects", path:"ops/",    icon:"\u25E7", color:"#2563EB", live:true  },
-  { id:"sports", name:"sports", desc:"Entrenamiento y carreras",                   path:"sports/", icon:"\u25D4", color:"#16A34A", live:false },
-  { id:"family", name:"family", desc:"Casa, viajes y planes",                      path:"family/", icon:"\u25CD", color:"#D97706", live:false }
+  { id:"ops",    name:"ops",    desc:"Lab operations \u00b7 tasks, people, projects", path:"ops/",    icon:"\u25E7", color:"#2563EB", live:true  },
+  { id:"sports", name:"sports", desc:"Training, races and recovery",              path:"sports/", icon:"\u25D4", color:"#16A34A", live:false },
+  { id:"family", name:"family", desc:"Home, travel and plans",                    path:"family/", icon:"\u25CD", color:"#D97706", live:false }
 ];
 
 document.getElementById("hub").innerHTML =
   "<h1>dashboards</h1><div class='sub'>"
-  + new Date().toLocaleDateString("es-ES",{weekday:"long",day:"numeric",month:"long"})
+  + new Date().toLocaleDateString("en-GB",{weekday:"long",day:"numeric",month:"long"})
   + "</div>"
   + DASHBOARDS.map(function(d){
       const inner =
           "<div class='hub-ic' style=\"background:" + d.color + "1a;color:" + d.color + "\">" + d.icon + "</div>"
         + "<div class='hub-t'><div class='hub-n'>" + d.name + "</div>"
         + "<div class='hub-d'>" + d.desc + "</div></div>"
-        + (d.live ? "" : "<span class='hub-badge'>pronto</span>");
+        + (d.live ? "" : "<span class='hub-badge'>soon</span>");
       return d.live
         ? "<a class='hub-item' href='" + d.path + "'>" + inner + "</a>"
         : "<div class='hub-item soon'>" + inner + "</div>";

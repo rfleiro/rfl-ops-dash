@@ -66,7 +66,7 @@ const IC = {
 function esc(s){ return String(s==null?"":s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c])); }
 function dc(d){ if(!d) return ""; if(d<TODAY) return "overdue"; if(d===TODAY) return "today"; return ""; }
 function fd(d){ if(!d) return ""; const p=String(d).split("-"); return p[2]+"/"+p[1]; }
-function hhmm(d){ return d.toLocaleTimeString("es-ES",{hour:"2-digit",minute:"2-digit"}); }
+function hhmm(d){ return d.toLocaleTimeString("en-GB",{hour:"2-digit",minute:"2-digit"}); }
 function tc(t){ return (M.topicColors && M.topicColors[t]) || {bg:"#eee",tx:"#555"}; }
 function ttag(t){ const c=tc(t); return "<span class='tag' style='background:"+c.bg+";color:"+c.tx+"'>"+esc(t)+"</span>"; }
 
@@ -88,13 +88,13 @@ async function api(path, method, body){
   let r;
   try{
     r = await fetch(API + path, {method:method||"GET", headers:h, body: body?JSON.stringify(body):undefined, cache:"no-store"});
-  }catch(e){ throw new Error("Sin conexión con GitHub. Comprueba la red."); }
+  }catch(e){ throw new Error("Can't reach GitHub. Check your connection."); }
   if(!r.ok){
     let msg = String(r.status);
     try{ const j = await r.json(); if(j && j.message) msg += " · " + j.message; }catch(e){}
-    if(r.status===401) msg = "401 · Token inválido o revocado.";
-    if(r.status===404) msg = "404 · No encontrado. Comprueba el repo configurado y que el token tenga acceso.";
-    if(r.status===403) msg += " · Permisos insuficientes o rate limit.";
+    if(r.status===401) msg = "401 · Token invalid or revoked.";
+    if(r.status===404) msg = "404 · Not found. Check the configured repo, and that the token has access to it.";
+    if(r.status===403) msg += " · Insufficient permissions, or rate limited.";
     throw new Error(msg);
   }
   return r.status===204 ? null : r.json();
@@ -222,7 +222,7 @@ function toggleHide(){
 function addTask(){
   const t = document.getElementById("nt-t");
   const title = t ? t.value.trim() : "";
-  if(!title){ document.getElementById("nt-err").textContent = "Título obligatorio."; return; }
+  if(!title){ document.getElementById("nt-err").textContent = "Title is required."; return; }
   S.nt.push({
     title: title,
     topic: document.getElementById("nt-tp").value,
@@ -254,14 +254,14 @@ function saveConfig(){
     .replace(/^https?:\/\/github\.com\//,"").replace(/\.git$/,"").replace(/\/+$/,"");
   const tk = document.getElementById("tk").value.trim();
   const e  = document.getElementById("tk-err");
-  if(!/^[\w.-]+\/[\w.-]+$/.test(rp)){ e.textContent = "Formato del repo: owner/nombre"; return; }
-  if(!tk){ e.textContent = "Pega el token."; return; }
+  if(!/^[\w.-]+\/[\w.-]+$/.test(rp)){ e.textContent = "Repo format: owner/name"; return; }
+  if(!tk){ e.textContent = "Paste the token."; return; }
   REPO = rp; TOKEN = tk;
   lsSet(K("repo"),rp); lsSet(K("pat"),tk);
   loadBrief();
 }
 function resetConfig(){
-  if(!confirm("Borrar el repo y el token guardados para «"+M.id+"» en este dispositivo?")) return;
+  if(!confirm("Clear the saved repo and token for \u201c"+M.id+"\u201d on this device?")) return;
   REPO=""; TOKEN=""; lsDel(K("repo")); lsDel(K("pat"));
   view="setup"; render();
 }
@@ -278,9 +278,9 @@ function renderModal(){
   if(!results){ m.innerHTML=""; return; }
   const ok  = results.filter(r=>r.status==="ok").length;
   const bad = results.filter(r=>r.status==="err").length;
-  const KL = {done:"cerrar issue",log:"comentario",reschedule:"nueva fecha",create:"crear item"};
-  let h = "<h2>"+(syncing?"Sincronizando…":"Sync completado")+"</h2>";
-  h += "<p>"+ok+" de "+results.length+" correctos"+(bad?" · <span style='color:var(--danger)'>"+bad+" con error</span>":"")+"</p><div class='mbody'>";
+  const KL = {done:"close issue",log:"comment",reschedule:"new date",create:"create item"};
+  let h = "<h2>"+(syncing?"Syncing…":"Sync complete")+"</h2>";
+  h += "<p>"+ok+" of "+results.length+" succeeded"+(bad?" · <span style='color:var(--danger)'>"+bad+" failed</span>":"")+"</p><div class='mbody'>";
   results.forEach(function(r){
     const cls = r.status==="ok"?"ok":r.status==="err"?"err":"";
     const ico = r.status==="ok"?IC.ok:r.status==="err"?IC.bad:r.status==="running"?"<span class='spin'>"+IC.load+"</span>":IC.dot;
@@ -289,8 +289,8 @@ function renderModal(){
        + (r.error?"<div class='srow-e'>"+esc(r.error)+"</div>":"")+"</div></div>";
   });
   h += "</div><div class='mbtns'>";
-  if(bad && !syncing) h += "<button class='btn' onclick='DashCore.retryFailed()'>Reintentar fallos</button>";
-  h += "<button class='btn "+(syncing?"":"btn-p")+"' onclick='DashCore.closeModal()' "+(syncing?"disabled":"")+">"+(syncing?"Espera…":"Cerrar")+"</button></div>";
+  if(bad && !syncing) h += "<button class='btn' onclick='DashCore.retryFailed()'>Retry failed</button>";
+  h += "<button class='btn "+(syncing?"":"btn-p")+"' onclick='DashCore.closeModal()' "+(syncing?"disabled":"")+">"+(syncing?"Working…":"Close")+"</button></div>";
   m.innerHTML = h;
 }
 
@@ -299,25 +299,25 @@ function card(item){
   const n=item.number, c=ch(n), p=panels[n]||{};
   const dd=c.newDate||item.due, dcs=dc(dd), done=!!c.done;
   const isTask=item.type==="task", isPerson=item.type==="person";
-  const dlabel = isPerson ? "Próximo seguimiento" : "Fecha límite";
+  const dlabel = isPerson ? "Next follow-up" : "Due date";
   return "<div class='card "+dcs+(done?" done":"")+"'>"
     + "<div class='card-row'><span class='card-title"+(done?" struck":"")+"'>"+esc(item.title)+"</span><div class='acts'>"
-    + (isTask?"<button class='act"+(done?" on-green":"")+"' onclick='DashCore.setCh("+n+",{done:"+(!done)+"})' title='"+(done?"Deshacer":"Hecho")+"'>"+IC.check+"</button>":"")
+    + (isTask?"<button class='act"+(done?" on-green":"")+"' onclick='DashCore.setCh("+n+",{done:"+(!done)+"})' title='"+(done?"Undo":"Done")+"'>"+IC.check+"</button>":"")
     + "<button class='act"+(p.log?" on":"")+"' onclick='DashCore.toggleP("+n+",\"log\")' title='Log'>"+IC.msg+"</button>"
     + "<button class='act"+(p.date?" on":"")+"' onclick='DashCore.toggleP("+n+",\"date\")' title='"+dlabel+"'>"+IC.cal+"</button>"
     + (item.url?"<a class='act' href='"+esc(item.url)+"' target='_blank' rel='noopener' title='GitHub'>"+IC.ext+"</a>":"")
     + "</div></div><div class='card-meta'>"+ttag(item.topic)
-    + (dd?"<span class='chip "+dcs+"'>"+(dcs==="overdue"?"atrasado · ":"")+fd(dd)+(c.newDate?" ✓":"")+"</span>":"")
+    + (dd?"<span class='chip "+dcs+"'>"+(dcs==="overdue"?"overdue · ":"")+fd(dd)+(c.newDate?" ✓":"")+"</span>":"")
     + (c.log?"<span class='chip logged'>"+IC.msg+" log</span>":"")
     + "</div>"
     + (item.note?"<div class='cnote'>"+esc(item.note)+"</div>":"")
-    + (p.log?"<div class='panel'><textarea id='lt-"+n+"' placeholder='Nota…'>"+esc(c.log||"")+"</textarea>"
-       + "<div class='pbtns'><button class='btn' onclick='DashCore.toggleP("+n+",\"log\")'>Cancelar</button>"
-       + "<button class='btn btn-p' onclick='DashCore.saveLog("+n+")'>Guardar</button></div></div>":"")
+    + (p.log?"<div class='panel'><textarea id='lt-"+n+"' placeholder='Note…'>"+esc(c.log||"")+"</textarea>"
+       + "<div class='pbtns'><button class='btn' onclick='DashCore.toggleP("+n+",\"log\")'>Cancel</button>"
+       + "<button class='btn btn-p' onclick='DashCore.saveLog("+n+")'>Save</button></div></div>":"")
     + (p.date?"<div class='panel'><div class='pfield'><label>"+dlabel+"</label>"
        + "<input type='date' id='dt-"+n+"' value='"+(dd||"")+"'></div>"
-       + "<div class='pbtns'><button class='btn' onclick='DashCore.toggleP("+n+",\"date\")'>Cancelar</button>"
-       + "<button class='btn btn-p' onclick='DashCore.saveDate("+n+")'>Fijar</button></div></div>":"")
+       + "<div class='pbtns'><button class='btn' onclick='DashCore.toggleP("+n+",\"date\")'>Cancel</button>"
+       + "<button class='btn btn-p' onclick='DashCore.saveDate("+n+")'>Set</button></div></div>":"")
     + "</div>";
 }
 
@@ -328,19 +328,19 @@ function render(){
     app.innerHTML = "<div class='center'>"
       + "<a class='back' href='../'>"+IC.back+" dashboards</a>"
       + "<h2>"+esc(M.title)+"<span class='hdr-id'>"+esc(M.id)+"</span></h2>"
-      + "<p>Indica el repositorio de datos y un token con acceso a él. Ambos se guardan sólo en este dispositivo, para este dashboard.</p>"
+      + "<p>Point this dashboard at a data repository and give it a token with access. Both are stored on this device only, for this dashboard.</p>"
       + "<div class='steps'><ol>"
-      + "<li>Crea un token en <a href='https://github.com/settings/personal-access-tokens/new' target='_blank' rel='noopener'>Settings → Developer settings → Fine-grained tokens</a></li>"
-      + "<li><b>Repository access</b> → Only select repositories → el repo de datos</li>"
-      + "<li><b>Permissions</b> → Contents: <code>Read</code> · Issues: <code>Read and write</code></li>"
+      + "<li>Create a token under <a href='https://github.com/settings/personal-access-tokens/new' target='_blank' rel='noopener'>Settings → Developer settings → Fine-grained tokens</a></li>"
+      + "<li><b>Repository access</b> → Only select repositories → your data repo</li>"
+      + "<li><b>Permissions</b> \u2192 Contents: <code>Read</code> \u00b7 Issues: <code>Read and write</code></li>"
       + "</ol></div>"
-      + "<div class='pfield' style='margin-bottom:8px'><label>Repositorio de datos</label>"
+      + "<div class='pfield' style='margin-bottom:8px'><label>Data repository</label>"
       + "<input id='rp' type='text' placeholder='owner/repo' autocomplete='off' spellcheck='false'></div>"
       + "<div class='pfield'><label>Token</label>"
       + "<input id='tk' type='password' placeholder='github_pat_…' autocomplete='off' spellcheck='false'></div>"
       + "<p class='err' id='tk-err'></p>"
-      + "<div class='pbtns' style='margin-top:10px'><button class='btn btn-p' onclick='DashCore.saveConfig()'>Guardar y entrar</button></div>"
-      + "<p class='muted'>Nada queda registrado en este sitio. Las peticiones van sólo a api.github.com.</p></div>";
+      + "<div class='pbtns' style='margin-top:10px'><button class='btn btn-p' onclick='DashCore.saveConfig()'>Save and continue</button></div>"
+      + "<p class='muted'>Nothing is logged by this site. Requests go to api.github.com and nowhere else.</p></div>";
     ["rp","tk"].forEach(function(id){
       document.getElementById(id).addEventListener("keydown",function(e){ if(e.key==="Enter") saveConfig(); });
     });
@@ -349,17 +349,17 @@ function render(){
   }
 
   if(view==="loading"){
-    app.innerHTML = "<div class='load'><span class='spin'>"+IC.load+"</span> Cargando…</div>";
+    app.innerHTML = "<div class='load'><span class='spin'>"+IC.load+"</span> Loading…</div>";
     return;
   }
 
   if(view==="error"){
     app.innerHTML = "<div class='center'>"
       + "<a class='back' href='../'>"+IC.back+" dashboards</a>"
-      + "<h2>No se pudo cargar</h2><div class='ebox'>"+esc(errMsg)+"</div>"
-      + (errMsg.indexOf("404")===0 ? "<p>Si el repo y el token son correctos, puede que aún no exista <code>"+esc(M.briefPath)+"</code>. Pide a Claude que lo genere.</p>" : "")
-      + "<div class='pbtns'><button class='lnk' onclick='DashCore.resetConfig()'>Cambiar repo/token</button>"
-      + "<button class='btn btn-p' onclick='DashCore.loadBrief()'>Reintentar</button></div></div>";
+      + "<h2>Couldn't load</h2><div class='ebox'>"+esc(errMsg)+"</div>"
+      + (errMsg.indexOf("404")===0 ? "<p>If the repo and token are right, <code>"+esc(M.briefPath)+"</code> may not exist yet. Ask Claude to generate it.</p>" : "")
+      + "<div class='pbtns'><button class='lnk' onclick='DashCore.resetConfig()'>Change repo/token</button>"
+      + "<button class='btn btn-p' onclick='DashCore.loadBrief()'>Retry</button></div></div>";
     return;
   }
 
@@ -370,23 +370,23 @@ function render(){
   let h = "<div class='wrap'>";
   h += "<a class='back' href='../'>"+IC.back+" dashboards</a>";
   h += "<div class='hdr'><div><h1>"+esc(M.title)+"<span class='hdr-id'>"+esc(M.id)+"</span></h1>"
-     + "<div class='hdr-date'>"+esc(new Date().toLocaleDateString("es-ES",{weekday:"long",day:"numeric",month:"long"}))+"</div></div>"
+     + "<div class='hdr-date'>"+esc(new Date().toLocaleDateString("en-GB",{weekday:"long",day:"numeric",month:"long"}))+"</div></div>"
      + "<div class='hdr-r'>"
-     + "<button class='btn btn-icon' onclick='DashCore.loadBrief()' title='Recargar'>"+IC.refresh+"</button>"
+     + "<button class='btn btn-icon' onclick='DashCore.loadBrief()' title='Reload'>"+IC.refresh+"</button>"
      + (nSettled ? "<button class='btn btn-icon"+(hideSettled?" on":"")+"' onclick='DashCore.toggleHide()' title='"
-         + (hideSettled ? "Mostrar "+nSettled+" resuelto(s)" : "Ocultar "+nSettled+" resuelto(s) hasta sincronizar")
+         + (hideSettled ? "Show "+nSettled+" settled item"+(nSettled===1?"":"s") : "Hide "+nSettled+" settled item"+(nSettled===1?"":"s")+" until synced")
          + "'>"+(hideSettled?IC.eyeOff:IC.eye)+"</button>" : "")
      + "<button class='btn "+(n?"btn-p pulse":"")+"' onclick='DashCore.runSync()' "+(n?"":"disabled")+">"
      + IC.up + (n?" Sync ("+n+")":" Sync") + "</button></div></div>";
 
   if(BRIEF.date !== TODAY)
-    h += "<div class='warn'>"+IC.warn+" Los datos son del "+fd(BRIEF.date)+". Pide a Claude que los actualice.</div>";
+    h += "<div class='warn'>"+IC.warn+" This data is from "+fd(BRIEF.date)+". Ask Claude to refresh it.</div>";
   meta.warnings.forEach(function(w){ h += "<div class='warn'>"+IC.warn+" "+esc(w)+"</div>"; });
   if(meta.summary) h += "<div class='summary'>"+esc(meta.summary)+"</div>";
 
   if(cal.length){
-    h += "<div class='sec'><div class='sec-hdr'><span class='sec-label'>Hoy</span></div><div class='cal-list'>"
-      + cal.map(e=>"<div class='cal-row'><span class='cal-time'>"+(e.allDay?"":esc(e.time))+"</span><span class='cal-ev'>"+esc(e.title)+"</span>"+(e.allDay?"<span class='cal-ad'>todo el día</span>":"")+"</div>").join("")
+    h += "<div class='sec'><div class='sec-hdr'><span class='sec-label'>Today</span></div><div class='cal-list'>"
+      + cal.map(e=>"<div class='cal-row'><span class='cal-time'>"+(e.allDay?"":esc(e.time))+"</span><span class='cal-ev'>"+esc(e.title)+"</span>"+(e.allDay?"<span class='cal-ad'>all day</span>":"")+"</div>").join("")
       + "</div></div>";
   }
 
@@ -396,18 +396,18 @@ function render(){
     const list   = hideSettled ? all.filter(i=>!isSettled(i)) : all;
     if(!all.length && !sec.allowNew) return;
     h += "<div class='sec'><div class='sec-hdr'><span class='sec-label'>"+esc(sec.label)+"</span>"
-       + (sec.allowNew?"<button class='sec-add' onclick='DashCore.toggleNew()'>"+IC.plus+" nuevo</button>":"")
+       + (sec.allowNew?"<button class='sec-add' onclick='DashCore.toggleNew()'>"+IC.plus+" new</button>":"")
        + "</div>";
     if(sec.allowNew && showNF){
       h += "<div class='nform'>"
-        + "<div class='field'><label>Título</label><input id='nt-t' type='text' placeholder='Admin — enviar X'></div>"
+        + "<div class='field'><label>Title</label><input id='nt-t' type='text' placeholder='Admin — submit X'></div>"
         + "<div class='grid'><div class='field'><label>Topic</label><select id='nt-tp'>"
         + (M.topics||[]).map(t=>"<option>"+esc(t)+"</option>").join("")+"</select></div>"
-        + "<div class='field'><label>Fecha límite</label><input id='nt-d' type='date' value='"+TODAY+"'></div></div>"
-        + "<div class='field'><label>Nota (opcional)</label><textarea id='nt-n' placeholder='Contexto…'></textarea></div>"
+        + "<div class='field'><label>Due date</label><input id='nt-d' type='date' value='"+TODAY+"'></div></div>"
+        + "<div class='field'><label>Note (optional)</label><textarea id='nt-n' placeholder='Context…'></textarea></div>"
         + "<p class='err' id='nt-err'></p>"
-        + "<div class='pbtns' style='margin-top:8px'><button class='btn' onclick='DashCore.toggleNew()'>Cancelar</button>"
-        + "<button class='btn btn-p' onclick='DashCore.addTask()'>Añadir</button></div></div>";
+        + "<div class='pbtns' style='margin-top:8px'><button class='btn' onclick='DashCore.toggleNew()'>Cancel</button>"
+        + "<button class='btn btn-p' onclick='DashCore.addTask()'>Add</button></div></div>";
     }
     h += list.map(card).join("");
     if(sec.allowNew){
@@ -416,19 +416,19 @@ function render(){
         return "<div class='card isnew'><div class='card-row'><span class='card-title'>"+esc(t.title)+"</span>"
           + "<div class='acts'><button class='act rm' onclick='DashCore.rmTask("+i+")'>"+IC.x+"</button></div></div>"
           + "<div class='card-meta'><span class='tag' style='background:"+c.bg+";color:"+c.tx+"'>"+esc(t.topic)+"</span>"
-          + (t.due?"<span class='chip'>"+fd(t.due)+"</span>":"")+"<span class='chip new'>nuevo</span></div>"
+          + (t.due?"<span class='chip'>"+fd(t.due)+"</span>":"")+"<span class='chip new'>new</span></div>"
           + (t.note?"<div class='cnote'>"+esc(t.note)+"</div>":"")+"</div>";
       }).join("");
     }
     if(hidden.length){
-      h += "<div class='hidden-row'>"+hidden.length+" oculto"+(hidden.length===1?"":"s")
-         + " hasta sincronizar <button class='lnk' onclick='DashCore.toggleHide()'>mostrar</button></div>";
+      h += "<div class='hidden-row'>"+hidden.length+" hidden until synced"
+         + " <button class='lnk' onclick='DashCore.toggleHide()'>show</button></div>";
     }
     h += "</div>";
   });
 
   h += "<div class='foot'><span>"+esc(BRIEF.date)+(lastLoad?" · "+hhmm(lastLoad):"")+"</span>"
-     + "<button class='lnk' onclick='DashCore.resetConfig()'>cambiar repo/token</button></div></div>";
+     + "<button class='lnk' onclick='DashCore.resetConfig()'>change repo/token</button></div></div>";
 
   app.innerHTML = h;
 }
