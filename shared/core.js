@@ -96,10 +96,7 @@ function loadLocal(){
 function saveLocal(){ lsSet(localKey(), JSON.stringify(S)); }
 
 // ── effective state: journal overlaid with local ─────────────────────────────
-const FIELDS = ["done","log","reminder","deadline","star"];
-// star is a toggle against a baseline in the brief, so `false` is a real value
-// rather than "clear this field" the way it is for the others.
-const BOOL_FIELDS = ["star"];
+const FIELDS = ["done","log","reminder","deadline"];
 function jch(n){ return (J && J.changes[String(n)]) || {}; }
 function lch(n){ return S.ch[String(n)] || {}; }
 function eff(n){
@@ -108,20 +105,25 @@ function eff(n){
   FIELDS.forEach(function(f){
     if(!(f in l)) return;
     const v = l[f];
-    if(BOOL_FIELDS.indexOf(f) >= 0){ out[f] = v; return; }
     if(v === false || v === null || v === "") delete out[f];
     else out[f] = v;
   });
   return out;
 }
-function briefItem(n){ return BRIEF ? BRIEF.items.find(i => String(i.number) === String(n)) : null; }
-function baseStar(n){ const it = briefItem(n); return !!(it && it.starred); }
-function isStarred(n){ const c = eff(n); return ("star" in c) ? !!c.star : baseStar(n); }
+
+// ── stars: dashboard-only, and only for today ────────────────────────────────
+// Deliberately not part of the journal and never written to the issues. A star
+// says "this is what I'm on right now", which is a today statement, so it is
+// kept in localStorage under the brief's date and starts empty each morning.
+let STAR = {};
+function starKey(){ return K("star:" + (BRIEF ? BRIEF.date : "none")); }
+function loadStars(){ try{ STAR = JSON.parse(ls(starKey())) || {}; }catch(e){ STAR = {}; } }
+function isStarred(n){ return !!STAR[String(n)]; }
 function toggleStar(n){
-  const key = String(n);
-  const l = Object.assign({}, lch(key));
-  l.star = !isStarred(key);
-  S.ch[key] = l; saveLocal(); render();
+  const k = String(n);
+  if(STAR[k]) delete STAR[k]; else STAR[k] = true;
+  lsSet(starKey(), JSON.stringify(STAR));
+  render();
 }
 // inbox items come from the brief and have no issue number; the journal records
 // only what was decided about them: converted to a task, or dismissed.
@@ -152,11 +154,6 @@ function localCount(){
     const j = jch(k), l = S.ch[k];
     FIELDS.forEach(function(f){
       if(!(f in l)) return;
-      if(BOOL_FIELDS.indexOf(f) >= 0){
-        const jv = (f in j) ? j[f] : baseStar(k);
-        if(l[f] !== jv) n++;
-        return;
-      }
       const v = l[f], had = (f in j);
       if(v === false || v === null || v === ""){ if(had) n++; }
       else if(j[f] !== v) n++;
@@ -257,6 +254,7 @@ async function loadBrief(){
     BRIEF.meta.warnings = BRIEF.meta.warnings || [];
     await fetchJournal();
     loadLocal();
+    loadStars();
     lastLoad = new Date();
     view="ready";
   }catch(e){
@@ -274,10 +272,6 @@ function mergeLocalInto(j){
     FIELDS.forEach(function(f){
       if(!(f in src)) return;
       const v = src[f];
-      if(BOOL_FIELDS.indexOf(f) >= 0){
-        if(v === baseStar(key)) delete dst[f]; else dst[f] = v;
-        return;
-      }
       if(v === false || v === null || v === "") delete dst[f];
       else dst[f] = v;
     });
@@ -578,7 +572,7 @@ function render(){
   }
   h += "</div>";   // .topgrid
 
-  h += "<div class='cols'>";
+  h += "<div class='main'><div class='cols'>";
   const created = effCreated();
   (M.sections||[]).forEach(function(sec){
     const all    = items.filter(sec.filter);
@@ -668,9 +662,11 @@ function render(){
     h += "</div>";
   }
 
+  h += "</div>";   // .cols
+
   if(M.braindump){
     const bd = effBraindump();
-    h += "<div class='sec'><div class='sec-hdr'><span class='sec-label'>Braindump</span>"
+    h += "<div class='rail'><div class='sec'><div class='sec-hdr'><span class='sec-label'>Braindump</span>"
        + "<button class='sec-add' onclick='DashCore.toggleBD()'>"+IC.plus+" add</button></div>";
     if(showBD){
       h += "<div class='nform'>"
@@ -698,10 +694,9 @@ function render(){
     } else if(!showBD){
       h += "<div class='bd-empty'>Nothing dumped today. Anything captured here gets reviewed at end of day.</div>";
     }
-    h += "</div>";
+    h += "</div></div>";   // .sec, .rail
   }
-
-  h += "</div>";   // .cols
+  h += "</div>";   // .main
   h += "<div class='foot'><span>"+esc(BRIEF.date)+(lastLoad?" \u00b7 "+hhmm(lastLoad):"")+"</span>"
      + "<button class='lnk' onclick='DashCore.resetConfig()'>change repo/token</button></div></div>";
 

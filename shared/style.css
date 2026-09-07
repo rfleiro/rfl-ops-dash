@@ -191,9 +191,17 @@
     .sec-hdr{padding:14px 0 6px}
   }
 
+  /* Widest: sections keep two columns and the braindump becomes a third,
+     pinned rail — it's a capture panel, so it should stay in view. */
   @media(min-width:1320px){
     .wrap{max-width:1440px;padding:28px 32px 80px}
-    .cols{grid-template-columns:1fr 1fr 1fr;gap:0 24px}
+    .main{display:grid;grid-template-columns:minmax(0,2fr) minmax(0,1fr);gap:0 28px;align-items:start}
+    .cols{grid-template-columns:1fr 1fr;gap:0 24px}
+    .rail{position:sticky;top:20px;max-height:calc(100vh - 48px);overflow-y:auto;
+          padding-left:24px;border-left:1px solid var(--border)}
+    .rail .sec-hdr{padding-top:0}
+    .rail::-webkit-scrollbar{width:6px}
+    .rail::-webkit-scrollbar-thumb{background:var(--border-strong);border-radius:3px}
     /* the top strip reads better constrained rather than stretched to 1440px */
     .summary,.warn,.queue{max-width:960px}
   }
@@ -204,3 +212,6 @@
     .topgrid .summary{margin-bottom:0}
   }
   .topgrid{display:block}
+
+  .main{display:block}
+  .rail{display:block}
