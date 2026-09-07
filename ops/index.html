@@ -23,7 +23,8 @@
 DashCore.start({
   id:        "ops",
   title:     "ops",
-  briefPath: "brief/ops/today.json",
+  briefPath:   "brief/ops/today.json",
+  changesPath: "brief/ops/today_changes.json",
 
   topics: ["admin","lab","IT","project","paper","grant","talk","review","patents"],
 
@@ -44,7 +45,6 @@ DashCore.start({
     { label:"Projects & threads", filter: i => i.type === "thread" }
   ],
 
-  newLabels: ["task"],
   dateField: { default:"Due", person:"Next follow-up" }
 });
 </script>

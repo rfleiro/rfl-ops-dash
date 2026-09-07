@@ -1,19 +1,29 @@
 /* ─────────────────────────────────────────────────────────────────────────────
    DashCore — shared engine for all dashboards in this repo.
 
-   A dashboard is a folder with an index.html that loads this file and calls
-   DashCore.start(manifest). Everything identifying (data repo, token) is
-   supplied by the user at runtime and stored per-dashboard in localStorage.
+   DATA MODEL — three layers, read in this order
+   ─────────────────────────────────────────────
+     1. brief      <briefPath>          generated each morning by Claude.
+                                        Read-only for the dashboard.
+     2. journal    <changesPath>        written ONLY by the dashboard.
+                                        Every edit lands here, never in issues.
+     3. local      localStorage         edits not yet pushed to the journal.
 
-   Manifest shape:
-     id          string   short slug, e.g. "ops". Namespaces all storage keys.
-     title       string   shown in the header
-     briefPath   string   path to the JSON payload inside the data repo
-     topics      [string] topic options offered when creating an item
-     topicColors {topic:{bg,tx}}
-     sections    [{label, filter(item), allowNew}]
-     newLabels   [string] labels applied to items created from the dashboard
-     dateField   {default,person} wording of the due-date field
+   Effective state = brief, overlaid with journal, overlaid with local.
+
+   The dashboard never writes to issues. Claude applies the journal to issues at
+   end of day, then clears it and regenerates the brief. That keeps a single
+   writer to the issue tracker, so a reload can never show a stale or
+   contradictory view, and edits survive across devices.
+
+   Journal shape:
+     { date, updated,
+       changes: { "<issue#>": {done:true, log:"…", newDate:"YYYY-MM-DD"} },
+       created: [ {cid, title, topic, due, note} ] }
+
+   Manifest:
+     id, title, briefPath, changesPath, topics, topicColors,
+     sections:[{label,filter,allowNew}], dateField:{default,person}
    ───────────────────────────────────────────────────────────────────────────── */
 "use strict";
 
@@ -21,23 +31,25 @@ window.DashCore = (function(){
 
 const API = "https://api.github.com";
 
-// ── manifest + runtime state ─────────────────────────────────────────────────
-let M      = null;
-let REPO   = "";
-let TOKEN  = "";
-let view   = "boot";        // setup | loading | ready | error
-let errMsg = "";
-let BRIEF  = null;
-let S      = {ch:{},nt:[]};
-let panels = {};
-let showNF = false;
-let syncing= false;
-let results= null;
-let lastLoad = null;
+let M       = null;
+let REPO    = "";
+let TOKEN   = "";
+let view    = "boot";      // setup | loading | ready | error
+let errMsg  = "";
+let BRIEF   = null;
+let J       = null;        // journal (server)
+let J_SHA   = null;        // journal file sha, null when it doesn't exist yet
+let S       = {ch:{},nt:[],rm:[]};   // local, unpushed
+let panels  = {};
+let showNF  = false;
+let saving  = false;
+let saveRes = null;
+let lastLoad= null;
+let hideSettled = true;
 const TODAY = new Date().toISOString().slice(0,10);
 
-// ── storage keys, namespaced per dashboard ───────────────────────────────────
-function K(suffix){ return "dash:" + M.id + ":" + suffix; }
+// ── storage, namespaced per dashboard ────────────────────────────────────────
+function K(s){ return "dash:" + M.id + ":" + s; }
 function ls(k){ try{ return localStorage.getItem(k); }catch(e){ return null; } }
 function lsSet(k,v){ try{ localStorage.setItem(k,v); }catch(e){} }
 function lsDel(k){ try{ localStorage.removeItem(k); }catch(e){} }
@@ -57,9 +69,9 @@ const IC = {
   eyeOff:`<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>`,
   ok:`<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>`,
   bad:`<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>`,
-  dot:`<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/></svg>`,
   load:`<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg>`,
   back:`<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>`,
+  clock:`<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><polyline points="12 7 12 12 15 14"/></svg>`,
 };
 
 // ── helpers ──────────────────────────────────────────────────────────────────
@@ -69,13 +81,72 @@ function fd(d){ if(!d) return ""; const p=String(d).split("-"); return p[2]+"/"+
 function hhmm(d){ return d.toLocaleTimeString("en-GB",{hour:"2-digit",minute:"2-digit"}); }
 function tc(t){ return (M.topicColors && M.topicColors[t]) || {bg:"#eee",tx:"#555"}; }
 function ttag(t){ const c=tc(t); return "<span class='tag' style='background:"+c.bg+";color:"+c.tx+"'>"+esc(t)+"</span>"; }
+function emptyJournal(date){ return {date:date, updated:null, changes:{}, created:[]}; }
 
-// ── state ────────────────────────────────────────────────────────────────────
-function stateKey(){ return K("state:" + (BRIEF ? BRIEF.date : "none")); }
-function loadState(){ try{ S = JSON.parse(ls(stateKey())) || {ch:{},nt:[]}; }catch(e){ S={ch:{},nt:[]}; } }
-function save(){ lsSet(stateKey(), JSON.stringify(S)); }
-function ch(n){ return S.ch[n] || {}; }
-function setCh(n,p){ S.ch[n] = Object.assign({}, ch(n), p); save(); render(); }
+// ── local layer ──────────────────────────────────────────────────────────────
+function localKey(){ return K("local:" + (BRIEF ? BRIEF.date : "none")); }
+function loadLocal(){
+  try{ S = JSON.parse(ls(localKey())) || {ch:{},nt:[],rm:[]}; }catch(e){ S = {ch:{},nt:[],rm:[]}; }
+  S.ch = S.ch || {}; S.nt = S.nt || []; S.rm = S.rm || [];
+}
+function saveLocal(){ lsSet(localKey(), JSON.stringify(S)); }
+
+// ── effective state: journal overlaid with local ─────────────────────────────
+const FIELDS = ["done","log","newDate"];
+function jch(n){ return (J && J.changes[String(n)]) || {}; }
+function lch(n){ return S.ch[String(n)] || {}; }
+function eff(n){
+  const out = Object.assign({}, jch(n));
+  const l = lch(n);
+  FIELDS.forEach(function(f){
+    if(!(f in l)) return;
+    const v = l[f];
+    if(v === false || v === null || v === "") delete out[f];
+    else out[f] = v;
+  });
+  return out;
+}
+function effCreated(){
+  const fromJ = (J ? J.created : []).filter(c => S.rm.indexOf(c.cid) === -1)
+                                    .map(c => Object.assign({}, c, {queued:true}));
+  const fromL = S.nt.map(c => Object.assign({}, c, {queued:false}));
+  return fromJ.concat(fromL);
+}
+// how many edits are sitting unpushed in localStorage
+function localCount(){
+  let n = 0;
+  Object.keys(S.ch).forEach(function(k){
+    const j = jch(k), l = S.ch[k];
+    FIELDS.forEach(function(f){
+      if(!(f in l)) return;
+      const v = l[f], had = (f in j);
+      if(v === false || v === null || v === ""){ if(had) n++; }
+      else if(j[f] !== v) n++;
+    });
+  });
+  return n + S.nt.length + S.rm.length;
+}
+// how many edits are in the journal, waiting for Claude
+function queuedCount(){
+  if(!J) return 0;
+  let n = 0;
+  Object.keys(J.changes).forEach(k => { n += Object.keys(J.changes[k]).filter(f=>FIELDS.indexOf(f)>=0).length; });
+  return n + J.created.length;
+}
+function setCh(n,p){
+  const key = String(n);
+  S.ch[key] = Object.assign({}, lch(key), p);
+  saveLocal(); render();
+}
+
+// ── settled / hide ───────────────────────────────────────────────────────────
+function isSettled(item){ const c = eff(item.number); return !!(c.done || c.newDate); }
+function settledCount(){ return BRIEF ? BRIEF.items.filter(isSettled).length : 0; }
+function toggleHide(){
+  hideSettled = !hideSettled;
+  lsSet(K("hide"), hideSettled ? "1" : "0");
+  render();
+}
 
 // ── GitHub API ───────────────────────────────────────────────────────────────
 async function api(path, method, body){
@@ -93,8 +164,9 @@ async function api(path, method, body){
     let msg = String(r.status);
     try{ const j = await r.json(); if(j && j.message) msg += " · " + j.message; }catch(e){}
     if(r.status===401) msg = "401 · Token invalid or revoked.";
-    if(r.status===404) msg = "404 · Not found. Check the configured repo, and that the token has access to it.";
+    if(r.status===404) msg = "404 · Not found. Check the configured repo and that the token has access.";
     if(r.status===403) msg += " · Insufficient permissions, or rate limited.";
+    if(r.status===409 || r.status===422) msg = String(r.status) + " · Conflict — someone else changed the journal. Reload and try again.";
     throw new Error(msg);
   }
   return r.status===204 ? null : r.json();
@@ -105,7 +177,28 @@ function b64utf8(b64){
   for(let i=0;i<bin.length;i++) b[i]=bin.charCodeAt(i);
   return new TextDecoder("utf-8").decode(b);
 }
+function utf8b64(str){
+  const bytes = new TextEncoder().encode(str);
+  let bin = "";
+  for(let i=0;i<bytes.length;i++) bin += String.fromCharCode(bytes[i]);
+  return btoa(bin);
+}
 
+// ── load ─────────────────────────────────────────────────────────────────────
+async function fetchJournal(){
+  try{
+    const f = await api("/repos/"+REPO+"/contents/"+M.changesPath+"?ref=HEAD&t="+Date.now());
+    J_SHA = f.sha;
+    const parsed = JSON.parse(b64utf8(f.content));
+    parsed.changes = parsed.changes || {};
+    parsed.created = parsed.created || [];
+    // a journal left over from an earlier day is not ours — start clean
+    J = (parsed.date === BRIEF.date) ? parsed : emptyJournal(BRIEF.date);
+  }catch(e){
+    if(String(e.message).indexOf("404") === 0){ J = emptyJournal(BRIEF.date); J_SHA = null; }
+    else throw e;
+  }
+}
 async function loadBrief(){
   if(!TOKEN || !REPO){ view="setup"; render(); return; }
   view="loading"; render();
@@ -116,7 +209,8 @@ async function loadBrief(){
     BRIEF.calendar = BRIEF.calendar || [];
     BRIEF.meta     = BRIEF.meta     || {};
     BRIEF.meta.warnings = BRIEF.meta.warnings || [];
-    loadState();
+    await fetchJournal();
+    loadLocal();
     lastLoad = new Date();
     view="ready";
   }catch(e){
@@ -126,112 +220,74 @@ async function loadBrief(){
   render();
 }
 
-// ── pending actions ──────────────────────────────────────────────────────────
-function actions(){
-  const a=[];
-  if(!BRIEF) return a;
-  Object.keys(S.ch).forEach(function(n){
-    const c=S.ch[n];
-    const it=BRIEF.items.find(i=>String(i.number)===String(n));
-    const t=it?it.title:"#"+n;
-    if(c.done)    a.push({kind:"done",      number:+n,title:t,field:"done"});
-    if(c.log)     a.push({kind:"log",       number:+n,title:t,text:c.log,field:"log"});
-    if(c.newDate) a.push({kind:"reschedule",number:+n,title:t,newDate:c.newDate,itemType:it?it.type:"task",field:"newDate"});
+// ── push local edits into the journal ────────────────────────────────────────
+function mergeLocalInto(j){
+  Object.keys(S.ch).forEach(function(key){
+    const src = S.ch[key];
+    const dst = Object.assign({}, j.changes[key] || {});
+    FIELDS.forEach(function(f){
+      if(!(f in src)) return;
+      const v = src[f];
+      if(v === false || v === null || v === "") delete dst[f];
+      else dst[f] = v;
+    });
+    if(Object.keys(dst).length) j.changes[key] = dst; else delete j.changes[key];
   });
-  S.nt.forEach(function(t,i){ a.push({kind:"create",idx:i,title:t.title,topic:t.topic,due:t.due,note:t.note}); });
-  return a;
-}
-
-async function exec(a){
-  const base = "/repos/"+REPO+"/issues";
-  if(a.kind==="done"){
-    await api(base+"/"+a.number,"PATCH",{state:"closed"});
-  } else if(a.kind==="log"){
-    await api(base+"/"+a.number+"/comments","POST",{body:"**"+BRIEF.date+"** — "+a.text});
-  } else if(a.kind==="reschedule"){
-    const iss = await api(base+"/"+a.number);
-    const label = a.itemType==="person" ? M.dateField.person : M.dateField.default;
-    let body = iss.body || "";
-    const re = new RegExp("📅\\s*(" + M.dateField.default + "|" + M.dateField.person + ")\\s*:\\s*\\d{4}-\\d{2}-\\d{2}");
-    const line = "📅 " + label + ": " + a.newDate;
-    body = re.test(body) ? body.replace(re,line) : (line + "\n\n" + body);
-    await api(base+"/"+a.number,"PATCH",{body:body});
-  } else if(a.kind==="create"){
-    const b = "📅 " + M.dateField.default + ": " + (a.due||"") + "\n\n## Notes\n" + (a.note||"");
-    await api(base,"POST",{title:a.title, labels:(M.newLabels||[]).concat([a.topic]), body:b});
-  }
-}
-
-function pruneSynced(){
-  const okCreates=[];
-  results.forEach(function(r){
-    if(r.status!=="ok") return;
-    if(r.kind==="create") okCreates.push(r.idx);
-    else if(S.ch[r.number]){
-      delete S.ch[r.number][r.field];
-      if(!Object.keys(S.ch[r.number]).length) delete S.ch[r.number];
-    }
+  j.created = j.created.filter(c => S.rm.indexOf(c.cid) === -1);
+  S.nt.forEach(function(t){
+    if(!j.created.some(c => c.cid === t.cid)) j.created.push(t);
   });
-  S.nt = S.nt.filter((_,i)=>okCreates.indexOf(i)===-1);
-  save();
+  j.date = BRIEF.date;
+  j.updated = new Date().toISOString();
+  return j;
 }
 
-async function runList(list){
-  for(let i=0;i<list.length;i++){
-    list[i].status="running"; renderModal();
-    try{ await exec(list[i]); list[i].status="ok"; }
-    catch(e){ list[i].status="err"; list[i].error = e.message||String(e); }
-    renderModal();
+async function push(){
+  if(saving) return;
+  if(!localCount()){ return; }
+  saving = true; saveRes = null; openModal(); renderModal();
+  try{
+    // re-read first, so concurrent edits from another device aren't clobbered
+    await fetchJournal();
+    const merged = mergeLocalInto(J);
+    const body = {
+      message: M.id + ": journal " + BRIEF.date,
+      content: utf8b64(JSON.stringify(merged, null, 2) + "\n")
+    };
+    if(J_SHA) body.sha = J_SHA;
+    const res = await api("/repos/"+REPO+"/contents/"+M.changesPath, "PUT", body);
+    J_SHA = res.content.sha;
+    J = merged;
+    S = {ch:{},nt:[],rm:[]};
+    saveLocal();
+    saveRes = {ok:true, queued:queuedCount()};
+  }catch(e){
+    saveRes = {ok:false, error: e.message || String(e)};
   }
-}
-async function runSync(){
-  const acts = actions();
-  if(!acts.length || syncing) return;
-  syncing = true;
-  results = acts.map(a=>Object.assign({},a,{status:"pending"}));
-  openModal(); renderModal();
-  await runList(results);
-  pruneSynced();
-  syncing = false; renderModal(); render();
-}
-async function retryFailed(){
-  const failed = results.filter(r=>r.status==="err");
-  if(!failed.length) return;
-  syncing = true;
-  failed.forEach(r=>{ r.status="pending"; delete r.error; });
-  renderModal();
-  await runList(failed);
-  pruneSynced();
-  syncing = false; renderModal(); render();
+  saving = false; renderModal(); render();
 }
 
-// ── hide settled items until synced ───────────────────────────────────────────
-// An item counts as "settled" once it's been ticked done or given a new date —
-// the decision is made, it's just waiting to be pushed. Logging a note doesn't
-// settle anything, so logged items stay visible.
-let hideSettled = true;   // set per-dashboard in start()
-function isSettled(item){ const c = ch(item.number); return !!(c.done || c.newDate); }
-function settledCount(){ return BRIEF ? BRIEF.items.filter(isSettled).length : 0; }
-function toggleHide(){
-  hideSettled = !hideSettled;
-  lsSet(K("hide"), hideSettled ? "1" : "0");
-  render();
-}
-
-// ── new item form ────────────────────────────────────────────────────────────
+// ── new items ────────────────────────────────────────────────────────────────
+function cid(){ return "c-" + Date.now().toString(36) + "-" + Math.random().toString(36).slice(2,7); }
 function addTask(){
-  const t = document.getElementById("nt-t");
-  const title = t ? t.value.trim() : "";
+  const el = document.getElementById("nt-t");
+  const title = el ? el.value.trim() : "";
   if(!title){ document.getElementById("nt-err").textContent = "Title is required."; return; }
   S.nt.push({
+    cid:   cid(),
     title: title,
     topic: document.getElementById("nt-tp").value,
     due:   document.getElementById("nt-d").value || null,
     note:  document.getElementById("nt-n").value.trim() || null
   });
-  showNF = false; save(); render();
+  showNF = false; saveLocal(); render();
 }
-function rmTask(i){ S.nt.splice(i,1); save(); render(); }
+function rmTask(c){
+  const i = S.nt.findIndex(t => t.cid === c);
+  if(i >= 0){ S.nt.splice(i,1); }
+  else if(S.rm.indexOf(c) === -1){ S.rm.push(c); }   // queued item — mark for removal
+  saveLocal(); render();
+}
 
 // ── panels ───────────────────────────────────────────────────────────────────
 function toggleP(n,w){
@@ -241,11 +297,13 @@ function toggleP(n,w){
 }
 function saveLog(n){
   const v=document.getElementById("lt-"+n).value.trim();
-  if(v) setCh(n,{log:v}); else { panels[n]={}; render(); }
+  panels[n]={};
+  setCh(n,{log: v || false});
 }
 function saveDate(n){
   const v=document.getElementById("dt-"+n).value;
-  if(v) setCh(n,{newDate:v}); else { panels[n]={}; render(); }
+  panels[n]={};
+  setCh(n,{newDate: v || false});
 }
 
 // ── config ───────────────────────────────────────────────────────────────────
@@ -269,49 +327,56 @@ function resetConfig(){
 // ── modal ────────────────────────────────────────────────────────────────────
 function openModal(){ document.getElementById("overlay").classList.add("open"); }
 function closeModal(){
-  if(syncing) return;
+  if(saving) return;
   document.getElementById("overlay").classList.remove("open");
-  results=null; if(BRIEF) render();
+  saveRes = null; if(BRIEF) render();
 }
 function renderModal(){
   const m = document.getElementById("modal");
-  if(!results){ m.innerHTML=""; return; }
-  const ok  = results.filter(r=>r.status==="ok").length;
-  const bad = results.filter(r=>r.status==="err").length;
-  const KL = {done:"close issue",log:"comment",reschedule:"new date",create:"create item"};
-  let h = "<h2>"+(syncing?"Syncing…":"Sync complete")+"</h2>";
-  h += "<p>"+ok+" of "+results.length+" succeeded"+(bad?" · <span style='color:var(--danger)'>"+bad+" failed</span>":"")+"</p><div class='mbody'>";
-  results.forEach(function(r){
-    const cls = r.status==="ok"?"ok":r.status==="err"?"err":"";
-    const ico = r.status==="ok"?IC.ok:r.status==="err"?IC.bad:r.status==="running"?"<span class='spin'>"+IC.load+"</span>":IC.dot;
-    h += "<div class='srow "+cls+"'><span class='st'>"+ico+"</span><div class='srow-t'>"
-       + "<div class='srow-k'>"+(KL[r.kind]||r.kind)+(r.number?" · #"+r.number:"")+"</div>"+esc(r.title)
-       + (r.error?"<div class='srow-e'>"+esc(r.error)+"</div>":"")+"</div></div>";
-  });
-  h += "</div><div class='mbtns'>";
-  if(bad && !syncing) h += "<button class='btn' onclick='DashCore.retryFailed()'>Retry failed</button>";
-  h += "<button class='btn "+(syncing?"":"btn-p")+"' onclick='DashCore.closeModal()' "+(syncing?"disabled":"")+">"+(syncing?"Working…":"Close")+"</button></div>";
-  m.innerHTML = h;
+  if(saving){
+    m.innerHTML = "<h2>Saving\u2026</h2><p>Writing your changes to the journal.</p>"
+      + "<div class='load'><span class='spin'>"+IC.load+"</span></div>";
+    return;
+  }
+  if(!saveRes){ m.innerHTML=""; return; }
+  if(saveRes.ok){
+    m.innerHTML = "<h2>"+IC.ok+" Saved</h2>"
+      + "<p>"+saveRes.queued+" change"+(saveRes.queued===1?"":"s")+" now queued in the journal. "
+      + "Nothing has been written to the issues yet \u2014 Claude applies the journal at end of day.</p>"
+      + "<div class='mbtns'><button class='btn btn-p' onclick='DashCore.closeModal()'>Close</button></div>";
+  } else {
+    m.innerHTML = "<h2>"+IC.bad+" Couldn't save</h2><div class='ebox'>"+esc(saveRes.error)+"</div>"
+      + "<p>Your edits are still held on this device, so nothing is lost. Try again, or reload first if someone else edited from another device.</p>"
+      + "<div class='mbtns'><button class='btn' onclick='DashCore.closeModal()'>Close</button>"
+      + "<button class='btn btn-p' onclick='DashCore.push()'>Retry</button></div>";
+  }
 }
 
 // ── render ───────────────────────────────────────────────────────────────────
 function card(item){
-  const n=item.number, c=ch(n), p=panels[n]||{};
+  const n=item.number, c=eff(n), l=lch(n), p=panels[n]||{};
   const dd=c.newDate||item.due, dcs=dc(dd), done=!!c.done;
   const isTask=item.type==="task", isPerson=item.type==="person";
-  const dlabel = isPerson ? "Next follow-up" : "Due date";
+  const dlabel = isPerson ? M.dateField.person : M.dateField.default;
+  // is any part of this card's state still only on this device?
+  const unsaved = FIELDS.some(function(f){
+    if(!(f in l)) return false;
+    const v=l[f], j=jch(n);
+    return (v===false||v===null||v==="") ? (f in j) : (j[f] !== v);
+  });
   return "<div class='card "+dcs+(done?" done":"")+"'>"
     + "<div class='card-row'><span class='card-title"+(done?" struck":"")+"'>"+esc(item.title)+"</span><div class='acts'>"
     + (isTask?"<button class='act"+(done?" on-green":"")+"' onclick='DashCore.setCh("+n+",{done:"+(!done)+"})' title='"+(done?"Undo":"Done")+"'>"+IC.check+"</button>":"")
-    + "<button class='act"+(p.log?" on":"")+"' onclick='DashCore.toggleP("+n+",\"log\")' title='Log'>"+IC.msg+"</button>"
+    + "<button class='act"+(p.log?" on":"")+(c.log&&!p.log?" on-green":"")+"' onclick='DashCore.toggleP("+n+",\"log\")' title='Log a note'>"+IC.msg+"</button>"
     + "<button class='act"+(p.date?" on":"")+"' onclick='DashCore.toggleP("+n+",\"date\")' title='"+dlabel+"'>"+IC.cal+"</button>"
     + (item.url?"<a class='act' href='"+esc(item.url)+"' target='_blank' rel='noopener' title='GitHub'>"+IC.ext+"</a>":"")
     + "</div></div><div class='card-meta'>"+ttag(item.topic)
-    + (dd?"<span class='chip "+dcs+"'>"+(dcs==="overdue"?"overdue · ":"")+fd(dd)+(c.newDate?" ✓":"")+"</span>":"")
-    + (c.log?"<span class='chip logged'>"+IC.msg+" log</span>":"")
+    + (dd?"<span class='chip "+dcs+"'>"+(dcs==="overdue"?"overdue · ":"")+fd(dd)+(c.newDate?" \u2713":"")+"</span>":"")
+    + (c.log?"<span class='chip logged'>"+IC.msg+" note</span>":"")
+    + (unsaved?"<span class='chip unsaved'>unsaved</span>":(Object.keys(c).length?"<span class='chip queued'>queued</span>":""))
     + "</div>"
     + (item.note?"<div class='cnote'>"+esc(item.note)+"</div>":"")
-    + (p.log?"<div class='panel'><textarea id='lt-"+n+"' placeholder='Note…'>"+esc(c.log||"")+"</textarea>"
+    + (p.log?"<div class='panel'><textarea id='lt-"+n+"' placeholder='Note\u2026'>"+esc(c.log||"")+"</textarea>"
        + "<div class='pbtns'><button class='btn' onclick='DashCore.toggleP("+n+",\"log\")'>Cancel</button>"
        + "<button class='btn btn-p' onclick='DashCore.saveLog("+n+")'>Save</button></div></div>":"")
     + (p.date?"<div class='panel'><div class='pfield'><label>"+dlabel+"</label>"
@@ -328,19 +393,19 @@ function render(){
     app.innerHTML = "<div class='center'>"
       + "<a class='back' href='../'>"+IC.back+" dashboards</a>"
       + "<h2>"+esc(M.title)+"<span class='hdr-id'>"+esc(M.id)+"</span></h2>"
-      + "<p>Point this dashboard at a data repository and give it a token with access. Both are stored on this device only, for this dashboard.</p>"
+      + "<p>Enter the data repository and a token with access to it. Both are stored only on this device, for this dashboard.</p>"
       + "<div class='steps'><ol>"
-      + "<li>Create a token under <a href='https://github.com/settings/personal-access-tokens/new' target='_blank' rel='noopener'>Settings → Developer settings → Fine-grained tokens</a></li>"
-      + "<li><b>Repository access</b> → Only select repositories → your data repo</li>"
-      + "<li><b>Permissions</b> \u2192 Contents: <code>Read</code> \u00b7 Issues: <code>Read and write</code></li>"
+      + "<li>Create a token at <a href='https://github.com/settings/personal-access-tokens/new' target='_blank' rel='noopener'>Settings \u2192 Developer settings \u2192 Fine-grained tokens</a></li>"
+      + "<li><b>Repository access</b> \u2192 Only select repositories \u2192 the data repo</li>"
+      + "<li><b>Permissions</b> \u2192 Contents: <code>Read and write</code></li>"
       + "</ol></div>"
       + "<div class='pfield' style='margin-bottom:8px'><label>Data repository</label>"
       + "<input id='rp' type='text' placeholder='owner/repo' autocomplete='off' spellcheck='false'></div>"
       + "<div class='pfield'><label>Token</label>"
-      + "<input id='tk' type='password' placeholder='github_pat_…' autocomplete='off' spellcheck='false'></div>"
+      + "<input id='tk' type='password' placeholder='github_pat_\u2026' autocomplete='off' spellcheck='false'></div>"
       + "<p class='err' id='tk-err'></p>"
       + "<div class='pbtns' style='margin-top:10px'><button class='btn btn-p' onclick='DashCore.saveConfig()'>Save and continue</button></div>"
-      + "<p class='muted'>Nothing is logged by this site. Requests go to api.github.com and nowhere else.</p></div>";
+      + "<p class='muted'>This dashboard never writes to your issues \u2014 it only appends to a change journal that Claude applies later. Requests go only to api.github.com.</p></div>";
     ["rp","tk"].forEach(function(id){
       document.getElementById(id).addEventListener("keydown",function(e){ if(e.key==="Enter") saveConfig(); });
     });
@@ -349,7 +414,7 @@ function render(){
   }
 
   if(view==="loading"){
-    app.innerHTML = "<div class='load'><span class='spin'>"+IC.load+"</span> Loading…</div>";
+    app.innerHTML = "<div class='load'><span class='spin'>"+IC.load+"</span> Loading\u2026</div>";
     return;
   }
 
@@ -357,15 +422,14 @@ function render(){
     app.innerHTML = "<div class='center'>"
       + "<a class='back' href='../'>"+IC.back+" dashboards</a>"
       + "<h2>Couldn't load</h2><div class='ebox'>"+esc(errMsg)+"</div>"
-      + (errMsg.indexOf("404")===0 ? "<p>If the repo and token are right, <code>"+esc(M.briefPath)+"</code> may not exist yet. Ask Claude to generate it.</p>" : "")
+      + (errMsg.indexOf("404")===0 ? "<p>If the repo and token are correct, <code>"+esc(M.briefPath)+"</code> may not exist yet. Ask Claude to generate it.</p>" : "")
       + "<div class='pbtns'><button class='lnk' onclick='DashCore.resetConfig()'>Change repo/token</button>"
       + "<button class='btn btn-p' onclick='DashCore.loadBrief()'>Retry</button></div></div>";
     return;
   }
 
   const meta = BRIEF.meta, cal = BRIEF.calendar, items = BRIEF.items;
-  const n = actions().length;
-  const nSettled = settledCount();
+  const nLocal = localCount(), nQueued = queuedCount(), nSettled = settledCount();
 
   let h = "<div class='wrap'>";
   h += "<a class='back' href='../'>"+IC.back+" dashboards</a>";
@@ -374,15 +438,23 @@ function render(){
      + "<div class='hdr-r'>"
      + "<button class='btn btn-icon' onclick='DashCore.loadBrief()' title='Reload'>"+IC.refresh+"</button>"
      + (nSettled ? "<button class='btn btn-icon"+(hideSettled?" on":"")+"' onclick='DashCore.toggleHide()' title='"
-         + (hideSettled ? "Show "+nSettled+" settled item"+(nSettled===1?"":"s") : "Hide "+nSettled+" settled item"+(nSettled===1?"":"s")+" until synced")
+         + (hideSettled ? "Show "+nSettled+" settled" : "Hide "+nSettled+" settled until applied")
          + "'>"+(hideSettled?IC.eyeOff:IC.eye)+"</button>" : "")
-     + "<button class='btn "+(n?"btn-p pulse":"")+"' onclick='DashCore.runSync()' "+(n?"":"disabled")+">"
-     + IC.up + (n?" Sync ("+n+")":" Sync") + "</button></div></div>";
+     + "<button class='btn "+(nLocal?"btn-p pulse":"")+"' onclick='DashCore.push()' "+(nLocal?"":"disabled")+">"
+     + IC.up + (nLocal?" Save ("+nLocal+")":" Save") + "</button></div></div>";
 
   if(BRIEF.date !== TODAY)
     h += "<div class='warn'>"+IC.warn+" This data is from "+fd(BRIEF.date)+". Ask Claude to refresh it.</div>";
   meta.warnings.forEach(function(w){ h += "<div class='warn'>"+IC.warn+" "+esc(w)+"</div>"; });
   if(meta.summary) h += "<div class='summary'>"+esc(meta.summary)+"</div>";
+
+  if(nQueued || nLocal){
+    h += "<div class='queue'>"+IC.clock+" <span>"
+      + (nQueued ? nQueued+" change"+(nQueued===1?"":"s")+" queued for Claude to apply" : "")
+      + (nQueued && nLocal ? " \u00b7 " : "")
+      + (nLocal ? nLocal+" not saved yet" : "")
+      + "</span></div>";
+  }
 
   if(cal.length){
     h += "<div class='sec'><div class='sec-hdr'><span class='sec-label'>Today</span></div><div class='cal-list'>"
@@ -390,6 +462,7 @@ function render(){
       + "</div></div>";
   }
 
+  const created = effCreated();
   (M.sections||[]).forEach(function(sec){
     const all    = items.filter(sec.filter);
     const hidden = hideSettled ? all.filter(isSettled) : [];
@@ -400,34 +473,36 @@ function render(){
        + "</div>";
     if(sec.allowNew && showNF){
       h += "<div class='nform'>"
-        + "<div class='field'><label>Title</label><input id='nt-t' type='text' placeholder='Admin — submit X'></div>"
+        + "<div class='field'><label>Title</label><input id='nt-t' type='text' placeholder='Admin \u2014 submit X'></div>"
         + "<div class='grid'><div class='field'><label>Topic</label><select id='nt-tp'>"
         + (M.topics||[]).map(t=>"<option>"+esc(t)+"</option>").join("")+"</select></div>"
         + "<div class='field'><label>Due date</label><input id='nt-d' type='date' value='"+TODAY+"'></div></div>"
-        + "<div class='field'><label>Note (optional)</label><textarea id='nt-n' placeholder='Context…'></textarea></div>"
+        + "<div class='field'><label>Note (optional)</label><textarea id='nt-n' placeholder='Context\u2026'></textarea></div>"
         + "<p class='err' id='nt-err'></p>"
         + "<div class='pbtns' style='margin-top:8px'><button class='btn' onclick='DashCore.toggleNew()'>Cancel</button>"
         + "<button class='btn btn-p' onclick='DashCore.addTask()'>Add</button></div></div>";
     }
     h += list.map(card).join("");
     if(sec.allowNew){
-      h += S.nt.map(function(t,i){
+      h += created.map(function(t){
         const c=tc(t.topic);
         return "<div class='card isnew'><div class='card-row'><span class='card-title'>"+esc(t.title)+"</span>"
-          + "<div class='acts'><button class='act rm' onclick='DashCore.rmTask("+i+")'>"+IC.x+"</button></div></div>"
+          + "<div class='acts'><button class='act rm' onclick='DashCore.rmTask(\""+esc(t.cid)+"\")' title='Remove'>"+IC.x+"</button></div></div>"
           + "<div class='card-meta'><span class='tag' style='background:"+c.bg+";color:"+c.tx+"'>"+esc(t.topic)+"</span>"
-          + (t.due?"<span class='chip'>"+fd(t.due)+"</span>":"")+"<span class='chip new'>new</span></div>"
+          + (t.due?"<span class='chip'>"+fd(t.due)+"</span>":"")
+          + (t.queued?"<span class='chip queued'>queued</span>":"<span class='chip unsaved'>unsaved</span>")
+          + "</div>"
           + (t.note?"<div class='cnote'>"+esc(t.note)+"</div>":"")+"</div>";
       }).join("");
     }
     if(hidden.length){
-      h += "<div class='hidden-row'>"+hidden.length+" hidden until synced"
+      h += "<div class='hidden-row'>"+hidden.length+" hidden until applied"
          + " <button class='lnk' onclick='DashCore.toggleHide()'>show</button></div>";
     }
     h += "</div>";
   });
 
-  h += "<div class='foot'><span>"+esc(BRIEF.date)+(lastLoad?" · "+hhmm(lastLoad):"")+"</span>"
+  h += "<div class='foot'><span>"+esc(BRIEF.date)+(lastLoad?" \u00b7 "+hhmm(lastLoad):"")+"</span>"
      + "<button class='lnk' onclick='DashCore.resetConfig()'>change repo/token</button></div></div>";
 
   app.innerHTML = h;
@@ -436,8 +511,9 @@ function render(){
 // ── start ────────────────────────────────────────────────────────────────────
 function start(manifest){
   M = Object.assign({
-    id:"dash", title:"dash", briefPath:"brief/today.json",
-    topics:[], topicColors:{}, sections:[], newLabels:[],
+    id:"dash", title:"dash",
+    briefPath:"brief/today.json", changesPath:"brief/today_changes.json",
+    topics:[], topicColors:{}, sections:[],
     dateField:{default:"Due", person:"Next follow-up"}
   }, manifest);
   REPO  = ls(K("repo")) || "";
@@ -458,6 +534,6 @@ return {
   start, loadBrief, saveConfig, resetConfig,
   setCh, toggleP, saveLog, saveDate,
   addTask, rmTask, toggleNew:function(){ showNF=!showNF; render(); },
-  runSync, retryFailed, toggleHide, closeModal
+  push, toggleHide, closeModal
 };
 })();
