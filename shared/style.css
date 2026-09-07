@@ -223,3 +223,5 @@
   .bd-bar .err{flex:1;margin:0}
   .bd-bar .btn{margin-left:auto}
   .bd-capture:focus-within{border-color:var(--accent-border);box-shadow:0 0 0 3px var(--accent-bg)}
+
+  .build{opacity:.65;font-variant-numeric:tabular-nums}

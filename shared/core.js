@@ -30,6 +30,7 @@
 window.DashCore = (function(){
 
 const API = "https://api.github.com";
+const BUILD = "20260907-1421";
 
 let M       = null;
 let REPO    = "";
@@ -690,7 +691,8 @@ function render(){
     h += "</div>";   // .sec
   }
   h += "</div>";   // .cols
-  h += "<div class='foot'><span>"+esc(BRIEF.date)+(lastLoad?" \u00b7 "+hhmm(lastLoad):"")+"</span>"
+  h += "<div class='foot'><span>"+esc(BRIEF.date)+(lastLoad?" \u00b7 "+hhmm(lastLoad):"")
+     + " \u00b7 <span class='build'>build "+BUILD+"</span></span>"
      + "<button class='lnk' onclick='DashCore.resetConfig()'>change repo/token</button></div></div>";
 
   app.innerHTML = h;

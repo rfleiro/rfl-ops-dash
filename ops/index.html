@@ -10,13 +10,13 @@
 <meta name="robots" content="noindex, nofollow">
 <title>ops</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%232563EB'/><text y='70' x='50' text-anchor='middle' font-size='56' font-family='sans-serif' font-weight='600' fill='white'>o</text></svg>">
-<link rel="stylesheet" href="../shared/style.css">
+<link rel="stylesheet" href="../shared/style.css?v=20260907-1421">
 </head>
 <body>
 <div id="app"></div>
 <div class="overlay" id="overlay"><div class="modal" id="modal"></div></div>
 
-<script src="../shared/core.js"></script>
+<script src="../shared/core.js?v=20260907-1421"></script>
 <script>
 // ─── ops dashboard manifest ───────────────────────────────────────────────────
 // Everything specific to this dashboard lives here. The engine is shared.
@@ -40,9 +40,9 @@ DashCore.start({
   },
 
   sections: [
+    { label:"Projects & threads", filter: i => i.type === "thread" },
     { label:"Tasks",              filter: i => i.type === "task",   allowNew:true },
-    { label:"People",             filter: i => i.type === "person" },
-    { label:"Projects & threads", filter: i => i.type === "thread" }
+    { label:"People",             filter: i => i.type === "person" }
   ],
 
   inbox:     true,
