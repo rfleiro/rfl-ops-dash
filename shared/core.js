@@ -572,7 +572,7 @@ function render(){
   }
   h += "</div>";   // .topgrid
 
-  h += "<div class='main'><div class='cols'>";
+  h += "<div class='cols'>";
   const created = effCreated();
   (M.sections||[]).forEach(function(sec){
     const all    = items.filter(sec.filter);
@@ -662,25 +662,18 @@ function render(){
     h += "</div>";
   }
 
-  h += "</div>";   // .cols
-
   if(M.braindump){
     const bd = effBraindump();
-    h += "<div class='rail'><div class='sec'><div class='sec-hdr'><span class='sec-label'>Braindump</span>"
-       + "<button class='sec-add' onclick='DashCore.toggleBD()'>"+IC.plus+" add</button></div>";
-    if(showBD){
-      h += "<div class='nform'>"
-        + "<div class='field'><label>Thought, note or meeting log</label>"
-        + "<textarea id='bd-t' style='min-height:76px' placeholder='Whatever\u2019s in your head\u2026'></textarea></div>"
-        + "<div class='grid'><div class='field'><label>Kind</label><select id='bd-k'>"
-        + "<option value='note'>note</option><option value='meeting'>meeting</option>"
-        + "<option value='idea'>idea</option><option value='decision'>decision</option>"
-        + "</select></div><div class='field'><label>Timestamp</label>"
-        + "<input type='text' value='"+hhmm(new Date())+" \u00b7 now' disabled></div></div>"
-        + "<p class='err' id='bd-err'></p>"
-        + "<div class='pbtns' style='margin-top:8px'><button class='btn' onclick='DashCore.toggleBD()'>Cancel</button>"
-        + "<button class='btn btn-p' onclick='DashCore.addBraindump()'>Add</button></div></div>";
-    }
+    h += "<div class='sec bd-sec'><div class='sec-hdr'><span class='sec-label'>Braindump</span>"
+       + "<span class='sec-note'>"+hhmm(new Date())+"</span></div>";
+    // always-on capture box: no click needed before you can start typing
+    h += "<div class='bd-capture'>"
+      + "<textarea id='bd-t' placeholder='Drop a thought, a note, a meeting log\u2026'></textarea>"
+      + "<div class='bd-bar'><select id='bd-k'>"
+      + "<option value='note'>note</option><option value='meeting'>meeting</option>"
+      + "<option value='idea'>idea</option><option value='decision'>decision</option>"
+      + "</select><span class='err' id='bd-err'></span>"
+      + "<button class='btn btn-p' onclick='DashCore.addBraindump()'>"+IC.plus+" Add</button></div></div>";
     if(bd.length){
       h += bd.map(function(b){
         const t = new Date(b.ts);
@@ -691,12 +684,12 @@ function render(){
           + "<button class='act rm' onclick='DashCore.rmBraindump(\""+esc(b.id)+"\")' title='Remove'>"+IC.x+"</button></div>"
           + "<div class='bd-text'>"+esc(b.text).replace(/\n/g,"<br>")+"</div></div>";
       }).join("");
-    } else if(!showBD){
-      h += "<div class='bd-empty'>Nothing dumped today. Anything captured here gets reviewed at end of day.</div>";
+    } else {
+      h += "<div class='bd-empty'>Nothing yet today. Whatever lands here gets reviewed at end of day.</div>";
     }
-    h += "</div></div>";   // .sec, .rail
+    h += "</div>";   // .sec
   }
-  h += "</div>";   // .main
+  h += "</div>";   // .cols
   h += "<div class='foot'><span>"+esc(BRIEF.date)+(lastLoad?" \u00b7 "+hhmm(lastLoad):"")+"</span>"
      + "<button class='lnk' onclick='DashCore.resetConfig()'>change repo/token</button></div></div>";
 

@@ -179,39 +179,47 @@
   .card.starred{box-shadow:inset 0 0 0 1px var(--accent-border);background:linear-gradient(90deg,var(--accent-bg) 0%,var(--surface) 60%)}
   .card.starred .card-title{font-weight:600}
 
-  /* ── Responsive: one column on phones, multi-column on wider screens ───── */
+
+  /* ── Responsive columns ───────────────────────────────────────────────────
+     Every section is a grid item, so the column count is the only thing that
+     changes. Five sections (Tasks, People, Projects, Inbox, Braindump) means
+     the widest screens give each one its own column; narrower ones wrap. */
   .cols{display:block}
 
   @media(min-width:840px){
     .wrap{max-width:1040px;padding:24px 24px 80px}
-    .cols{display:grid;grid-template-columns:1fr 1fr;gap:0 22px;align-items:start}
+    .cols{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:0 22px;align-items:start}
     .hdr{padding-bottom:18px}
     .hdr h1{font-size:18px}
     .summary{font-size:13px}
-    .sec-hdr{padding:14px 0 6px}
-  }
-
-  /* Widest: sections keep two columns and the braindump becomes a third,
-     pinned rail — it's a capture panel, so it should stay in view. */
-  @media(min-width:1320px){
-    .wrap{max-width:1440px;padding:28px 32px 80px}
-    .main{display:grid;grid-template-columns:minmax(0,2fr) minmax(0,1fr);gap:0 28px;align-items:start}
-    .cols{grid-template-columns:1fr 1fr;gap:0 24px}
-    .rail{position:sticky;top:20px;max-height:calc(100vh - 48px);overflow-y:auto;
-          padding-left:24px;border-left:1px solid var(--border)}
-    .rail .sec-hdr{padding-top:0}
-    .rail::-webkit-scrollbar{width:6px}
-    .rail::-webkit-scrollbar-thumb{background:var(--border-strong);border-radius:3px}
-    /* the top strip reads better constrained rather than stretched to 1440px */
-    .summary,.warn,.queue{max-width:960px}
-  }
-
-  /* Wider screens have room for the calendar beside the summary */
-  @media(min-width:840px){
     .topgrid{display:grid;grid-template-columns:minmax(0,1.4fr) minmax(0,1fr);gap:0 22px;align-items:start}
     .topgrid .summary{margin-bottom:0}
   }
+  @media(min-width:1320px){
+    .wrap{max-width:1400px;padding:28px 30px 80px}
+    .cols{grid-template-columns:repeat(3,minmax(0,1fr));gap:0 24px}
+    .summary,.warn,.queue{max-width:1000px}
+  }
+  @media(min-width:1700px){
+    .wrap{max-width:1780px}
+    .cols{grid-template-columns:repeat(4,minmax(0,1fr))}
+  }
+  @media(min-width:2100px){
+    .wrap{max-width:2160px}
+    .cols{grid-template-columns:repeat(5,minmax(0,1fr))}
+  }
   .topgrid{display:block}
 
-  .main{display:block}
-  .rail{display:block}
+  /* ── Braindump capture box ────────────────────────────────────────────── */
+  .bd-capture{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:8px;margin-bottom:8px}
+  .bd-capture textarea{width:100%;min-height:62px;resize:vertical;font-family:inherit;font-size:12.5px;
+    line-height:1.55;border:none;background:transparent;color:var(--text);padding:3px 4px}
+  .bd-capture textarea:focus{outline:none}
+  .bd-capture textarea::placeholder{color:var(--text-3)}
+  .bd-bar{display:flex;align-items:center;gap:6px;padding-top:7px;border-top:1px solid var(--border)}
+  .bd-bar select{font-size:11px;font-family:inherit;border:1px solid var(--border);border-radius:var(--rs);
+    padding:3px 6px;background:var(--bg);color:var(--text-2)}
+  .bd-bar select:focus{outline:none;border-color:var(--accent)}
+  .bd-bar .err{flex:1;margin:0}
+  .bd-bar .btn{margin-left:auto}
+  .bd-capture:focus-within{border-color:var(--accent-border);box-shadow:0 0 0 3px var(--accent-bg)}
