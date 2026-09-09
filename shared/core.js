@@ -30,7 +30,7 @@
 window.DashCore = (function(){
 
 const API = "https://api.github.com";
-const BUILD = "20260907-1421";
+const BUILD = "20260909-1500";
 
 let M       = null;
 let REPO    = "";
@@ -329,11 +329,12 @@ function addTask(){
   const title = el ? el.value.trim() : "";
   if(!title){ document.getElementById("nt-err").textContent = "Title is required."; return; }
   S.nt.push({
-    cid:   cid(),
-    title: title,
-    topic: document.getElementById("nt-tp").value,
-    due:   document.getElementById("nt-d").value || null,
-    note:  document.getElementById("nt-n").value.trim() || null
+    cid:      cid(),
+    title:    title,
+    topic:    document.getElementById("nt-tp").value,
+    due:      document.getElementById("nt-d").value || null,
+    deadline: document.getElementById("nt-dl").value || null,
+    note:     document.getElementById("nt-n").value.trim() || null
   });
   showNF = false; saveLocal(); render();
 }
@@ -389,6 +390,35 @@ function rmTask(c){
   const i = S.nt.findIndex(t => t.cid === c);
   if(i >= 0){ S.nt.splice(i,1); }
   else if(S.rm.indexOf(c) === -1){ S.rm.push(c); }   // queued item — mark for removal
+  saveLocal(); render();
+}
+
+// ── new-task panels ──────────────────────────────────────────────────────────
+function ensureNtLocal(cid_val, mutate){
+  const i = S.nt.findIndex(t => t.cid === cid_val);
+  if(i >= 0){ mutate(S.nt[i]); return; }
+  const q = J ? J.created.find(c => c.cid === cid_val) : null;
+  if(q){ const copy = Object.assign({}, q); mutate(copy); if(S.rm.indexOf(cid_val)===-1) S.rm.push(cid_val); S.nt.push(copy); }
+}
+function toggleNtP(cid_val, w){
+  const key = "nt-" + cid_val;
+  const cur = panels[key] || {};
+  panels[key] = {log:false, date:false};
+  panels[key][w] = !cur[w];
+  render();
+}
+function saveNtLog(cid_val){
+  const el = document.getElementById("nlt-" + cid_val);
+  const v = el ? el.value.trim() : "";
+  if(v) ensureNtLocal(cid_val, function(t){ t.log = v; });
+  panels["nt-" + cid_val] = {};
+  saveLocal(); render();
+}
+function saveNtDate(cid_val){
+  const rv = (document.getElementById("ndt-" + cid_val)||{value:""}).value;
+  const dv = (document.getElementById("ndl-" + cid_val)||{value:""}).value;
+  ensureNtLocal(cid_val, function(t){ if(rv) t.due = rv; if(dv) t.deadline = dv; });
+  panels["nt-" + cid_val] = {};
   saveLocal(); render();
 }
 
@@ -588,9 +618,11 @@ function render(){
     if(sec.allowNew && showNF){
       h += "<div class='nform'>"
         + "<div class='field'><label>Title</label><input id='nt-t' type='text' placeholder='Admin \u2014 submit X'></div>"
-        + "<div class='grid'><div class='field'><label>Topic</label><select id='nt-tp'>"
+        + "<div class='grid' style='grid-template-columns:1fr 1fr 1fr'>"
+        + "<div class='field'><label>Topic</label><select id='nt-tp'>"
         + (M.topics||[]).map(t=>"<option>"+esc(t)+"</option>").join("")+"</select></div>"
-        + "<div class='field'><label>Due date</label><input id='nt-d' type='date' value='"+TODAY+"'></div></div>"
+        + "<div class='field'><label>Reminder</label><input id='nt-d' type='date' value='"+TODAY+"'></div>"
+        + "<div class='field'><label>Deadline</label><input id='nt-dl' type='date'></div></div>"
         + "<div class='field'><label>Note (optional)</label><textarea id='nt-n' placeholder='Context\u2026'></textarea></div>"
         + "<p class='err' id='nt-err'></p>"
         + "<div class='pbtns' style='margin-top:8px'><button class='btn' onclick='DashCore.toggleNew()'>Cancel</button>"
@@ -599,14 +631,30 @@ function render(){
     h += list.map(card).join("");
     if(sec.allowNew){
       h += created.map(function(t){
-        const c=tc(t.topic);
-        return "<div class='card isnew'><div class='card-row'><span class='card-title'>"+esc(t.title)+"</span>"
-          + "<div class='acts'><button class='act rm' onclick='DashCore.rmTask(\""+esc(t.cid)+"\")' title='Remove'>"+IC.x+"</button></div></div>"
+        const c=tc(t.topic), p=panels["nt-"+t.cid]||{}, dcs=dc(t.due);
+        return "<div class='card isnew"+(dcs?" "+dcs:"")+"'>"
+          + "<div class='card-row'><span class='card-title'>"+esc(t.title)+"</span>"
+          + "<div class='acts'>"
+          + "<button class='act"+(p.log?" on":"")+(t.log&&!p.log?" on-green":"")+"' onclick='DashCore.toggleNtP(\""  +esc(t.cid)+"\",\"log\")' title='Log'>"+IC.msg+"</button>"
+          + "<button class='act"+(p.date?" on":"")+"' onclick='DashCore.toggleNtP(\""+esc(t.cid)+"\",\"date\")' title='Reminder'>"+IC.cal+"</button>"
+          + "<button class='act rm' onclick='DashCore.rmTask(\""+esc(t.cid)+"\")' title='Remove'>"+IC.x+"</button>"
+          + "</div></div>"
           + "<div class='card-meta'><span class='tag' style='background:"+c.bg+";color:"+c.tx+"'>"+esc(t.topic)+"</span>"
-          + (t.due?"<span class='chip'>"+fd(t.due)+"</span>":"")
+          + (t.due?"<span class='chip "+dcs+"'>"+fd(t.due)+"</span>":"")
+          + (t.deadline?"<span class='chip dl "+dc(t.deadline)+"'>deadline "+fd(t.deadline)+"</span>":"")
+          + (t.log?"<span class='chip logged'>"+IC.msg+" note</span>":"")
           + (t.queued?"<span class='chip queued'>queued</span>":"<span class='chip unsaved'>unsaved</span>")
           + "</div>"
-          + (t.note?"<div class='cnote'>"+esc(t.note)+"</div>":"")+"</div>";
+          + (t.note?"<div class='cnote'>"+esc(t.note)+"</div>":"")
+          + (p.log?"<div class='panel'><textarea id='nlt-"+esc(t.cid)+"' placeholder='Note\u2026'>"+esc(t.log||"")+"</textarea>"
+             + "<div class='pbtns'><button class='btn' onclick='DashCore.toggleNtP(\""+esc(t.cid)+"\",\"log\")'>Cancel</button>"
+             + "<button class='btn btn-p' onclick='DashCore.saveNtLog(\""+esc(t.cid)+"\")'>Save</button></div></div>":"")
+          + (p.date?"<div class='panel'><div class='grid' style='display:grid;grid-template-columns:1fr 1fr;gap:8px'>"
+             + "<div class='field'><label>Reminder</label><input type='date' id='ndt-"+esc(t.cid)+"' value='"+(t.due||"")+"'></div>"
+             + "<div class='field'><label>Deadline</label><input type='date' id='ndl-"+esc(t.cid)+"' value='"+(t.deadline||"")+"'></div></div>"
+             + "<div class='pbtns'><button class='btn' onclick='DashCore.toggleNtP(\""+esc(t.cid)+"\",\"date\")'>Cancel</button>"
+             + "<button class='btn btn-p' onclick='DashCore.saveNtDate(\""+esc(t.cid)+"\")'>Set</button></div></div>":"")
+          + "</div>";
       }).join("");
     }
     if(hidden.length){
@@ -726,6 +774,7 @@ return {
   addTask, rmTask, toggleNew:function(){ showNF=!showNF; render(); },
   toggleBD, addBraindump, rmBraindump,
   dismissInbox, undoInbox, toggleIB, convertInbox,
-  toggleStar, push, toggleHide, closeModal
+  toggleStar, push, toggleHide, closeModal,
+  toggleNtP, saveNtLog, saveNtDate
 };
 })();
