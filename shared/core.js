@@ -30,7 +30,7 @@
 window.DashCore = (function(){
 
 const API = "https://api.github.com";
-const BUILD = "20260909-1500";
+const BUILD = "20260909-1600";
 
 let M       = null;
 let REPO    = "";
@@ -421,6 +421,15 @@ function saveNtDate(cid_val){
   panels["nt-" + cid_val] = {};
   saveLocal(); render();
 }
+function toggleStarNt(cid_val){
+  if(STAR[cid_val]) delete STAR[cid_val]; else STAR[cid_val] = true;
+  lsSet(starKey(), JSON.stringify(STAR));
+  render();
+}
+function toggleNtDone(cid_val){
+  ensureNtLocal(cid_val, function(t){ t.done = !t.done; });
+  saveLocal(); render();
+}
 
 // ── panels ───────────────────────────────────────────────────────────────────
 function toggleP(n,w){
@@ -632,10 +641,13 @@ function render(){
     if(sec.allowNew){
       h += created.map(function(t){
         const c=tc(t.topic), p=panels["nt-"+t.cid]||{}, dcs=dc(t.due);
-        return "<div class='card isnew"+(dcs?" "+dcs:"")+"'>"
-          + "<div class='card-row'><span class='card-title'>"+esc(t.title)+"</span>"
+        const done=!!t.done, star=!!STAR[t.cid];
+        return "<div class='card isnew"+(dcs?" "+dcs:"")+(done?" done":"")+(star?" starred":"")+"'>"
+          + "<div class='card-row'><span class='card-title"+(done?" struck":"")+"'>"+esc(t.title)+"</span>"
           + "<div class='acts'>"
-          + "<button class='act"+(p.log?" on":"")+(t.log&&!p.log?" on-green":"")+"' onclick='DashCore.toggleNtP(\""  +esc(t.cid)+"\",\"log\")' title='Log'>"+IC.msg+"</button>"
+          + "<button class='act"+(star?" on-star":"")+"' onclick='DashCore.toggleStarNt(\""+esc(t.cid)+"\")' title='"+(star?"Unstar":"Star")+"'>"+(star?IC.starOn:IC.star)+"</button>"
+          + "<button class='act"+(done?" on-green":"")+"' onclick='DashCore.toggleNtDone(\""+esc(t.cid)+"\")' title='"+(done?"Undo":"Done")+"'>"+IC.check+"</button>"
+          + "<button class='act"+(p.log?" on":"")+(t.log&&!p.log?" on-green":"")+"' onclick='DashCore.toggleNtP(\""+esc(t.cid)+"\",\"log\")' title='Log'>"+IC.msg+"</button>"
           + "<button class='act"+(p.date?" on":"")+"' onclick='DashCore.toggleNtP(\""+esc(t.cid)+"\",\"date\")' title='Reminder'>"+IC.cal+"</button>"
           + "<button class='act rm' onclick='DashCore.rmTask(\""+esc(t.cid)+"\")' title='Remove'>"+IC.x+"</button>"
           + "</div></div>"
@@ -643,6 +655,7 @@ function render(){
           + (t.due?"<span class='chip "+dcs+"'>"+fd(t.due)+"</span>":"")
           + (t.deadline?"<span class='chip dl "+dc(t.deadline)+"'>deadline "+fd(t.deadline)+"</span>":"")
           + (t.log?"<span class='chip logged'>"+IC.msg+" note</span>":"")
+          + (done?"<span class='chip logged'>done \u2014 will create+close</span>":"")
           + (t.queued?"<span class='chip queued'>queued</span>":"<span class='chip unsaved'>unsaved</span>")
           + "</div>"
           + (t.note?"<div class='cnote'>"+esc(t.note)+"</div>":"")
@@ -775,6 +788,6 @@ return {
   toggleBD, addBraindump, rmBraindump,
   dismissInbox, undoInbox, toggleIB, convertInbox,
   toggleStar, push, toggleHide, closeModal,
-  toggleNtP, saveNtLog, saveNtDate
+  toggleNtP, saveNtLog, saveNtDate, toggleStarNt, toggleNtDone
 };
 })();
