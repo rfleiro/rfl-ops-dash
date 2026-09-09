@@ -30,7 +30,7 @@
 window.DashCore = (function(){
 
 const API = "https://api.github.com";
-const BUILD = "20260909-1600";
+const BUILD = "20260909-1700";
 
 let M       = null;
 let REPO    = "";
@@ -42,6 +42,7 @@ let J       = null;        // journal (server)
 let J_SHA   = null;        // journal file sha, null when it doesn't exist yet
 let S       = {ch:{},nt:[],rm:[],bd:[],bdrm:[],ib:{}};   // local, unpushed
 let panels  = {};
+let bdPanels = {};
 let showNF  = false;
 let showBD  = false;
 let saving  = false;
@@ -76,6 +77,7 @@ const IC = {
   star:`<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>`,
   starOn:`<svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>`,
   clock:`<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><polyline points="12 7 12 12 15 14"/></svg>`,
+  edit:`<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>`,
 };
 
 // ── helpers ──────────────────────────────────────────────────────────────────
@@ -385,6 +387,25 @@ function rmBraindump(id){
   if(i >= 0){ S.bd.splice(i,1); }
   else if(S.bdrm.indexOf(id) === -1){ S.bdrm.push(id); }
   saveLocal(); render();
+}
+function toggleBDEdit(id){
+  const cur = bdPanels[id] || {};
+  bdPanels[id] = {editing: !cur.editing};
+  render();
+}
+function saveBDEdit(id){
+  const el = document.getElementById("bdet-" + id);
+  const v = el ? el.value.trim() : "";
+  if(v){
+    const i = S.bd.findIndex(b => b.id === id);
+    if(i >= 0){ S.bd[i].text = v; }
+    else {
+      const q = J ? J.braindump.find(b => b.id === id) : null;
+      if(q){ const copy = Object.assign({}, q, {text: v}); if(S.bdrm.indexOf(id)===-1) S.bdrm.push(id); S.bd.push(copy); }
+    }
+    saveLocal();
+  }
+  bdPanels[id] = {}; render();
 }
 function rmTask(c){
   const i = S.nt.findIndex(t => t.cid === c);
@@ -739,12 +760,19 @@ function render(){
     if(bd.length){
       h += bd.map(function(b){
         const t = new Date(b.ts);
-        return "<div class='bd-item'>"
+        const ep = bdPanels[b.id] || {};
+          return "<div class='bd-item'>"
           + "<div class='bd-head'><span class='bd-ts'>"+esc(isNaN(t)?b.ts:hhmm(t))+"</span>"
           + "<span class='bd-kind bd-"+esc(b.kind||"note")+"'>"+esc(b.kind||"note")+"</span>"
           + (b.queued?"<span class='chip queued'>queued</span>":"<span class='chip unsaved'>unsaved</span>")
-          + "<button class='act rm' onclick='DashCore.rmBraindump(\""+esc(b.id)+"\")' title='Remove'>"+IC.x+"</button></div>"
-          + "<div class='bd-text'>"+esc(b.text).replace(/\n/g,"<br>")+"</div></div>";
+          + "<button class='act"+(ep.editing?" on":"")+"' onclick='DashCore.toggleBDEdit(\""+esc(b.id)+"\")'  title='Edit'>"+IC.edit+"</button>"
+          + "<button class='act rm' onclick='DashCore.rmBraindump(\""+esc(b.id)+"\")'  title='Remove'>"+IC.x+"</button></div>"
+          + (ep.editing
+            ? "<div class='panel'><textarea id='bdet-"+esc(b.id)+"'>"+esc(b.text)+"</textarea>"
+              + "<div class='pbtns'><button class='btn' onclick='DashCore.toggleBDEdit(\""+esc(b.id)+"\")'>"+"Cancel</button>"
+              + "<button class='btn btn-p' onclick='DashCore.saveBDEdit(\""+esc(b.id)+"\")'>"+"Save</button></div></div>"
+            : "<div class='bd-text'>"+esc(b.text).replace(/\n/g,"<br>")+"</div>")
+          + "</div>";
       }).join("");
     } else {
       h += "<div class='bd-empty'>Nothing yet today. Whatever lands here gets reviewed at end of day.</div>";
@@ -785,7 +813,7 @@ return {
   start, loadBrief, saveConfig, resetConfig,
   setCh, toggleP, saveLog, saveDate,
   addTask, rmTask, toggleNew:function(){ showNF=!showNF; render(); },
-  toggleBD, addBraindump, rmBraindump,
+  toggleBD, addBraindump, rmBraindump, toggleBDEdit, saveBDEdit,
   dismissInbox, undoInbox, toggleIB, convertInbox,
   toggleStar, push, toggleHide, closeModal,
   toggleNtP, saveNtLog, saveNtDate, toggleStarNt, toggleNtDone
