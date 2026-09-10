@@ -30,7 +30,7 @@
 window.DashCore = (function(){
 
 const API = "https://api.github.com";
-const BUILD = "20260910-1300";
+const BUILD = "20260910-1400";
 
 let M       = null;
 let REPO    = "";
@@ -414,6 +414,7 @@ function rmBraindump(id){
   else if(S.bdrm.indexOf(id) === -1){ S.bdrm.push(id); }
   saveLocal(); render();
 }
+function toggleBDExpand(id){ bdPanels[id]={...bdPanels[id]||{},expanded:!((bdPanels[id]||{}).expanded)}; render(); }
 function toggleBDEdit(id){
   const cur = bdPanels[id] || {};
   bdPanels[id] = {editing: !cur.editing};
@@ -853,7 +854,7 @@ function render(){
             ? "<div class='panel'><textarea id='bdet-"+esc(b.id)+"'>"+esc(b.text)+"</textarea>"
               + "<div class='pbtns'><button class='btn' onclick='DashCore.toggleBDEdit(\""+esc(b.id)+"\")'>"+"Cancel</button>"
               + "<button class='btn btn-p' onclick='DashCore.saveBDEdit(\""+esc(b.id)+"\")'>"+"Save</button></div></div>"
-            : "<div class='bd-text'>"+esc(b.text).replace(/\n/g,"<br>")+"</div>")
+            : "<div class='bd-text"+(ep.expanded?" expanded":"")+"' onclick='DashCore.toggleBDExpand(\""+esc(b.id)+"\")'  title='"+(ep.expanded?"Collapse":"Expand")+"'>" + esc(b.text).replace(/\n/g,"<br>") + "</div>")
           + "</div>";
       }).join("");
     } else {
@@ -898,10 +899,11 @@ return {
   addTask, rmTask, toggleNew:function(){ showNF=!showNF; render(); },
   toggleBD, addBraindump, rmBraindump, toggleBDEdit, saveBDEdit,
   dismissInbox, undoInbox, toggleIB, convertInbox,
-  toggleStar, push, toggleHide, toggleSection, dismissWarn, toggleSubForm, addSubtask, closeModal,
+  toggleStar, push, toggleHide, toggleSection, dismissWarn, toggleSubForm, addSubtask, toggleBDExpand, closeModal,
   toggleNtP, saveNtLog, saveNtDate, toggleStarNt, toggleNtDone
 };
 })();
+
 
 
 
