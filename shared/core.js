@@ -30,7 +30,7 @@
 window.DashCore = (function(){
 
 const API = "https://api.github.com";
-const BUILD = "20260909-1700";
+const BUILD = "20260910-0900";
 
 let M       = null;
 let REPO    = "";
@@ -49,6 +49,7 @@ let saving  = false;
 let saveRes = null;
 let lastLoad= null;
 let hideSettled = true;
+let COLL = {};
 const TODAY = new Date().toISOString().slice(0,10);
 
 // ── storage, namespaced per dashboard ────────────────────────────────────────
@@ -78,6 +79,8 @@ const IC = {
   starOn:`<svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>`,
   clock:`<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><polyline points="12 7 12 12 15 14"/></svg>`,
   edit:`<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>`,
+  chevDown:`<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>`,
+  chevRight:`<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>`,
 };
 
 // ── helpers ──────────────────────────────────────────────────────────────────
@@ -191,6 +194,11 @@ function toggleHide(){
   lsSet(K("hide"), hideSettled ? "1" : "0");
   render();
 }
+function collKey(){ return K("coll"); }
+function loadColl(){ try{ COLL = JSON.parse(ls(collKey())) || {}; }catch(e){ COLL = {}; } }
+function isCollapsed(id){ return !!COLL[id]; }
+function toggleSection(id){ COLL[id] = !COLL[id]; lsSet(collKey(), JSON.stringify(COLL)); render(); }
+function secChev(id){ return "<button class='sec-chev' onclick='DashCore.toggleSection(\""+id+"\")' title='"+(isCollapsed(id)?"Expand":"Collapse")+"'>"+(isCollapsed(id)?IC.chevRight:IC.chevDown)+"</button>"; }
 
 // ── GitHub API ───────────────────────────────────────────────────────────────
 async function api(path, method, body){
@@ -258,6 +266,7 @@ async function loadBrief(){
     await fetchJournal();
     loadLocal();
     loadStars();
+    loadColl();
     lastLoad = new Date();
     view="ready";
   }catch(e){
@@ -615,9 +624,6 @@ function render(){
   if(BRIEF.date !== TODAY)
     h += "<div class='warn'>"+IC.warn+" This data is from "+fd(BRIEF.date)+". Ask Claude to refresh it.</div>";
   meta.warnings.forEach(function(w){ h += "<div class='warn'>"+IC.warn+" "+esc(w)+"</div>"; });
-  h += "<div class='topgrid'>";
-  if(meta.summary) h += "<div class='summary'>"+esc(meta.summary)+"</div>";
-
   if(nQueued || nLocal){
     h += "<div class='queue'>"+IC.clock+" <span>"
       + (nQueued ? nQueued+" change"+(nQueued===1?"":"s")+" queued for Claude to apply" : "")
@@ -626,12 +632,23 @@ function render(){
       + "</span></div>";
   }
 
-  if(cal.length){
-    h += "<div class='sec'><div class='sec-hdr'><span class='sec-label'>Today</span></div><div class='cal-list'>"
-      + cal.map(e=>"<div class='cal-row'><span class='cal-time'>"+(e.allDay?"":esc(e.time))+"</span><span class='cal-ev'>"+esc(e.title)+"</span>"+(e.allDay?"<span class='cal-ad'>all day</span>":"")+"</div>").join("")
-      + "</div></div>";
+  if(meta.summary){
+    var bCol = isCollapsed("brief");
+    h += "<div class='sec'><div class='sec-hdr'><span class='sec-label'>Brief</span>" + secChev("brief") + "</div>";
+    if(!bCol) h += "<div class='summary'>" + esc(meta.summary) + "</div>";
+    h += "</div>";
   }
-  h += "</div>";   // .topgrid
+
+  if(cal.length){
+    var cCol = isCollapsed("calendar");
+    h += "<div class='sec'><div class='sec-hdr'><span class='sec-label'>Today</span>" + secChev("calendar") + "</div>";
+    if(!cCol){
+      h += "<div class='cal-list'>"
+        + cal.map(e=>"<div class='cal-row'><span class='cal-time'>"+(e.allDay?"":esc(e.time))+"</span><span class='cal-ev'>"+esc(e.title)+"</span>"+(e.allDay?"<span class='cal-ad'>all day</span>":"")+"</div>").join("")
+        + "</div>";
+    }
+    h += "</div>";
+  }
 
   h += "<div class='cols'>";
   const created = effCreated();
@@ -642,10 +659,14 @@ function render(){
     // starred first, original order preserved within each group
     list = list.filter(i=>isStarred(i.number)).concat(list.filter(i=>!isStarred(i.number)));
     if(!all.length && !sec.allowNew) return;
+    var sId = "sec-"+sec.label.toLowerCase().replace(/[^a-z0-9]+/g,"-");
+    var sCol = isCollapsed(sId);
     h += "<div class='sec'><div class='sec-hdr'><span class='sec-label'>"+esc(sec.label)+"</span>"
-       + (sec.allowNew?"<button class='sec-add' onclick='DashCore.toggleNew()'>"+IC.plus+" new</button>":"")
-       + "</div>";
-    if(sec.allowNew && showNF){
+       + "<div class='sec-r'>"
+       + (sec.allowNew?"<button class='sec-add' onclick='event.stopPropagation();DashCore.toggleNew()'>"+IC.plus+" new</button>":"")
+       + secChev(sId)
+       + "</div></div>";
+    if(!sCol && sec.allowNew && showNF){
       h += "<div class='nform'>"
         + "<div class='field'><label>Title</label><input id='nt-t' type='text' placeholder='Admin \u2014 submit X'></div>"
         + "<div class='grid' style='grid-template-columns:1fr 1fr 1fr'>"
@@ -658,8 +679,8 @@ function render(){
         + "<div class='pbtns' style='margin-top:8px'><button class='btn' onclick='DashCore.toggleNew()'>Cancel</button>"
         + "<button class='btn btn-p' onclick='DashCore.addTask()'>Add</button></div></div>";
     }
-    h += list.map(card).join("");
-    if(sec.allowNew){
+    if(!sCol) h += list.map(card).join("");
+    if(!sCol && sec.allowNew){
       h += created.map(function(t){
         const c=tc(t.topic), p=panels["nt-"+t.cid]||{}, dcs=dc(t.due);
         const done=!!t.done, star=!!STAR[t.cid];
@@ -691,7 +712,7 @@ function render(){
           + "</div>";
       }).join("");
     }
-    if(hidden.length){
+    if(!sCol && hidden.length){
       h += "<div class='hidden-row'>"+hidden.length+" hidden until applied"
          + " <button class='lnk' onclick='DashCore.toggleHide()'>show</button></div>";
     }
@@ -702,9 +723,10 @@ function render(){
     const all    = inboxItems();
     const decided= all.filter(x => !!effIb(x.id));
     const list   = hideSettled ? all.filter(x => !effIb(x.id)) : all;
+    var ibCol = isCollapsed("inbox");
     h += "<div class='sec'><div class='sec-hdr'><span class='sec-label'>Inbox</span>"
-       + "<span class='sec-note'>from email \u00b7 not issues yet</span></div>";
-    h += list.map(function(x){
+       + "<div class='sec-r'><span class='sec-note'>from email \u00b7 not issues yet</span>" + secChev("inbox") + "</div></div>";
+    if(!ibCol) h += list.map(function(x){
       const st = effIb(x.id);
       const l  = lib(x.id);
       const unsaved = (l !== undefined) && (l === null ? !!jib(x.id) : (!jib(x.id) || jib(x.id).status !== l.status));
@@ -738,7 +760,7 @@ function render(){
             + "<button class='btn btn-p' onclick='DashCore.convertInbox(\""+esc(x.id)+"\")'>Create task</button></div></div>":"")
         + "</div>";
     }).join("");
-    if(hideSettled && decided.length){
+    if(!ibCol && hideSettled && decided.length){
       h += "<div class='hidden-row'>"+decided.length+" handled"
          + " <button class='lnk' onclick='DashCore.toggleHide()'>show</button></div>";
     }
@@ -747,8 +769,10 @@ function render(){
 
   if(M.braindump){
     const bd = effBraindump();
+    var bdCol = isCollapsed("braindump");
     h += "<div class='sec bd-sec'><div class='sec-hdr'><span class='sec-label'>Braindump</span>"
-       + "<span class='sec-note'>"+hhmm(new Date())+"</span></div>";
+       + "<div class='sec-r'><span class='sec-note'>"+hhmm(new Date())+"</span>" + secChev("braindump") + "</div></div>";
+    if(!bdCol){
     // always-on capture box: no click needed before you can start typing
     h += "<div class='bd-capture'>"
       + "<textarea id='bd-t' placeholder='Drop a thought, a note, a meeting log\u2026'></textarea>"
@@ -777,6 +801,7 @@ function render(){
     } else {
       h += "<div class='bd-empty'>Nothing yet today. Whatever lands here gets reviewed at end of day.</div>";
     }
+    } // end !bdCol
     h += "</div>";   // .sec
   }
   h += "</div>";   // .cols
@@ -815,7 +840,7 @@ return {
   addTask, rmTask, toggleNew:function(){ showNF=!showNF; render(); },
   toggleBD, addBraindump, rmBraindump, toggleBDEdit, saveBDEdit,
   dismissInbox, undoInbox, toggleIB, convertInbox,
-  toggleStar, push, toggleHide, closeModal,
+  toggleStar, push, toggleHide, toggleSection, closeModal,
   toggleNtP, saveNtLog, saveNtDate, toggleStarNt, toggleNtDone
 };
 })();
