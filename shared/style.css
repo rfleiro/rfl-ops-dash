@@ -41,6 +41,9 @@
   .sec-label{font-size:11px;font-weight:600;color:var(--text-3);letter-spacing:.04em;text-transform:uppercase}
   .sec-add{display:flex;align-items:center;gap:4px;font-size:11px;color:var(--text-3);background:none;border:none;cursor:pointer;padding:2px 5px;border-radius:var(--rs);font-family:inherit}
   .sec-add:hover{color:var(--accent);background:var(--accent-bg)}
+  .sec-r{display:flex;align-items:center;gap:4px}
+  .sec-chev{display:flex;align-items:center;justify-content:center;width:22px;height:22px;background:none;border:none;cursor:pointer;color:var(--text-3);border-radius:var(--rs);padding:0;flex-shrink:0}
+  .sec-chev:hover{background:var(--surface2);color:var(--text)}
 
   .card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:10px 12px;margin-bottom:6px;border-left:3px solid transparent}
   .card.overdue{border-left-color:var(--danger)}
