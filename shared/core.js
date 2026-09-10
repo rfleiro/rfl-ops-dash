@@ -30,7 +30,7 @@
 window.DashCore = (function(){
 
 const API = "https://api.github.com";
-const BUILD = "20260910-1030";
+const BUILD = "20260910-1100";
 
 let M       = null;
 let REPO    = "";
@@ -616,7 +616,7 @@ function render(){
 
   let h = "<div class='wrap'>";
   h += "<a class='back' href='../'>"+IC.back+" dashboards</a>";
-  h += "<div class='hdr'><div><h1>"+esc(M.title)+"<span class='hdr-id'>"+esc(M.id)+"</span></h1>"
+  h += "<div class='hdr'><div><h1>"+esc(M.title)+(M.id!==M.title?"<span class='hdr-id'>"+esc(M.id)+"</span>":"")+("</h1>")
      + "<div class='hdr-date'>"+esc(new Date().toLocaleDateString("en-GB",{weekday:"long",day:"numeric",month:"long"}))+"</div></div>"
      + "<div class='hdr-r'>"
      + "<button class='btn btn-icon' onclick='DashCore.loadBrief()' title='Reload'>"+IC.refresh+"</button>"
@@ -841,5 +841,6 @@ return {
   toggleNtP, saveNtLog, saveNtDate, toggleStarNt, toggleNtDone
 };
 })();
+
 
 
