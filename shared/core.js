@@ -30,7 +30,7 @@
 window.DashCore = (function(){
 
 const API = "https://api.github.com";
-const BUILD = "20260910-0900";
+const BUILD = "20260910-1000";
 
 let M       = null;
 let REPO    = "";
@@ -50,6 +50,7 @@ let saveRes = null;
 let lastLoad= null;
 let hideSettled = true;
 let COLL = {};
+let WDISM = {};
 const TODAY = new Date().toISOString().slice(0,10);
 
 // ── storage, namespaced per dashboard ────────────────────────────────────────
@@ -198,6 +199,9 @@ function collKey(){ return K("coll"); }
 function loadColl(){ try{ COLL = JSON.parse(ls(collKey())) || {}; }catch(e){ COLL = {}; } }
 function isCollapsed(id){ return !!COLL[id]; }
 function toggleSection(id){ COLL[id] = !COLL[id]; lsSet(collKey(), JSON.stringify(COLL)); render(); }
+function wdismKey(){ return K("wdism:"+(BRIEF?BRIEF.date:"none")); }
+function loadWdism(){ try{ WDISM = JSON.parse(ls(wdismKey())) || {}; }catch(e){ WDISM = {}; } }
+function dismissWarn(i){ WDISM[i]=true; lsSet(wdismKey(),JSON.stringify(WDISM)); render(); }
 function secChev(id){ return "<button class='sec-chev' onclick='DashCore.toggleSection(\""+id+"\")' title='"+(isCollapsed(id)?"Expand":"Collapse")+"'>"+(isCollapsed(id)?IC.chevRight:IC.chevDown)+"</button>"; }
 
 // ── GitHub API ───────────────────────────────────────────────────────────────
@@ -267,6 +271,7 @@ async function loadBrief(){
     loadLocal();
     loadStars();
     loadColl();
+    loadWdism();
     lastLoad = new Date();
     view="ready";
   }catch(e){
@@ -623,7 +628,7 @@ function render(){
 
   if(BRIEF.date !== TODAY)
     h += "<div class='warn'>"+IC.warn+" This data is from "+fd(BRIEF.date)+". Ask Claude to refresh it.</div>";
-  meta.warnings.forEach(function(w){ h += "<div class='warn'>"+IC.warn+" "+esc(w)+"</div>"; });
+  meta.warnings.forEach(function(w,i){ if(WDISM[i]) return; h += "<div class='warn'>"+IC.warn+"<span style='flex:1'>"+esc(w)+"</span><button class='warn-x' onclick='DashCore.dismissWarn("+i+")' title='Dismiss'>"+IC.x+"</button></div>"; });
   if(nQueued || nLocal){
     h += "<div class='queue'>"+IC.clock+" <span>"
       + (nQueued ? nQueued+" change"+(nQueued===1?"":"s")+" queued for Claude to apply" : "")
@@ -840,7 +845,8 @@ return {
   addTask, rmTask, toggleNew:function(){ showNF=!showNF; render(); },
   toggleBD, addBraindump, rmBraindump, toggleBDEdit, saveBDEdit,
   dismissInbox, undoInbox, toggleIB, convertInbox,
-  toggleStar, push, toggleHide, toggleSection, closeModal,
+  toggleStar, push, toggleHide, toggleSection, dismissWarn, closeModal,
   toggleNtP, saveNtLog, saveNtDate, toggleStarNt, toggleNtDone
 };
 })();
+
