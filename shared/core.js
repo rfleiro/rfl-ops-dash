@@ -30,7 +30,7 @@
 window.DashCore = (function(){
 
 const API = "https://api.github.com";
-const BUILD = "20260910-1000";
+const BUILD = "20260910-1030";
 
 let M       = null;
 let REPO    = "";
@@ -629,14 +629,6 @@ function render(){
   if(BRIEF.date !== TODAY)
     h += "<div class='warn'>"+IC.warn+" This data is from "+fd(BRIEF.date)+". Ask Claude to refresh it.</div>";
   meta.warnings.forEach(function(w,i){ if(WDISM[i]) return; h += "<div class='warn'>"+IC.warn+"<span style='flex:1'>"+esc(w)+"</span><button class='warn-x' onclick='DashCore.dismissWarn("+i+")' title='Dismiss'>"+IC.x+"</button></div>"; });
-  if(nQueued || nLocal){
-    h += "<div class='queue'>"+IC.clock+" <span>"
-      + (nQueued ? nQueued+" change"+(nQueued===1?"":"s")+" queued for Claude to apply" : "")
-      + (nQueued && nLocal ? " \u00b7 " : "")
-      + (nLocal ? nLocal+" not saved yet" : "")
-      + "</span></div>";
-  }
-
   if(meta.summary){
     var bCol = isCollapsed("brief");
     h += "<div class='sec'><div class='sec-hdr'><span class='sec-label'>Brief</span>" + secChev("brief") + "</div>";
@@ -811,7 +803,7 @@ function render(){
   }
   h += "</div>";   // .cols
   h += "<div class='foot'><span>"+esc(BRIEF.date)+(lastLoad?" \u00b7 "+hhmm(lastLoad):"")
-     + " \u00b7 <span class='build'>build "+BUILD+"</span></span>"
+     + " \u00b7 <span class='build'>build "+BUILD+"</span>"+(nQueued?" \u00b7 "+nQueued+" queued":"")+(nLocal?" \u00b7 "+nLocal+" unsaved":"")+"</span>"
      + "<button class='lnk' onclick='DashCore.resetConfig()'>change repo/token</button></div></div>";
 
   app.innerHTML = h;
@@ -849,4 +841,5 @@ return {
   toggleNtP, saveNtLog, saveNtDate, toggleStarNt, toggleNtDone
 };
 })();
+
 
