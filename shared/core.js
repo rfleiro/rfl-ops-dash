@@ -30,7 +30,7 @@
 window.DashCore = (function(){
 
 const API = "https://api.github.com";
-const BUILD = "20260910-1200";
+const BUILD = "20260910-1300";
 
 let M       = null;
 let REPO    = "";
@@ -51,6 +51,7 @@ let lastLoad= null;
 let hideSettled = true;
 let COLL = {};
 let WDISM = {};
+let subForms = {};
 const TODAY = new Date().toISOString().slice(0,10);
 
 // ── storage, namespaced per dashboard ────────────────────────────────────────
@@ -203,6 +204,16 @@ function toggleSection(id){ COLL[id] = !COLL[id]; lsSet(collKey(), JSON.stringif
 function wdismKey(){ return K("wdism:"+(BRIEF?BRIEF.date:"none")); }
 function loadWdism(){ try{ WDISM = JSON.parse(ls(wdismKey())) || {}; }catch(e){ WDISM = {}; } }
 function dismissWarn(i){ WDISM[i]=true; lsSet(wdismKey(),JSON.stringify(WDISM)); render(); }
+function toggleSubForm(n){ subForms[n]=!subForms[n]; render(); }
+function addSubtask(n){
+  const el = document.getElementById("sf-"+n);
+  const title = el ? el.value.trim() : "";
+  if(!title) return;
+  const par = BRIEF ? BRIEF.items.find(function(i){ return i.number===n; }) : null;
+  S.nt.push({ cid:cid(), title:title, topic:(par?par.topic:"paper"), due:null, parent:"#"+n });
+  subForms[n] = false;
+  saveLocal(); render();
+}
 function secChev(id){ return "<button class='sec-chev' onclick='DashCore.toggleSection(\""+id+"\")' title='"+(isCollapsed(id)?"Expand":"Collapse")+"'>"+(isCollapsed(id)?IC.chevRight:IC.chevDown)+"</button>"; }
 
 // ── GitHub API ───────────────────────────────────────────────────────────────
@@ -546,20 +557,48 @@ function card(item){
   });
   const star = isStarred(n);
   const subHtml = (function(){
-    if(!item.subtasks || !item.subtasks.length) return "";
+    const pendingSubs = effCreated().filter(function(t){ return t.parent === "#"+n; });
+    const confirmed = item.subtasks || [];
+    const hasSubs = confirmed.length > 0 || pendingSubs.length > 0;
+    const showForm = !!subForms[n];
+    if(!hasSubs && !showForm)
+      return "<button class='sub-trigger' onclick='DashCore.toggleSubForm("+n+")'>" + IC.plus + " subtask</button>";
     const subId = "sub-"+n;
     const subCol = isSubCollapsed(n);
-    const doneCnt = item.subtasks.filter(function(s){ return eff(s.number).done; }).length;
-    let h2 = "<div class=\'sub-hdr\' onclick=\'DashCore.toggleSection(\""+subId+"\")\'>"
-      + "<span class=\'sub-label\'>"+item.subtasks.length+" subtask"+(item.subtasks.length!==1?"s":"")
-      + (doneCnt?" \u00b7 "+doneCnt+" done":"")+"</span>"
-      + (subCol?IC.chevRight:IC.chevDown)+"</div>";
-    if(!subCol){
-      h2 += "<div class=\'sub-list\'>";
-      item.subtasks.forEach(function(s){
-        const sc=eff(s.number), sdone=!!sc.done;
-        const sdd=sc.reminder||s.due, sdcs=dc(sdd);
-        h2 += "<div class=\'sub-item"+(sdone?" done":"")+"\'>"          + "<button class=\'act"+(sdone?" on-green":"")+"\' onclick=\'event.stopPropagation();DashCore.setCh("+s.number+",{done:"+(!sdone)+"})\'  title=\'"+(sdone?"Undo":"Done")+"\'>"+IC.check+"</button>"          + "<span class=\'sub-title"+(sdone?" struck":"")+"\'>"+esc(s.title)+"</span>"          + (sdd?"<span class=\'chip "+sdcs+"\'>"+fd(sdd)+"</span>":"")          + (s.url?"<a class=\'act\' href=\'"+esc(s.url)+"\' target=\'_blank\' rel=\'noopener\' title=\'GitHub\'>"+IC.ext+"</a>":"")          + "</div>";
+    const total = confirmed.length + pendingSubs.length;
+    const doneCnt = confirmed.filter(function(s){ return eff(s.number).done; }).length;
+    let h2 = "<div class='sub-hdr'>";
+    if(hasSubs){
+      h2 += "<span class='sub-label' onclick='DashCore.toggleSection(\""+subId+"\")'>";
+      h2 += total+" subtask"+(total!==1?"s":"")+(doneCnt?" \u00b7 "+doneCnt+" done":"")+"</span>";
+    } else { h2 += "<span class='sub-label'>Add subtask</span>"; }
+    h2 += "<div class='sec-r'>"
+      + "<button class='sec-add' onclick='event.stopPropagation();DashCore.toggleSubForm("+n+")'>" + IC.plus + " subtask</button>"
+      + (hasSubs ? "<span onclick='event.stopPropagation();DashCore.toggleSection(\""+subId+"\")'  style='display:flex;align-items:center;cursor:pointer'>"+(subCol?IC.chevRight:IC.chevDown)+"</span>" : "")
+      + "</div></div>";
+    if(showForm){
+      h2 += "<div class='sub-form'>"
+        + "<input id='sf-"+n+"' type='text' placeholder='Subtask title\u2026' onkeydown='if(event.key===\"Enter\")DashCore.addSubtask("+n+")'>" 
+        + "<div class='sf-btns'><button class='btn btn-p' onclick='DashCore.addSubtask("+n+")'>Add</button>"
+        + "<button class='btn' onclick='DashCore.toggleSubForm("+n+")'>Cancel</button></div></div>";
+    }
+    if(hasSubs && !subCol){
+      h2 += "<div class='sub-list'>";
+      confirmed.forEach(function(s){
+        const sc=eff(s.number), sdone=!!sc.done, sdd=sc.reminder||s.due, sdcs=dc(sdd);
+        h2 += "<div class='sub-item"+(sdone?" done":"")+"'>"
+          + "<button class='act"+(sdone?" on-green":"")+" ' onclick='event.stopPropagation();DashCore.setCh("+s.number+",{done:"+(!sdone)+"})'  title='"+(sdone?"Undo":"Done")+"'>" + IC.check + "</button>"
+          + "<span class='sub-title"+(sdone?" struck":"")+"'>" + esc(s.title) + "</span>"
+          + (sdd ? "<span class='chip "+sdcs+"'>" + fd(sdd) + "</span>" : "")
+          + (s.url ? "<a class='act' href='" + esc(s.url) + "' target='_blank' rel='noopener' title='GitHub'>" + IC.ext + "</a>" : "")
+          + "</div>";
+      });
+      pendingSubs.forEach(function(t){
+        h2 += "<div class='sub-item isnew'>"
+          + "<span class='sub-title'>" + esc(t.title) + "</span>"
+          + "<span class='chip new'>new</span>"
+          + "<button class='act rm' onclick='event.stopPropagation();DashCore.rmTask(\"" + esc(t.cid) + "\")'  title='Remove'>" + IC.x + "</button>"
+          + "</div>";
       });
       h2 += "</div>";
     }
@@ -670,7 +709,7 @@ function render(){
   }
 
   h += "<div class='cols'>";
-  const created = effCreated();
+  const created = effCreated().filter(function(t){ return !t.parent; });
   (M.sections||[]).forEach(function(sec){
     const all    = items.filter(sec.filter);
     const hidden = hideSettled ? all.filter(isSettled) : [];
@@ -859,10 +898,11 @@ return {
   addTask, rmTask, toggleNew:function(){ showNF=!showNF; render(); },
   toggleBD, addBraindump, rmBraindump, toggleBDEdit, saveBDEdit,
   dismissInbox, undoInbox, toggleIB, convertInbox,
-  toggleStar, push, toggleHide, toggleSection, dismissWarn, closeModal,
+  toggleStar, push, toggleHide, toggleSection, dismissWarn, toggleSubForm, addSubtask, closeModal,
   toggleNtP, saveNtLog, saveNtDate, toggleStarNt, toggleNtDone
 };
 })();
+
 
 
 
