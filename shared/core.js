@@ -30,7 +30,7 @@
 window.DashCore = (function(){
 
 const API = "https://api.github.com";
-const BUILD = "20260910-1100";
+const BUILD = "20260910-1200";
 
 let M       = null;
 let REPO    = "";
@@ -198,6 +198,7 @@ function toggleHide(){
 function collKey(){ return K("coll"); }
 function loadColl(){ try{ COLL = JSON.parse(ls(collKey())) || {}; }catch(e){ COLL = {}; } }
 function isCollapsed(id){ return !!COLL[id]; }
+function isSubCollapsed(n){ return !COLL["sub-"+n]; }
 function toggleSection(id){ COLL[id] = !COLL[id]; lsSet(collKey(), JSON.stringify(COLL)); render(); }
 function wdismKey(){ return K("wdism:"+(BRIEF?BRIEF.date:"none")); }
 function loadWdism(){ try{ WDISM = JSON.parse(ls(wdismKey())) || {}; }catch(e){ WDISM = {}; } }
@@ -544,6 +545,26 @@ function card(item){
     return (v===false||v===null||v==="") ? (f in j) : (j[f] !== v);
   });
   const star = isStarred(n);
+  const subHtml = (function(){
+    if(!item.subtasks || !item.subtasks.length) return "";
+    const subId = "sub-"+n;
+    const subCol = isSubCollapsed(n);
+    const doneCnt = item.subtasks.filter(function(s){ return eff(s.number).done; }).length;
+    let h2 = "<div class=\'sub-hdr\' onclick=\'DashCore.toggleSection(\""+subId+"\")\'>"
+      + "<span class=\'sub-label\'>"+item.subtasks.length+" subtask"+(item.subtasks.length!==1?"s":"")
+      + (doneCnt?" \u00b7 "+doneCnt+" done":"")+"</span>"
+      + (subCol?IC.chevRight:IC.chevDown)+"</div>";
+    if(!subCol){
+      h2 += "<div class=\'sub-list\'>";
+      item.subtasks.forEach(function(s){
+        const sc=eff(s.number), sdone=!!sc.done;
+        const sdd=sc.reminder||s.due, sdcs=dc(sdd);
+        h2 += "<div class=\'sub-item"+(sdone?" done":"")+"\'>"          + "<button class=\'act"+(sdone?" on-green":"")+"\' onclick=\'event.stopPropagation();DashCore.setCh("+s.number+",{done:"+(!sdone)+"})\'  title=\'"+(sdone?"Undo":"Done")+"\'>"+IC.check+"</button>"          + "<span class=\'sub-title"+(sdone?" struck":"")+"\'>"+esc(s.title)+"</span>"          + (sdd?"<span class=\'chip "+sdcs+"\'>"+fd(sdd)+"</span>":"")          + (s.url?"<a class=\'act\' href=\'"+esc(s.url)+"\' target=\'_blank\' rel=\'noopener\' title=\'GitHub\'>"+IC.ext+"</a>":"")          + "</div>";
+      });
+      h2 += "</div>";
+    }
+    return h2;
+  })();
   return "<div class='card "+dcs+(done?" done":"")+(star?" starred":"")+"'>"
     + "<div class='card-row'><span class='card-title"+(done?" struck":"")+"'>"+esc(item.title)+"</span><div class='acts'>"
     + "<button class='act"+(star?" on-star":"")+"' onclick='DashCore.toggleStar("+n+")' title='"+(star?"Unstar":"Star \u2014 mark as important or active")+"'>"+(star?IC.starOn:IC.star)+"</button>"
@@ -558,6 +579,7 @@ function card(item){
     + (unsaved?"<span class='chip unsaved'>unsaved</span>":(Object.keys(c).length?"<span class='chip queued'>queued</span>":""))
     + "</div>"
     + (item.note?"<div class='cnote'>"+esc(item.note)+"</div>":"")
+    + subHtml
     + (p.log?"<div class='panel'><textarea id='lt-"+n+"' placeholder='Note\u2026'>"+esc(c.log||"")+"</textarea>"
        + "<div class='pbtns'><button class='btn' onclick='DashCore.toggleP("+n+",\"log\")'>Cancel</button>"
        + "<button class='btn btn-p' onclick='DashCore.saveLog("+n+")'>Save</button></div></div>":"")
@@ -841,6 +863,7 @@ return {
   toggleNtP, saveNtLog, saveNtDate, toggleStarNt, toggleNtDone
 };
 })();
+
 
 
 
