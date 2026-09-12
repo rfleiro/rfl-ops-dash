@@ -187,6 +187,16 @@ function setCh(n,p){
   S.ch[key] = Object.assign({}, lch(key), p);
   saveLocal(); render();
 }
+function toggleTask(n, text){
+  const item = BRIEF ? (BRIEF.items||[]).find(function(i){ return i.number===n; })||{} : {};
+  const orig  = (item.tasks||[]).find(function(t){ return t.text===text; });
+  const origDone = orig ? orig.done : false;
+  const cur  = eff(n).tasks || {};
+  const curDone = (text in cur) ? cur[text] : origDone;
+  const next = Object.assign({}, cur);
+  next[text] = !curDone;
+  setCh(n, {tasks: next});
+}
 
 // ── settled / hide ───────────────────────────────────────────────────────────
 function isSettled(item){ const c = eff(item.number); return !!(c.done || c.reminder); }
@@ -560,14 +570,17 @@ function card(item){
   const subHtml = (function(){
     const pendingSubs = effCreated().filter(function(t){ return t.parent === "#"+n; });
     const confirmed = item.subtasks || [];
-    const hasSubs = confirmed.length > 0 || pendingSubs.length > 0;
+    const bodyTasks = item.tasks || [];
+    const hasSubs = confirmed.length > 0 || pendingSubs.length > 0 || bodyTasks.length > 0;
     const showForm = !!subForms[n];
     if(!hasSubs && !showForm)
       return "<button class='sub-trigger' onclick='DashCore.toggleSubForm("+n+")'>" + IC.plus + " subtask</button>";
     const subId = "sub-"+n;
     const subCol = isSubCollapsed(n);
-    const total = confirmed.length + pendingSubs.length;
-    const doneCnt = confirmed.filter(function(s){ return eff(s.number).done; }).length;
+    const total = confirmed.length + pendingSubs.length + bodyTasks.length;
+    const taskEff = eff(n).tasks || {};
+    const bodyDone = bodyTasks.filter(function(t){ return (t.text in taskEff) ? taskEff[t.text] : t.done; }).length;
+    const doneCnt = confirmed.filter(function(s){ return eff(s.number).done; }).length + bodyDone;
     let h2 = "<div class='sub-hdr'>";
     if(hasSubs){
       h2 += "<span class='sub-label' onclick='DashCore.toggleSection(\""+subId+"\")'>";
@@ -592,6 +605,14 @@ function card(item){
           + "<span class='sub-title"+(sdone?" struck":"")+"'>" + esc(s.title) + "</span>"
           + (sdd ? "<span class='chip "+sdcs+"'>" + fd(sdd) + "</span>" : "")
           + (s.url ? "<a class='act' href='" + esc(s.url) + "' target='_blank' rel='noopener' title='GitHub'>" + IC.ext + "</a>" : "")
+          + "</div>";
+      });
+      bodyTasks.forEach(function(t){
+        const tEff = eff(n).tasks || {};
+        const isDone = (t.text in tEff) ? tEff[t.text] : t.done;
+        h2 += "<div class='sub-item"+(isDone?" done":"")+"'>"
+          + "<button class='act"+(isDone?" on-green":"")+"' onclick='event.stopPropagation();DashCore.toggleTask("+n+","+JSON.stringify(t.text)+")' title='"+(isDone?"Undo":"Done")+"'>"+IC.check+"</button>"
+          + "<span class='sub-title"+(isDone?" struck":"")+"'>"+esc(t.text)+"</span>"
           + "</div>";
       });
       pendingSubs.forEach(function(t){
