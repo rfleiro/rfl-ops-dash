@@ -30,7 +30,7 @@
 window.DashCore = (function(){
 
 const API = "https://api.github.com";
-const BUILD = "20260910-1430";
+const BUILD = "20260911-2130";
 
 let M       = null;
 let REPO    = "";
@@ -104,7 +104,7 @@ function loadLocal(){
 function saveLocal(){ lsSet(localKey(), JSON.stringify(S)); }
 
 // ── effective state: journal overlaid with local ─────────────────────────────
-const FIELDS = ["done","log","reminder","deadline"];
+const FIELDS = ["done","log","reminder","deadline","tasks"];
 function jch(n){ return (J && J.changes[String(n)]) || {}; }
 function lch(n){ return S.ch[String(n)] || {}; }
 function eff(n){
@@ -899,7 +899,7 @@ return {
   addTask, rmTask, toggleNew:function(){ showNF=!showNF; render(); },
   toggleBD, addBraindump, rmBraindump, toggleBDEdit, saveBDEdit,
   dismissInbox, undoInbox, toggleIB, convertInbox,
-  toggleStar, push, toggleHide, toggleSection, dismissWarn, toggleSubForm, addSubtask, toggleBDExpand, closeModal,
+  toggleStar, push, toggleHide, toggleSection, dismissWarn, toggleSubForm, addSubtask, toggleBDExpand, closeModal, toggleTask,
   toggleNtP, saveNtLog, saveNtDate, toggleStarNt, toggleNtDone
 };
 })();
