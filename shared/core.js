@@ -30,7 +30,7 @@
 window.DashCore = (function(){
 
 const API = "https://api.github.com";
-const BUILD = "20260911-2130";
+const BUILD = "20260914-0730";
 
 let M       = null;
 let REPO    = "";
@@ -52,7 +52,7 @@ let hideSettled = true;
 let COLL = {};
 let WDISM = {};
 let subForms = {};
-const TODAY = new Date().toISOString().slice(0,10);
+const TODAY = (()=>{const d=new Date(); return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");})();
 
 // ── storage, namespaced per dashboard ────────────────────────────────────────
 function K(s){ return "dash:" + M.id + ":" + s; }
