@@ -30,7 +30,7 @@
 window.DashCore = (function(){
 
 const API = "https://api.github.com";
-const BUILD = "20260914-0800";
+const BUILD = "20260914-0820";
 
 let M       = null;
 let REPO    = "";
@@ -199,7 +199,7 @@ function toggleTask(n, text){
 }
 
 // ── settled / hide ───────────────────────────────────────────────────────────
-function isSettled(item){ const c = eff(item.number); return !!(c.done || c.reminder); }
+function isSettled(item){ const c = eff(item.number); return !!(c.done || (c.reminder && c.reminder > TODAY)); }
 function settledCount(){ return BRIEF ? BRIEF.items.filter(isSettled).length : 0; }
 function toggleHide(){
   hideSettled = !hideSettled;
