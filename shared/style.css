@@ -90,7 +90,7 @@
   .cal-list{margin-bottom:4px}
   .cal-row{display:flex;align-items:baseline;gap:10px;padding:5px 0;border-bottom:1px solid var(--border);font-size:13px}
   .cal-row:last-child{border-bottom:none}
-  .cal-time{font-size:11px;color:var(--text-3);min-width:38px;flex-shrink:0}
+  .cal-time{font-size:11px;color:var(--text-3);min-width:80px;flex-shrink:0;font-variant-numeric:tabular-nums}
   .cal-ev{flex:1}
   .cal-ad{font-size:10px;background:var(--accent-bg);color:var(--accent);padding:1px 6px;border-radius:10px}
 
