@@ -30,7 +30,7 @@
 window.DashCore = (function(){
 
 const API = "https://api.github.com";
-const BUILD = "20260914-0820";
+const BUILD = "20260915-0900";
 
 let M       = null;
 let REPO    = "";
@@ -724,7 +724,7 @@ function render(){
     h += "<div class='sec'><div class='sec-hdr'><span class='sec-label'>Today</span>" + secChev("calendar") + "</div>";
     if(!cCol){
       h += "<div class='cal-list'>"
-        + cal.map(e=>"<div class='cal-row'><span class='cal-time'>"+(e.allDay?"":esc(e.time))+"</span><span class='cal-ev'>"+esc(e.title)+"</span>"+(e.allDay?"<span class='cal-ad'>all day</span>":"")+"</div>").join("")
+        + cal.map(function(e){var ad=e.allDay===true||e.start==="all-day";var t=e.time||(e.start&&e.end&&!ad?e.start+"–"+e.end:e.start&&!ad?e.start:"");return "<div class='cal-row'><span class='cal-time'>"+(ad?"":esc(t))+"</span><span class='cal-ev'>"+esc(e.title)+"</span>"+(ad?"<span class='cal-ad'>all day</span>":"")+"</div>";}).join("")
         + "</div>";
     }
     h += "</div>";
