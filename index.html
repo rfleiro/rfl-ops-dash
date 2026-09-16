@@ -10,7 +10,7 @@
 <meta name="robots" content="noindex, nofollow">
 <title>dashboards</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%232563EB'/><rect x='22' y='22' width='24' height='24' rx='4' fill='white'/><rect x='54' y='22' width='24' height='24' rx='4' fill='white' opacity='.6'/><rect x='22' y='54' width='24' height='24' rx='4' fill='white' opacity='.6'/><rect x='54' y='54' width='24' height='24' rx='4' fill='white' opacity='.3'/></svg>">
-<link rel="stylesheet" href="shared/style.css?v=20260917-0030">
+<link rel="stylesheet" href="shared/style.css?v=20260917-0040">
 </head>
 <body>
 <div class="hub" id="hub"></div>
@@ -21,10 +21,7 @@
 const DASHBOARDS = [
   { id:"ops",    name:"ops",    desc:"Lab operations \u00b7 tasks, people, projects", path:"ops/",    icon:"\u25E7", color:"#2563EB", live:true  },
   { id:"people", name:"people", desc:"Lab members, alumni and timeline", path:"people/", icon:"\u25CF", color:"#7C3AED", live:true  },
-  { id:"grants",  name:"grants",  desc:"Funding history, active grants and pipeline",  path:"grants/",  icon:"\u25B2", color:"#16A34A", live:true  },
-  { id:"sports", name:"sports", desc:"Training, races and recovery",              path:"sports/", icon:"\u25D4", color:"#16A34A", live:false },
-  { id:"family", name:"family", desc:"Home, travel and plans",                    path:"family/", icon:"\u25CD", color:"#D97706", live:false }
-];
+  { id:"grants",  name:"grants",  desc:"Funding history, active grants and pipeline",  path:"grants/",  icon:"\u25B2", color:"#16A34A", live:true  }];
 
 document.getElementById("hub").innerHTML =
   "<h1>dashboards</h1><div class='sub'>"
