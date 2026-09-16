@@ -30,7 +30,7 @@
 window.DashCore = (function(){
 
 const API = "https://api.github.com";
-const BUILD = "20260915-0900";
+const BUILD = "20260916-1400";
 
 let M       = null;
 let REPO    = "";
@@ -627,7 +627,7 @@ function card(item){
     return h2;
   })();
   return "<div class='card "+dcs+(done?" done":"")+(star?" starred":"")+"'>"
-    + "<div class='card-row'><span class='card-title"+(done?" struck":"")+"'>"+esc(item.title)+"</span><div class='acts'>"
+    + "<div class='card-row'><span class='card-title"+(done?" struck":"")+"'><span class='card-num'>#"+n+"</span>"+esc(item.title)+"</span><div class='acts'>"
     + "<button class='act"+(star?" on-star":"")+"' onclick='DashCore.toggleStar("+n+")' title='"+(star?"Unstar":"Star \u2014 mark as important or active")+"'>"+(star?IC.starOn:IC.star)+"</button>"
     + (isTask?"<button class='act"+(done?" on-green":"")+"' onclick='DashCore.setCh("+n+",{done:"+(!done)+"})' title='"+(done?"Undo":"Done")+"'>"+IC.check+"</button>":"")
     + "<button class='act"+(p.log?" on":"")+(c.log&&!p.log?" on-green":"")+"' onclick='DashCore.toggleP("+n+",\"log\")' title='Log a note'>"+IC.msg+"</button>"
