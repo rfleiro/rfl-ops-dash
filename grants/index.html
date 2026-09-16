@@ -306,7 +306,8 @@ async function loadData(pat){
     );
     if(!r.ok) throw new Error(`GitHub ${r.status}`);
     const j=await r.json();
-    grants=parseCsv(atob(j.content.replace(/\n/g,"")));
+    const b64=j.content.replace(/\n/g,"");
+    grants=parseCsv(new TextDecoder().decode(Uint8Array.from(atob(b64),c=>c.charCodeAt(0))));
     render();
   }catch(e){
     localStorage.removeItem(PAT_KEY); showSetup(e.message);
