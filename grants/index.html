@@ -1,0 +1,358 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#F7F6F3" media="(prefers-color-scheme:light)">
+<meta name="theme-color" content="#141412" media="(prefers-color-scheme:dark)">
+<meta name="robots" content="noindex,nofollow">
+<title>grants</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%2316A34A'/><text y='70' x='50' text-anchor='middle' font-size='56' font-family='sans-serif' font-weight='600' fill='white'>g</text></svg>">
+<link rel="stylesheet" href="../shared/style.css?v=20260917-0030">
+<style>
+.page{max-width:1000px;margin:0 auto;padding:20px 16px 80px}
+.ph{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:24px;padding-bottom:16px;border-bottom:1px solid var(--border)}
+.ph h1{font-size:16px;font-weight:600;letter-spacing:-.01em}
+.ph-sub{font-size:12px;color:var(--text-3);margin-top:2px}
+
+.tl-wrap{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);overflow-x:auto;margin-bottom:16px}
+.tl-svg{display:block;min-width:560px;width:100%}
+
+.legend{display:flex;flex-wrap:wrap;gap:14px;margin-bottom:24px}
+.leg{display:flex;align-items:center;gap:5px;font-size:10px;color:var(--text-2)}
+.leg-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+
+.sec-hd{font-size:11px;font-weight:600;color:var(--text-3);letter-spacing:.04em;text-transform:uppercase;margin-bottom:10px;margin-top:4px}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:8px;margin-bottom:20px}
+
+.card{background:var(--surface);border:1.5px solid var(--border);border-radius:var(--r);padding:13px;cursor:pointer;transition:border-color .12s,background .12s}
+.card:hover{border-color:var(--border-strong)}
+.card.sel{border-color:var(--accent);background:var(--accent-bg)}
+.card.dim{opacity:.45}
+.card.dim:hover{opacity:.75}
+
+.cn{font-size:13px;font-weight:600;letter-spacing:-.01em;margin-bottom:2px}
+.cmeta{font-size:11px;color:var(--text-2);margin-bottom:7px}
+.camount{display:inline-block;font-size:11px;font-weight:600;color:var(--green);background:var(--green-bg);border:1px solid var(--green-border);border-radius:99px;padding:1px 8px;margin-bottom:6px}
+.cdates{font-size:11px;color:var(--text-2);margin-bottom:5px}
+.cnote{font-size:10px;color:var(--warning);margin-top:4px}
+.cbadge{display:inline-block;font-size:9px;padding:1px 6px;border-radius:99px;margin-top:6px}
+.cbadge-active{background:var(--green-bg);color:var(--green);border:1px solid var(--green-border)}
+.cbadge-waiting{background:var(--warning-bg);color:var(--warning);border:1px solid var(--warning-border)}
+.cbadge-eval{background:var(--accent-bg);color:var(--accent);border:1px solid var(--accent-border)}
+.cbadge-done{background:var(--surface2);color:var(--text-3);border:1px solid var(--border)}
+.cbadge-declined{background:var(--surface2);color:var(--text-3);border:1px solid var(--border)}
+
+.past-btn{font-size:11px;color:var(--text-2);background:none;border:none;cursor:pointer;font-family:inherit;padding:2px 0;margin-bottom:10px;display:flex;align-items:center;gap:5px}
+.past-btn:hover{color:var(--accent)}
+
+.setup{max-width:360px;margin:80px auto;text-align:center}
+.setup h1{font-size:20px;font-weight:600;margin-bottom:6px}
+.setup p{font-size:13px;color:var(--text-2);margin-bottom:20px;line-height:1.6}
+.setup input{width:100%;padding:8px 11px;border:1px solid var(--border);border-radius:var(--rs);background:var(--surface);color:var(--text);font-family:inherit;font-size:13px;margin-bottom:10px;outline:none;display:block}
+.setup input:focus{border-color:var(--accent)}
+
+.tip{position:fixed;background:var(--surface);border:1px solid var(--border-strong);border-radius:var(--rs);padding:5px 9px;font-size:11px;line-height:1.5;pointer-events:none;z-index:200;box-shadow:0 3px 10px rgba(0,0,0,.12);display:none}
+.tip b{font-weight:600}
+</style>
+</head>
+<body>
+<div id="app"></div>
+<div class="tip" id="tip"></div>
+<script>
+const PAT_KEY = "dash:grants:pat";
+const REPO    = "rfleiro/rfl_ops";
+const CSVPATH = "data/grants.csv";
+const BUILD   = "20260917-0030";
+
+let grants = [], selected = null, showPast = false;
+
+/* ── call group ──────────────────────────────────────────── */
+const CALL_GROUPS = [
+  { label:"PN",             match: c => c.startsWith("pn") },
+  { label:"AECC",           match: c => c.includes("aecc") },
+  { label:"CAM",            match: c => c.startsWith("cam") },
+  { label:"CaixaImpulse",   match: c => c.includes("caixa") },
+  { label:"ERC",            match: c => c.startsWith("erc") },
+  { label:"Infrastructure", match: c => c.includes("infra") },
+  { label:"TEMPOS",         match: c => c.includes("tempos") },
+  { label:"Other",          match: () => true },
+];
+function callGroup(call) {
+  const c = (call||"").toLowerCase();
+  return CALL_GROUPS.findIndex(g => g.match(c));
+}
+
+/* ── status colours ──────────────────────────────────────── */
+const STATUS_COLOR = {
+  active:"#16A34A", waiting:"#D97706", done:"#9CA3AF",
+  evaluation:"#2563EB", pending:"#9CA3AF"
+};
+
+/* ── CSV parser ──────────────────────────────────────────── */
+function parseCsv(txt) {
+  const lines = txt.trim().split("\n");
+  const hdrs  = lines[0].split(",").map(h=>h.replace(/^"|"$/g,"").trim());
+  return lines.slice(1).map(line=>{
+    const vals=[]; let cur="", inQ=false;
+    for(let i=0;i<line.length;i++){
+      if(line[i]==='"'){inQ=!inQ;continue;}
+      if(line[i]===','&&!inQ){vals.push(cur);cur="";}else cur+=line[i];
+    }
+    vals.push(cur);
+    const row={};
+    hdrs.forEach((h,i)=>row[h]=(vals[i]||"").replace(/^"|"$/g,"").trim());
+    return row;
+  }).filter(r=>r.Name);
+}
+
+/* ── timeline ────────────────────────────────────────────── */
+function buildTimeline(gs) {
+  const W=900, PL=72, PR=12, PT=22, PB=8;
+  const ROW=6, BAR=3, SEPGAP=5;
+  const T0=new Date("2017-01-01").getTime();
+  const T1=new Date("2031-01-01").getTime();
+  const today=new Date(), todayStr=today.toISOString().slice(0,10);
+
+  function tx(d){
+    const ms=(d==="present"?today:new Date(d)).getTime();
+    return PL+(ms-T0)/(T1-T0)*(W-PL-PR);
+  }
+
+  // only granted grants with start dates
+  const withDates = gs.filter(g=>g.Start&&g.Result==="granted");
+
+  // group by call
+  const groups = CALL_GROUPS.map(()=>[]);
+  withDates.forEach(g=>groups[callGroup(g.Call)].push(g));
+  groups.forEach(g=>g.sort((a,b)=>a.Start.localeCompare(b.Start)));
+
+  // layout
+  const items=[]; let y=PT, first=true;
+  const groupMeta=[];
+  groups.forEach((gp,gi)=>{
+    if(!gp.length) return;
+    if(!first) y+=SEPGAP;
+    const yStart=y;
+    gp.forEach(g=>{ items.push({g,y:y+(ROW-BAR)/2,gi}); y+=ROW; });
+    groupMeta.push({label:CALL_GROUPS[gi].label, yMid:(yStart+(y-ROW))/2+BAR/2});
+    first=false;
+  });
+  const H=y+PB;
+
+  let s=`<svg class="tl-svg" viewBox="0 0 ${W} ${H}" id="tl-svg">`;
+
+  // year lines
+  for(let yr=2017;yr<=2031;yr++){
+    const x=tx(`${yr}-01-01`);
+    s+=`<line x1="${x.toFixed(1)}" y1="${PT-8}" x2="${x.toFixed(1)}" y2="${H-PB}" stroke="var(--border)" stroke-width=".5"/>`;
+    if(yr%2===0||yr===2017)
+      s+=`<text x="${x.toFixed(1)}" y="${PT-9}" text-anchor="middle" font-size="7.5" fill="var(--text-3)" font-family="system-ui,sans-serif">${yr}</text>`;
+  }
+
+  // today
+  const tx0=tx(todayStr);
+  s+=`<line x1="${tx0.toFixed(1)}" y1="${PT-8}" x2="${tx0.toFixed(1)}" y2="${H-PB}" stroke="var(--accent)" stroke-width=".8" stroke-dasharray="2,2"/>`;
+
+  // group labels
+  groupMeta.forEach(m=>{
+    s+=`<text x="2" y="${m.yMid.toFixed(1)}" dominant-baseline="middle" font-size="7.5" fill="var(--text-3)" font-family="system-ui,sans-serif">${m.label}</text>`;
+  });
+
+  // bars
+  items.forEach(({g,y})=>{
+    const color=STATUS_COLOR[g.Status]||"#9CA3AF";
+    const x1=tx(g.Start);
+    const x2=Math.max(tx(g.End||todayStr),x1+3);
+    const isFut=g.Start>todayStr;
+    const op=selected?(selected===g.Name?1:.07):.72;
+    const nm=g.Name.replace(/"/g,"&quot;");
+    if(isFut){
+      s+=`<rect class="tl-bar" data-name="${nm}" x="${x1.toFixed(1)}" y="${y.toFixed(1)}" width="${(x2-x1).toFixed(1)}" height="${BAR}" rx="${BAR/2}" fill="none" stroke="${color}" stroke-width="1.2" stroke-dasharray="2.5,2" style="opacity:${op};cursor:pointer;transition:opacity .18s"/>`;
+    } else {
+      s+=`<rect class="tl-bar" data-name="${nm}" x="${x1.toFixed(1)}" y="${y.toFixed(1)}" width="${(x2-x1).toFixed(1)}" height="${BAR}" rx="${BAR/2}" fill="${color}" style="opacity:${op};cursor:pointer;transition:opacity .18s"/>`;
+    }
+  });
+
+  s+=`</svg>`;
+  return s;
+}
+
+/* ── helpers ─────────────────────────────────────────────── */
+const MONTHS=["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+function fmt(d){
+  if(!d||d==="") return "";
+  const[y,m]=d.split("-");
+  return `${MONTHS[+m-1]} ${y}`;
+}
+function fmtAmt(a){
+  const n=parseInt(a||"0");
+  if(!n) return "";
+  if(n>=1000000) return `€${(n/1e6).toFixed(1).replace(".0","")}M`;
+  if(n>=1000) return `€${Math.round(n/1000)}k`;
+  return `€${n}`;
+}
+
+/* ── card ────────────────────────────────────────────────── */
+function cardHTML(g){
+  const amt=fmtAmt(g.Amount);
+  const dates=g.Start?`${fmt(g.Start)} – ${fmt(g.End)||"ongoing"}`:"";
+  const badgeCls=`cbadge cbadge-${g.Status==="evaluation"?"eval":g.Result==="declined"?"declined":g.Status}`;
+  const badgeTxt=g.Status==="evaluation"?"under evaluation":g.Result==="declined"?"declined":g.Status;
+  return `<div class="card${selected===g.Name?" sel":""}${g.Status==="done"?" dim":""}" data-name="${g.Name}">
+  <div class="cn">${g.Name}</div>
+  <div class="cmeta">${g.Call}${g.Topic?" · "+g.Topic:""}</div>
+  ${amt?`<div><span class="camount">${amt}</span></div>`:""}
+  ${dates?`<div class="cdates">${dates}</div>`:""}
+  ${g.Notes?`<div class="cnote">&#9888; ${g.Notes}</div>`:""}
+  <div><span class="${badgeCls}">${badgeTxt}</span></div>
+</div>`;
+}
+
+/* ── highlight ───────────────────────────────────────────── */
+function updateHL(){
+  document.querySelectorAll(".tl-bar").forEach(b=>{
+    b.style.opacity=selected?(selected===b.dataset.name?1:.07):.72;
+  });
+  document.querySelectorAll(".card").forEach(c=>{
+    c.classList.toggle("sel",c.dataset.name===selected);
+  });
+}
+
+/* ── render ──────────────────────────────────────────────── */
+function render(){
+  const active  = grants.filter(g=>g.Status==="active");
+  const waiting = grants.filter(g=>g.Status==="waiting");
+  const evaluat = grants.filter(g=>g.Status==="evaluation");
+  const past    = grants.filter(g=>g.Status==="done");
+  const grantedPast  = past.filter(g=>g.Result==="granted");
+  const declinedPast = past.filter(g=>g.Result!=="granted");
+
+  const totalActive=active.length+waiting.length+evaluat.length;
+
+  document.getElementById("app").innerHTML=`
+<div class="page">
+  <div class="ph">
+    <div>
+      <h1>grants</h1>
+      <div class="ph-sub">since 2017 · ${totalActive} active/pending · ${past.length} past</div>
+    </div>
+    <button class="btn btn-icon" id="disc-btn" title="Disconnect">
+      <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M9 5l2 2-2 2M5 7h6M1 7a6 6 0 106 6" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    </button>
+  </div>
+
+  <div class="tl-wrap">${buildTimeline(grants)}</div>
+  <div class="legend">
+    <span class="leg"><span class="leg-dot" style="background:#16A34A"></span>active</span>
+    <span class="leg"><span class="leg-dot" style="background:#D97706"></span>waiting</span>
+    <span class="leg"><span class="leg-dot" style="background:#9CA3AF"></span>done</span>
+    <span class="leg"><span class="leg-dot" style="background:#2563EB"></span>evaluation</span>
+    <span class="leg" style="border-left:1px solid var(--border);padding-left:14px">
+      <span style="font-size:10px;color:var(--text-3)">Groups: PN · AECC · CAM · CaixaImpulse · ERC · Infrastructure · TEMPOS · Other</span>
+    </span>
+  </div>
+
+  ${active.length?`<div class="sec-hd">active · ${active.length}</div><div class="grid">${active.map(cardHTML).join("")}</div>`:""}
+  ${waiting.length?`<div class="sec-hd">waiting · ${waiting.length}</div><div class="grid">${waiting.map(cardHTML).join("")}</div>`:""}
+  ${evaluat.length?`<div class="sec-hd">under evaluation · ${evaluat.length}</div><div class="grid">${evaluat.map(cardHTML).join("")}</div>`:""}
+
+  <button class="past-btn" id="past-btn">
+    <svg width="10" height="10" viewBox="0 0 10 10"><path d="${showPast?"M2 4l3 3 3-3":"M2 3l3 3 3-3"}" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" fill="none"/></svg>
+    past · ${past.length}
+  </button>
+  ${showPast?`
+    ${grantedPast.length?`<div class="sec-hd" style="margin-top:2px">granted &amp; ended · ${grantedPast.length}</div><div class="grid">${grantedPast.map(cardHTML).join("")}</div>`:""}
+    ${declinedPast.length?`<div class="sec-hd">declined · ${declinedPast.length}</div><div class="grid">${declinedPast.map(cardHTML).join("")}</div>`:""}
+  `:""}
+
+  <div style="font-size:10px;color:var(--text-3);margin-top:32px">build ${BUILD}</div>
+</div>`;
+
+  document.getElementById("disc-btn")?.addEventListener("click",()=>{
+    localStorage.removeItem(PAT_KEY); showSetup();
+  });
+  document.getElementById("past-btn")?.addEventListener("click",()=>{
+    showPast=!showPast; render();
+  });
+}
+
+/* ── setup ───────────────────────────────────────────────── */
+function showSetup(err){
+  document.getElementById("app").innerHTML=`
+<div class="setup">
+  <h1>grants</h1>
+  <p>Enter a GitHub PAT with <strong>Contents: Read</strong> access to rfl_ops.</p>
+  ${err?`<p style="color:var(--danger);font-size:12px;margin-bottom:12px">${err}</p>`:""}
+  <input type="password" id="pi" placeholder="github_pat_&hellip;" autocomplete="off">
+  <button class="btn btn-p" style="width:100%;justify-content:center" id="conn-btn">Connect</button>
+</div>`;
+  const go=()=>{
+    const pat=document.getElementById("pi")?.value.trim();
+    if(!pat) return;
+    localStorage.setItem(PAT_KEY,pat);
+    loadData(pat);
+  };
+  document.getElementById("pi")?.addEventListener("keydown",e=>e.key==="Enter"&&go());
+  document.getElementById("conn-btn")?.addEventListener("click",go);
+}
+
+async function loadData(pat){
+  try{
+    const r=await fetch(
+      `https://api.github.com/repos/${REPO}/contents/${CSVPATH}?ref=HEAD&t=${Date.now()}`,
+      {headers:{Authorization:`token ${pat}`,Accept:"application/vnd.github+json"}}
+    );
+    if(!r.ok) throw new Error(`GitHub ${r.status}`);
+    const j=await r.json();
+    grants=parseCsv(atob(j.content.replace(/\n/g,"")));
+    render();
+  }catch(e){
+    localStorage.removeItem(PAT_KEY); showSetup(e.message);
+  }
+}
+
+/* ── global events ───────────────────────────────────────── */
+document.addEventListener("click",e=>{
+  const bar=e.target.closest(".tl-bar");
+  const card=e.target.closest(".card");
+  if(bar){
+    const name=bar.dataset.name;
+    selected=selected===name?null:name;
+    updateHL();
+    if(selected){
+      const c=document.querySelector(`.card[data-name="${name}"]`);
+      if(c) setTimeout(()=>c.scrollIntoView({behavior:"smooth",block:"nearest"}),40);
+    }
+  } else if(card){
+    const name=card.dataset.name;
+    selected=selected===name?null:name;
+    updateHL();
+  } else if(selected){
+    selected=null; updateHL();
+  }
+});
+
+document.addEventListener("mousemove",e=>{
+  const bar=e.target.closest(".tl-bar");
+  const tip=document.getElementById("tip");
+  if(!tip) return;
+  if(bar&&grants.length){
+    const g=grants.find(g=>g.Name===bar.dataset.name);
+    if(g){
+      const amt=fmtAmt(g.Amount);
+      tip.innerHTML=`<b>${g.Name}</b> · ${g.Status}${amt?" · "+amt:""}<br>${fmt(g.Start)} – ${fmt(g.End)}`;
+      tip.style.display="block";
+      tip.style.left=(e.clientX+14)+"px";
+      tip.style.top=(e.clientY-8)+"px";
+    }
+  } else { tip.style.display="none"; }
+});
+
+(async()=>{
+  const pat=localStorage.getItem(PAT_KEY);
+  if(pat) await loadData(pat); else showSetup();
+})();
+</script>
+</body>
+</html>
