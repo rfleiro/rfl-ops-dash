@@ -8,7 +8,7 @@
 <meta name="robots" content="noindex,nofollow">
 <title>grants</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%2316A34A'/><text y='70' x='50' text-anchor='middle' font-size='56' font-family='sans-serif' font-weight='600' fill='white'>g</text></svg>">
-<link rel="stylesheet" href="../shared/style.css?v=20260917-0030">
+<link rel="stylesheet" href="../shared/style.css?v=20260917-0045">
 <style>
 .page{max-width:1000px;margin:0 auto;padding:20px 16px 80px}
 .ph{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:24px;padding-bottom:16px;border-bottom:1px solid var(--border)}
@@ -63,7 +63,7 @@
 const PAT_KEY = "dash:grants:pat";
 const REPO    = "rfleiro/rfl_ops";
 const CSVPATH = "data/grants.csv";
-const BUILD   = "20260917-0030";
+const BUILD   = "20260917-0045";
 
 let grants = [], selected = null, showPast = false;
 
@@ -232,6 +232,7 @@ function render(){
 
   document.getElementById("app").innerHTML=`
 <div class="page">
+  <a class="back" href="../"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg> dashboards</a>
   <div class="ph">
     <div>
       <h1>grants</h1>
