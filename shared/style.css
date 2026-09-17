@@ -212,8 +212,8 @@
     .wrap{max-width:1780px}
     .cols{grid-template-columns:repeat(4,minmax(0,1fr))}
   }
-  @media(min-width:2100px){
-    .wrap{max-width:2160px}
+  @media(min-width:1800px){
+    .wrap{max-width:1900px}
     .cols{grid-template-columns:repeat(5,minmax(0,1fr))}
   }
   .topgrid{display:block}
