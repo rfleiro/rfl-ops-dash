@@ -30,7 +30,7 @@
 window.DashCore = (function(){
 
 const API = "https://api.github.com";
-const BUILD = "20260917-0800";
+const BUILD = "20260917-0830";
 
 let M       = null;
 let REPO    = "";
@@ -827,9 +827,16 @@ function render(){
   });
 
   if(M.inbox && inboxItems().length){
-    const all    = inboxItems();
-    const decided= all.filter(x => !!effIb(x.id));
-    const list   = hideSettled ? all.filter(x => !effIb(x.id)) : all;
+    const all      = inboxItems();
+    const dismissed= all.filter(x => { const s=effIb(x.id); return s && s.status==="dismissed"; });
+    const tasked   = all.filter(x => { const s=effIb(x.id); return s && s.status==="task"; });
+    // dismissed always hidden; tasked follows hideSettled
+    const list     = all.filter(x => {
+      const s = effIb(x.id);
+      if(!s) return true;
+      if(s.status === "dismissed") return false;
+      return !hideSettled;
+    });
     var ibCol = isCollapsed("inbox");
     h += "<div class='sec'><div class='sec-hdr'><span class='sec-label'>Inbox</span>"
        + "<div class='sec-r'><span class='sec-note'>from email \u00b7 not issues yet</span>" + secChev("inbox") + "</div></div>";
@@ -867,8 +874,13 @@ function render(){
             + "<button class='btn btn-p' onclick='DashCore.convertInbox(\""+esc(x.id)+"\")'>Create task</button></div></div>":"")
         + "</div>";
     }).join("");
-    if(!ibCol && hideSettled && decided.length){
-      h += "<div class='hidden-row'>"+decided.length+" handled"
+    if(!ibCol && dismissed.length){
+      h += "<div class='hidden-row'>" + IC.x + " " + dismissed.length + " dismissed"
+         + dismissed.map(function(x){ return " &middot; <button class='lnk' onclick='DashCore.undoInbox(\""+esc(x.id)+"\")' title='Undo'>"+esc(x.subject.length>28?x.subject.slice(0,26)+"\u2026":x.subject)+"</button>"; }).join("")
+         + "</div>";
+    }
+    if(!ibCol && hideSettled && tasked.length){
+      h += "<div class='hidden-row'>"+tasked.length+" \u2192 task"
          + " <button class='lnk' onclick='DashCore.toggleHide()'>show</button></div>";
     }
     h += "</div>";
