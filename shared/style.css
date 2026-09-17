@@ -184,6 +184,8 @@
   /* ── Starred ───────────────────────────────────────────────────────────── */
   .act.on-star{background:#FEF3C7;color:#B45309;border-color:#FCD34D}
   @media(prefers-color-scheme:dark){.act.on-star{background:#2A1F00;color:#FCD34D;border-color:#713F12}}
+  .act.on-snz{background:#EDE9FE;color:#5B21B6;border-color:#C4B5FD}
+  @media(prefers-color-scheme:dark){.act.on-snz{background:#1E1035;color:#A78BFA;border-color:#4C1D95}}
   .card.starred{box-shadow:inset 0 0 0 1px var(--accent-border);background:linear-gradient(90deg,var(--accent-bg) 0%,var(--surface) 60%)}
   .card.starred .card-title{font-weight:600}
 
