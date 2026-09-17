@@ -8,9 +8,9 @@
 <meta name="robots" content="noindex,nofollow">
 <title>grants</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%2316A34A'/><text y='70' x='50' text-anchor='middle' font-size='56' font-family='sans-serif' font-weight='600' fill='white'>g</text></svg>">
-<link rel="stylesheet" href="../shared/style.css?v=20260917-0070">
+<link rel="stylesheet" href="../shared/style.css?v=20260917-0075">
 <style>
-.page{padding:20px 24px 80px}
+.page{max-width:1000px;margin:0 auto;padding:20px 16px 80px}
 .ph{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:24px;padding-bottom:16px;border-bottom:1px solid var(--border)}
 .ph h1{font-size:16px;font-weight:600;letter-spacing:-.01em}
 .ph-sub{font-size:12px;color:var(--text-3);margin-top:2px}
@@ -23,7 +23,7 @@
 .leg-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
 
 .sec-hd{font-size:11px;font-weight:600;color:var(--text-3);letter-spacing:.04em;text-transform:uppercase;margin-bottom:10px;margin-top:4px}
-.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:8px;margin-bottom:20px}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:8px;margin-bottom:20px}
 
 .card{background:var(--surface);border:1.5px solid var(--border);border-radius:var(--r);padding:13px;cursor:pointer;transition:border-color .12s,background .12s}
 .card:hover{border-color:var(--border-strong)}
@@ -63,7 +63,7 @@
 const PAT_KEY = "dash:grants:pat";
 const REPO    = "rfleiro/rfl_ops";
 const CSVPATH = "data/grants.csv";
-const BUILD   = "20260917-0070";
+const BUILD   = "20260917-0075";
 
 let grants = [], selected = null, showPast = false;
 
