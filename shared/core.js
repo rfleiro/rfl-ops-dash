@@ -30,7 +30,7 @@
 window.DashCore = (function(){
 
 const API = "https://api.github.com";
-const BUILD = "20260917-0085";
+const BUILD = "20260917-0800";
 
 let M       = null;
 let REPO    = "";
@@ -79,6 +79,8 @@ const IC = {
   back:`<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>`,
   star:`<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>`,
   starOn:`<svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>`,
+  moon:`<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>`,
+  moonOn:`<svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>`,
   clock:`<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><polyline points="12 7 12 12 15 14"/></svg>`,
   edit:`<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>`,
   chevDown:`<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>`,
@@ -117,6 +119,20 @@ function eff(n){
     else out[f] = v;
   });
   return out;
+}
+
+// ── snooze: dashboard-only, and only for today ───────────────────────────────
+// Hides a card from the section list for the rest of the day. Date-scoped,
+// never reaches GitHub. Resets every morning like stars.
+let SNOOZE = {};
+function snoozeKey(){ return K("snooze:" + (BRIEF ? BRIEF.date : "none")); }
+function loadSnooze(){ try{ SNOOZE = JSON.parse(ls(snoozeKey())) || {}; }catch(e){ SNOOZE = {}; } }
+function isSnoozed(n){ return !!SNOOZE[String(n)]; }
+function toggleSnooze(n){
+  const k = String(n);
+  if(SNOOZE[k]) delete SNOOZE[k]; else SNOOZE[k] = true;
+  lsSet(snoozeKey(), JSON.stringify(SNOOZE));
+  render();
 }
 
 // ── stars: dashboard-only, and only for today ────────────────────────────────
@@ -292,6 +308,7 @@ async function loadBrief(){
     await fetchJournal();
     loadLocal();
     loadStars();
+    loadSnooze();
     loadColl();
     loadWdism();
     lastLoad = new Date();
@@ -567,6 +584,7 @@ function card(item){
     return (v===false||v===null||v==="") ? (f in j) : (j[f] !== v);
   });
   const star = isStarred(n);
+  const snz  = isSnoozed(n);
   const subHtml = (function(){
     const pendingSubs = effCreated().filter(function(t){ return t.parent === "#"+n; });
     const confirmed = item.subtasks || [];
@@ -629,6 +647,7 @@ function card(item){
   return "<div class='card "+dcs+(done?" done":"")+(star?" starred":"")+"'>"
     + "<div class='card-row'><span class='card-title"+(done?" struck":"")+"'><span class='card-num'>#"+n+"</span>"+esc(item.title)+"</span><div class='acts'>"
     + "<button class='act"+(star?" on-star":"")+"' onclick='DashCore.toggleStar("+n+")' title='"+(star?"Unstar":"Star \u2014 mark as important or active")+"'>"+(star?IC.starOn:IC.star)+"</button>"
+    + "<button class='act"+(snz?" on-snz":"")+"' onclick='DashCore.toggleSnooze("+n+")' title='"+(snz?"Un-snooze \u2014 bring back to list":"Snooze \u2014 hide for the rest of today")+"'>"+(snz?IC.moonOn:IC.moon)+"</button>"
     + (isTask?"<button class='act"+(done?" on-green":"")+"' onclick='DashCore.setCh("+n+",{done:"+(!done)+"})' title='"+(done?"Undo":"Done")+"'>"+IC.check+"</button>":"")
     + "<button class='act"+(p.log?" on":"")+(c.log&&!p.log?" on-green":"")+"' onclick='DashCore.toggleP("+n+",\"log\")' title='Log a note'>"+IC.msg+"</button>"
     + "<button class='act"+(p.date?" on":"")+"' onclick='DashCore.toggleP("+n+",\"date\")' title='"+dlabel+"'>"+IC.cal+"</button>"
@@ -736,6 +755,9 @@ function render(){
     const all    = items.filter(sec.filter);
     const hidden = hideSettled ? all.filter(isSettled) : [];
     let   list   = hideSettled ? all.filter(i=>!isSettled(i)) : all;
+    // snoozed cards are removed from view for today; collect before starred sort
+    const snoozed = list.filter(i=>isSnoozed(i.number));
+    list = list.filter(i=>!isSnoozed(i.number));
     // starred first, original order preserved within each group
     list = list.filter(i=>isStarred(i.number)).concat(list.filter(i=>!isStarred(i.number)));
     if(!all.length && !sec.allowNew) return;
@@ -795,6 +817,11 @@ function render(){
     if(!sCol && hidden.length){
       h += "<div class='hidden-row'>"+hidden.length+" hidden until applied"
          + " <button class='lnk' onclick='DashCore.toggleHide()'>show</button></div>";
+    }
+    if(!sCol && snoozed.length){
+      h += "<div class='hidden-row'>" + IC.moon + " " + snoozed.length + " snoozed today"
+         + snoozed.map(function(i){ return " &middot; <button class='lnk' onclick='DashCore.toggleSnooze("+i.number+")' title='Un-snooze'>#"+i.number+"</button>"; }).join("")
+         + "</div>";
     }
     h += "</div>";
   });
@@ -920,7 +947,7 @@ return {
   addTask, rmTask, toggleNew:function(){ showNF=!showNF; render(); },
   toggleBD, addBraindump, rmBraindump, toggleBDEdit, saveBDEdit,
   dismissInbox, undoInbox, toggleIB, convertInbox,
-  toggleStar, push, toggleHide, toggleSection, dismissWarn, toggleSubForm, addSubtask, toggleBDExpand, closeModal, toggleTask,
+  toggleStar, toggleSnooze, push, toggleHide, toggleSection, dismissWarn, toggleSubForm, addSubtask, toggleBDExpand, closeModal, toggleTask,
   toggleNtP, saveNtLog, saveNtDate, toggleStarNt, toggleNtDone
 };
 })();
