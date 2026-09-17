@@ -214,7 +214,7 @@
   }
   @media(min-width:1800px){
     .wrap{max-width:1900px}
-    .cols{grid-template-columns:repeat(5,minmax(0,1fr))}
+    .cols{grid-template-columns:repeat(auto-fit,minmax(340px,1fr))}
   }
   .topgrid{display:block}
 
