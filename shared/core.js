@@ -30,7 +30,7 @@
 window.DashCore = (function(){
 
 const API = "https://api.github.com";
-const BUILD = "20260917-0830";
+const BUILD = "20260917-0900";
 
 let M       = null;
 let REPO    = "";
@@ -587,7 +587,12 @@ function card(item){
   const snz  = isSnoozed(n);
   const subHtml = (function(){
     const pendingSubs = effCreated().filter(function(t){ return t.parent === "#"+n; });
-    const confirmed = item.subtasks || [];
+    const fromBrief = (BRIEF && BRIEF.items ? BRIEF.items : [])
+      .filter(function(x){ return x.parent === n; })
+      .map(function(x){ return {number:x.number, title:x.title, due:x.reminder, deadline:x.deadline, url:x.url}; });
+    const confirmed = (item.subtasks || []).concat(fromBrief.filter(function(fb){
+      return !(item.subtasks||[]).some(function(s){ return s.number === fb.number; });
+    }));
     const bodyTasks = item.tasks || [];
     const hasSubs = confirmed.length > 0 || pendingSubs.length > 0 || bodyTasks.length > 0;
     const showForm = !!subForms[n];
@@ -645,7 +650,7 @@ function card(item){
     return h2;
   })();
   return "<div class='card "+dcs+(done?" done":"")+(star?" starred":"")+"'>"
-    + "<div class='card-row'><span class='card-title"+(done?" struck":"")+"'><span class='card-num'>#"+n+"</span>"+esc(item.title)+"</span><div class='acts'>"
+    + "<div class='card-row'><span class='card-title"+(done?" struck":"")+"'>"+(REPO?"<a class='card-num' href='https://github.com/"+esc(REPO)+"/issues/"+n+"' target='_blank' rel='noopener'>#"+n+"</a>":"<span class='card-num'>#"+n+"</span>")+esc(item.title)+"</span><div class='acts'>"
     + "<button class='act"+(star?" on-star":"")+"' onclick='DashCore.toggleStar("+n+")' title='"+(star?"Unstar":"Star \u2014 mark as important or active")+"'>"+(star?IC.starOn:IC.star)+"</button>"
     + "<button class='act"+(snz?" on-snz":"")+"' onclick='DashCore.toggleSnooze("+n+")' title='"+(snz?"Un-snooze \u2014 bring back to list":"Snooze \u2014 hide for the rest of today")+"'>"+(snz?IC.moonOn:IC.moon)+"</button>"
     + (isTask?"<button class='act"+(done?" on-green":"")+"' onclick='DashCore.setCh("+n+",{done:"+(!done)+"})' title='"+(done?"Undo":"Done")+"'>"+IC.check+"</button>":"")
@@ -751,8 +756,10 @@ function render(){
 
   h += "<div class='cols'>";
   const created = effCreated().filter(function(t){ return !t.parent; });
+  // items that declare a parent pointing to another brief item are subtasks — don't show top-level
+  const briefNumSet = new Set(items.map(function(i){ return i.number; }));
   (M.sections||[]).forEach(function(sec){
-    const all    = items.filter(sec.filter);
+    const all    = items.filter(sec.filter).filter(function(i){ return !i.parent || !briefNumSet.has(i.parent); });
     const hidden = hideSettled ? all.filter(isSettled) : [];
     let   list   = hideSettled ? all.filter(i=>!isSettled(i)) : all;
     // snoozed cards are removed from view for today; collect before starred sort
