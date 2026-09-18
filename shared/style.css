@@ -235,6 +235,7 @@
   .bd-bar .err{flex:1;margin:0}
   .bd-bar .btn{margin-left:auto}
   .bd-capture:focus-within{border-color:var(--accent-border);box-shadow:0 0 0 3px var(--accent-bg)}
+  .bd-top{margin-bottom:14px}
 
   .build{opacity:.65;font-variant-numeric:tabular-nums}
 
@@ -256,4 +257,5 @@
   .sub-form input:focus{outline:none;border-color:var(--accent)}
   .sf-btns{display:flex;gap:5px;justify-content:flex-end}
   .sub-item.isnew{background:var(--accent-bg)}
+
 
