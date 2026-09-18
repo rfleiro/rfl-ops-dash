@@ -236,6 +236,15 @@
   .bd-bar .btn{margin-left:auto}
   .bd-capture:focus-within{border-color:var(--accent-border);box-shadow:0 0 0 3px var(--accent-bg)}
   .bd-top{margin-bottom:14px}
+  /* ── Mic button ──────────────────────────────────────────────────────────── */
+  .btn-mic{background:none;border:1px solid var(--border);border-radius:var(--rs);padding:3px 8px;cursor:pointer;font-size:13px;color:var(--text-2);transition:border-color .15s,color .15s;line-height:1}
+  .btn-mic:hover{border-color:var(--accent);color:var(--accent)}
+  .btn-mic.mic-on{background:#fee2e2;border-color:#dc2626;color:#dc2626;animation:mic-pulse 1.4s ease-in-out infinite}
+  @keyframes mic-pulse{0%,100%{opacity:1}50%{opacity:.55}}
+  .btn-mic-lang{background:none;border:1px solid var(--border);border-radius:var(--rs);padding:3px 7px;cursor:pointer;font-size:10px;font-weight:700;letter-spacing:.04em;color:var(--text-2);transition:border-color .15s}
+  .btn-mic-lang:hover{border-color:var(--accent);color:var(--accent)}
+  .bd-interim{font-size:11.5px;color:var(--text-3);font-style:italic;padding:3px 2px 5px;line-height:1.4}
+
 
   .build{opacity:.65;font-variant-numeric:tabular-nums}
 
