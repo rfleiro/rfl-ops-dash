@@ -30,7 +30,7 @@
 window.DashCore = (function(){
 
 const API = "https://api.github.com";
-const BUILD = "20260918-0100";
+const BUILD = "20260918-0101";
 
 let M       = null;
 let REPO    = "";
@@ -755,13 +755,14 @@ function render(){
   }
 
   if(M.braindump){
-    h += "<div class='bd-capture bd-top'>"
+    h += "<div class='sec bd-sec-top'><div class='sec-hdr'><span class='sec-label'>Braindump</span></div>"
+      + "<div class='bd-capture'>"
       + "<textarea id='bd-t' placeholder='Drop a thought, a note, a meeting log\u2026'></textarea>"
       + "<div class='bd-bar'><select id='bd-k'>"
       + "<option value='note'>note</option><option value='meeting'>meeting</option>"
       + "<option value='idea'>idea</option><option value='decision'>decision</option>"
       + "</select><span class='err' id='bd-err'></span>"
-      + "<button class='btn btn-p' onclick='DashCore.addBraindump()'>"+IC.plus+" Add</button></div></div>";
+      + "<button class='btn btn-p' onclick='DashCore.addBraindump()'>"+IC.plus+" Add</button></div></div></div>";
   }
   h += "<div class='cols'>";
   const created = effCreated().filter(function(t){ return !t.parent; });
