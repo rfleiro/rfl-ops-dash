@@ -30,7 +30,7 @@
 window.DashCore = (function(){
 
 const API = "https://api.github.com";
-const BUILD = "20260917-0090";
+const BUILD = "20260918-0100";
 
 let M       = null;
 let REPO    = "";
@@ -754,6 +754,15 @@ function render(){
     h += "</div>";
   }
 
+  if(M.braindump){
+    h += "<div class='bd-capture bd-top'>"
+      + "<textarea id='bd-t' placeholder='Drop a thought, a note, a meeting log\u2026'></textarea>"
+      + "<div class='bd-bar'><select id='bd-k'>"
+      + "<option value='note'>note</option><option value='meeting'>meeting</option>"
+      + "<option value='idea'>idea</option><option value='decision'>decision</option>"
+      + "</select><span class='err' id='bd-err'></span>"
+      + "<button class='btn btn-p' onclick='DashCore.addBraindump()'>"+IC.plus+" Add</button></div></div>";
+  }
   h += "<div class='cols'>";
   const created = effCreated().filter(function(t){ return !t.parent; });
   // items that declare a parent pointing to another brief item are subtasks — don't show top-level
@@ -895,40 +904,30 @@ function render(){
 
   if(M.braindump){
     const bd = effBraindump();
-    var bdCol = isCollapsed("braindump");
-    h += "<div class='sec bd-sec'><div class='sec-hdr'><span class='sec-label'>Braindump</span>"
-       + "<div class='sec-r'><span class='sec-note'>"+hhmm(new Date())+"</span>" + secChev("braindump") + "</div></div>";
-    if(!bdCol){
-    // always-on capture box: no click needed before you can start typing
-    h += "<div class='bd-capture'>"
-      + "<textarea id='bd-t' placeholder='Drop a thought, a note, a meeting log\u2026'></textarea>"
-      + "<div class='bd-bar'><select id='bd-k'>"
-      + "<option value='note'>note</option><option value='meeting'>meeting</option>"
-      + "<option value='idea'>idea</option><option value='decision'>decision</option>"
-      + "</select><span class='err' id='bd-err'></span>"
-      + "<button class='btn btn-p' onclick='DashCore.addBraindump()'>"+IC.plus+" Add</button></div></div>";
     if(bd.length){
-      h += bd.map(function(b){
-        const t = new Date(b.ts);
-        const ep = bdPanels[b.id] || {};
-          return "<div class='bd-item'>"
-          + "<div class='bd-head'><span class='bd-ts'>"+esc(isNaN(t)?b.ts:hhmm(t))+"</span>"
-          + "<span class='bd-kind bd-"+esc(b.kind||"note")+"'>"+esc(b.kind||"note")+"</span>"
-          + (b.queued?"<span class='chip queued'>queued</span>":"<span class='chip unsaved'>unsaved</span>")
-          + "<button class='act"+(ep.editing?" on":"")+"' onclick='DashCore.toggleBDEdit(\""+esc(b.id)+"\")'  title='Edit'>"+IC.edit+"</button>"
-          + "<button class='act rm' onclick='DashCore.rmBraindump(\""+esc(b.id)+"\")'  title='Remove'>"+IC.x+"</button></div>"
-          + (ep.editing
-            ? "<div class='panel'><textarea id='bdet-"+esc(b.id)+"'>"+esc(b.text)+"</textarea>"
-              + "<div class='pbtns'><button class='btn' onclick='DashCore.toggleBDEdit(\""+esc(b.id)+"\")'>"+"Cancel</button>"
-              + "<button class='btn btn-p' onclick='DashCore.saveBDEdit(\""+esc(b.id)+"\")'>"+"Save</button></div></div>"
-            : "<div class='bd-text"+(ep.expanded?" expanded":"")+"' onclick='DashCore.toggleBDExpand(\""+esc(b.id)+"\")'  title='"+(ep.expanded?"Collapse":"Expand")+"'>" + esc(b.text).replace(/\n/g,"<br>") + "</div>")
-          + "</div>";
-      }).join("");
-    } else {
-      h += "<div class='bd-empty'>Nothing yet today. Whatever lands here gets reviewed at end of day.</div>";
+      var bdCol = isCollapsed("braindump");
+      h += "<div class='sec bd-sec'><div class='sec-hdr'><span class='sec-label'>Braindump</span>"
+         + "<div class='sec-r'><span class='sec-note'>"+bd.length+" entr"+(bd.length===1?"y":"ies")+"</span>" + secChev("braindump") + "</div></div>";
+      if(!bdCol){
+        h += bd.map(function(b){
+          const t = new Date(b.ts);
+          const ep = bdPanels[b.id] || {};
+            return "<div class='bd-item'>"
+            + "<div class='bd-head'><span class='bd-ts'>"+esc(isNaN(t)?b.ts:hhmm(t))+"</span>"
+            + "<span class='bd-kind bd-"+esc(b.kind||"note")+"'>"+esc(b.kind||"note")+"</span>"
+            + (b.queued?"<span class='chip queued'>queued</span>":"<span class='chip unsaved'>unsaved</span>")
+            + "<button class='act"+(ep.editing?" on":"")+"' onclick='DashCore.toggleBDEdit(\""+esc(b.id)+"\")'  title='Edit'>"+IC.edit+"</button>"
+            + "<button class='act rm' onclick='DashCore.rmBraindump(\""+esc(b.id)+"\")'  title='Remove'>"+IC.x+"</button></div>"
+            + (ep.editing
+              ? "<div class='panel'><textarea id='bdet-"+esc(b.id)+"'>"+esc(b.text)+"</textarea>"
+                + "<div class='pbtns'><button class='btn' onclick='DashCore.toggleBDEdit(\""+esc(b.id)+"\")'>"+"Cancel</button>"
+                + "<button class='btn btn-p' onclick='DashCore.saveBDEdit(\""+esc(b.id)+"\")'>"+"Save</button></div></div>"
+              : "<div class='bd-text"+(ep.expanded?" expanded":"")+"' onclick='DashCore.toggleBDExpand(\""+esc(b.id)+"\")'  title='"+(ep.expanded?"Collapse":"Expand")+"'>" + esc(b.text).replace(/\n/g,"<br>") + "</div>")
+            + "</div>";
+        }).join("");
+      }
+      h += "</div>";   // .sec
     }
-    } // end !bdCol
-    h += "</div>";   // .sec
   }
   h += "</div>";   // .cols
   h += "<div class='foot'><span>"+esc(BRIEF.date)+(lastLoad?" \u00b7 "+hhmm(lastLoad):"")
@@ -970,6 +969,7 @@ return {
   toggleNtP, saveNtLog, saveNtDate, toggleStarNt, toggleNtDone
 };
 })();
+
 
 
 
