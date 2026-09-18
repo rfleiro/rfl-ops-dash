@@ -30,7 +30,7 @@
 window.DashCore = (function(){
 
 const API = "https://api.github.com";
-const BUILD = "20260918-0102";
+const BUILD = "20260918-1340";
 
 let M       = null;
 let REPO    = "";
@@ -53,6 +53,12 @@ let COLL = {};
 let WDISM = {};
 let subForms = {};
 const TODAY = (()=>{const d=new Date(); return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");})();
+
+// ── mic state ────────────────────────────────────────────────────────────────
+let _mic = null;
+let _micActive = false;
+let _micLang = "es-ES";
+let _micFinal = "";
 
 // ── storage, namespaced per dashboard ────────────────────────────────────────
 function K(s){ return "dash:" + M.id + ":" + s; }
@@ -423,6 +429,7 @@ function convertInbox(id){
 }
 function toggleBD(){ showBD = !showBD; render(); }
 function addBraindump(){
+  if(_micActive){ if(_mic){try{_mic.stop();}catch(e){}} _micActive=false; _mic=null; }
   const ta = document.getElementById("bd-t");
   const text = ta ? ta.value.trim() : "";
   if(!text){ document.getElementById("bd-err").textContent = "Nothing to add."; return; }
@@ -433,7 +440,7 @@ function addBraindump(){
     kind: kindEl ? kindEl.value : "note",
     text: text
   });
-  showBD = false; saveLocal(); render();
+  showBD = false; _micFinal = ""; saveLocal(); render();
 }
 function rmBraindump(id){
   const i = S.bd.findIndex(b => b.id === id);
@@ -442,6 +449,61 @@ function rmBraindump(id){
   saveLocal(); render();
 }
 function toggleBDExpand(id){ bdPanels[id]={...bdPanels[id]||{},expanded:!((bdPanels[id]||{}).expanded)}; render(); }
+function toggleMic(){
+  var SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if(!SR){
+    var err = document.getElementById("bd-err");
+    if(err) err.textContent = "Needs Chrome or Edge.";
+    return;
+  }
+  if(_micActive){
+    if(_mic){try{_mic.stop();}catch(e){}}
+    _micActive = false; _mic = null;
+    var saved = ""; var ta = document.getElementById("bd-t"); if(ta) saved = ta.value;
+    render();
+    var ta2 = document.getElementById("bd-t"); if(ta2 && saved) ta2.value = saved;
+    return;
+  }
+  _micActive = true; _micFinal = "";
+  render();
+  _mic = new SR();
+  _mic.continuous = true;
+  _mic.interimResults = true;
+  _mic.lang = _micLang;
+  _mic.onresult = function(e){
+    var fin = "", itr = "";
+    for(var i = e.resultIndex; i < e.results.length; i++){
+      var t = e.results[i][0].transcript;
+      if(e.results[i].isFinal){ fin += t; } else { itr += t; }
+    }
+    if(fin){ _micFinal += (_micFinal && !_micFinal.match(/\s$/) ? " " : "") + fin; }
+    var ta = document.getElementById("bd-t");
+    if(ta) ta.value = _micFinal + (itr ? " "+itr : "");
+    var il = document.getElementById("bd-interim");
+    if(il){ il.textContent = itr; il.style.display = itr ? "" : "none"; }
+  };
+  _mic.onerror = function(e){
+    if(e.error === "aborted" || e.error === "no-speech") return;
+    _micActive = false; _mic = null;
+    var sv = ""; var ta = document.getElementById("bd-t"); if(ta) sv = ta.value;
+    render();
+    var ta2 = document.getElementById("bd-t"); if(ta2 && sv) ta2.value = sv;
+    var er = document.getElementById("bd-err"); if(er) er.textContent = "Mic: "+e.error;
+  };
+  _mic.onend = function(){
+    if(_micActive && _mic){ try{ _mic.start(); }catch(ex){ _micActive=false; _mic=null; render(); } }
+  };
+  try{ _mic.start(); }catch(ex){
+    _micActive=false; _mic=null; render();
+    var er = document.getElementById("bd-err"); if(er) er.textContent = "Could not start mic.";
+  }
+}
+function toggleMicLang(){
+  if(_micActive) return;
+  _micLang = _micLang==="es-ES" ? "en-GB" : "es-ES";
+  render();
+}
+
 function toggleBDEdit(id){
   const cur = bdPanels[id] || {};
   bdPanels[id] = {editing: !cur.editing};
@@ -755,13 +817,20 @@ function render(){
   }
 
   if(M.braindump){
+    var hasSR = !!(window.SpeechRecognition || window.webkitSpeechRecognition);
+    var micBtns = hasSR
+      ? "<button class='btn-mic"+(_micActive?" mic-on":"")+"' onclick='DashCore.toggleMic()' title='"+ (_micActive?"Stop recording":"Voice input")+"'>"+(_micActive?"\u23f9":"\uD83C\uDF99")+"</button>"
+        +"<button class='btn-mic-lang' onclick='DashCore.toggleMicLang()' title='Switch language'>"+(_micLang==="es-ES"?"ES":"EN")+"</button>"
+      : "";
     h += "<div class='sec bd-sec-top'><div class='sec-hdr'><span class='sec-label'>Braindump</span></div>"
       + "<div class='bd-capture'>"
       + "<textarea id='bd-t' placeholder='Drop a thought, a note, a meeting log\u2026'></textarea>"
+      + "<div id='bd-interim' class='bd-interim' style='display:none'></div>"
       + "<div class='bd-bar'><select id='bd-k'>"
       + "<option value='note'>note</option><option value='meeting'>meeting</option>"
       + "<option value='idea'>idea</option><option value='decision'>decision</option>"
       + "</select><span class='err' id='bd-err'></span>"
+      + micBtns
       + "<button class='btn btn-p' onclick='DashCore.addBraindump()'>"+IC.plus+" Add</button></div></div></div>";
   }
   h += "<div class='cols'>";
@@ -964,7 +1033,7 @@ return {
   start, loadBrief, saveConfig, resetConfig,
   setCh, toggleP, saveLog, saveDate,
   addTask, rmTask, toggleNew:function(){ showNF=!showNF; render(); },
-  toggleBD, addBraindump, rmBraindump, toggleBDEdit, saveBDEdit,
+  toggleBD, addBraindump, rmBraindump, toggleBDEdit, saveBDEdit, toggleMic, toggleMicLang,
   dismissInbox, undoInbox, toggleIB, convertInbox,
   toggleStar, toggleSnooze, push, toggleHide, toggleSection, dismissWarn, toggleSubForm, addSubtask, toggleBDExpand, closeModal, toggleTask,
   toggleNtP, saveNtLog, saveNtDate, toggleStarNt, toggleNtDone
