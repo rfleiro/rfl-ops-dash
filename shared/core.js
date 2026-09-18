@@ -30,7 +30,7 @@
 window.DashCore = (function(){
 
 const API = "https://api.github.com";
-const BUILD = "20260918-0101";
+const BUILD = "20260918-0102";
 
 let M       = null;
 let REPO    = "";
@@ -907,7 +907,7 @@ function render(){
     const bd = effBraindump();
     if(bd.length){
       var bdCol = isCollapsed("braindump");
-      h += "<div class='sec bd-sec'><div class='sec-hdr'><span class='sec-label'>Braindump</span>"
+      h += "<div class='sec bd-sec'><div class='sec-hdr'><span class='sec-label'>Braindumps</span>"
          + "<div class='sec-r'><span class='sec-note'>"+bd.length+" entr"+(bd.length===1?"y":"ies")+"</span>" + secChev("braindump") + "</div></div>";
       if(!bdCol){
         h += bd.map(function(b){
