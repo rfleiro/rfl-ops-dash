@@ -30,7 +30,7 @@
 window.DashCore = (function(){
 
 const API = "https://api.github.com";
-const BUILD = "20260918-1340";
+const BUILD = "20260918-1410";
 
 let M       = null;
 let REPO    = "";
@@ -59,6 +59,7 @@ let _mic = null;
 let _micActive = false;
 let _micLang = "es-ES";
 let _micFinal = "";
+let _micBase  = "";
 
 // ── storage, namespaced per dashboard ────────────────────────────────────────
 function K(s){ return "dash:" + M.id + ":" + s; }
@@ -449,6 +450,15 @@ function rmBraindump(id){
   saveLocal(); render();
 }
 function toggleBDExpand(id){ bdPanels[id]={...bdPanels[id]||{},expanded:!((bdPanels[id]||{}).expanded)}; render(); }
+function updateMicBtn(){
+  var btn = document.querySelector(".btn-mic");
+  if(btn){
+    if(_micActive){ btn.classList.add("mic-on"); btn.title="Stop recording"; btn.textContent="\u23f9"; }
+    else{ btn.classList.remove("mic-on"); btn.title="Voice input"; btn.textContent="\uD83C\uDF99"; }
+  }
+  var lang = document.querySelector(".btn-mic-lang");
+  if(lang) lang.textContent = _micLang==="es-ES"?"ES":"EN";
+}
 function toggleMic(){
   var SR = window.SpeechRecognition || window.webkitSpeechRecognition;
   if(!SR){
@@ -459,13 +469,17 @@ function toggleMic(){
   if(_micActive){
     if(_mic){try{_mic.stop();}catch(e){}}
     _micActive = false; _mic = null;
-    var saved = ""; var ta = document.getElementById("bd-t"); if(ta) saved = ta.value;
-    render();
-    var ta2 = document.getElementById("bd-t"); if(ta2 && saved) ta2.value = saved;
+    updateMicBtn();
+    var il = document.getElementById("bd-interim");
+    if(il){ il.textContent=""; il.style.display="none"; }
     return;
   }
-  _micActive = true; _micFinal = "";
-  render();
+  // Snapshot current textarea as base — preserves typed text and prior sessions
+  var ta0 = document.getElementById("bd-t");
+  _micBase = ta0 ? ta0.value : "";
+  _micFinal = "";
+  _micActive = true;
+  updateMicBtn();
   _mic = new SR();
   _mic.continuous = true;
   _mic.interimResults = true;
@@ -478,23 +492,22 @@ function toggleMic(){
     }
     if(fin){ _micFinal += (_micFinal && !_micFinal.match(/\s$/) ? " " : "") + fin; }
     var ta = document.getElementById("bd-t");
-    if(ta) ta.value = _micFinal + (itr ? " "+itr : "");
+    var sep = _micBase && !_micBase.match(/\s$/) ? " " : "";
+    if(ta) ta.value = _micBase + sep + _micFinal + (itr ? " "+itr : "");
     var il = document.getElementById("bd-interim");
     if(il){ il.textContent = itr; il.style.display = itr ? "" : "none"; }
   };
   _mic.onerror = function(e){
     if(e.error === "aborted" || e.error === "no-speech") return;
     _micActive = false; _mic = null;
-    var sv = ""; var ta = document.getElementById("bd-t"); if(ta) sv = ta.value;
-    render();
-    var ta2 = document.getElementById("bd-t"); if(ta2 && sv) ta2.value = sv;
+    updateMicBtn();
     var er = document.getElementById("bd-err"); if(er) er.textContent = "Mic: "+e.error;
   };
   _mic.onend = function(){
-    if(_micActive && _mic){ try{ _mic.start(); }catch(ex){ _micActive=false; _mic=null; render(); } }
+    if(_micActive && _mic){ try{ _mic.start(); }catch(ex){ _micActive=false; _mic=null; updateMicBtn(); } }
   };
   try{ _mic.start(); }catch(ex){
-    _micActive=false; _mic=null; render();
+    _micActive=false; _mic=null; updateMicBtn();
     var er = document.getElementById("bd-err"); if(er) er.textContent = "Could not start mic.";
   }
 }
@@ -1025,6 +1038,13 @@ function start(manifest){
   });
   document.addEventListener("visibilitychange", function(){
     if(!document.hidden && view==="ready" && lastLoad && (Date.now()-lastLoad.getTime())>600000) loadBrief();
+  });
+  // When user types in the braindump textarea while mic is on, treat the
+  // current value as the new base so the next recognition result appends.
+  document.addEventListener("input", function(e){
+    if(e.target && e.target.id === "bd-t" && _micActive){
+      _micBase = e.target.value; _micFinal = "";
+    }
   });
   loadBrief();
 }
