@@ -8,7 +8,7 @@
 <meta name="robots" content="noindex, nofollow">
 <title>Issues — rfl-ops</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%232563EB'/><text x='50' y='68' font-size='56' text-anchor='middle' fill='white'>📋</text></svg>">
-<link rel="stylesheet" href="../shared/style.css?v=20260921-0740">
+<link rel="stylesheet" href="../shared/style.css?v=20260921-0750">
 <style>
 /* ── Issues dashboard ───────────────────────────────────────────────────── */
 body { min-height: 100vh; }
@@ -356,9 +356,21 @@ body { min-height: 100vh; }
 <body>
 <div id="app"></div>
 <script>
+// Global error trap — writes the error visibly into #app so we can debug
+window.onerror = function(msg, src, line, col, err) {
+  var app = document.getElementById('app');
+  if(app) app.innerHTML = '<div style="color:#dc2626;padding:20px;font-family:monospace;font-size:12px;line-height:1.6;background:#fef2f2;border:1px solid #fecaca;border-radius:8px;margin:20px">'
+    + '<b>JS error (line ' + line + '):</b><br>' + msg + '</div>';
+  return false;
+};
+window.addEventListener('unhandledrejection', function(e) {
+  var app = document.getElementById('app');
+  if(app && app.innerHTML.trim() === '') app.innerHTML = '<div style="color:#dc2626;padding:20px;font-family:monospace;font-size:12px;line-height:1.6;background:#fef2f2;border:1px solid #fecaca;border-radius:8px;margin:20px">'
+    + '<b>Unhandled rejection:</b><br>' + (e.reason || 'unknown') + '</div>';
+});
 'use strict';
 
-const BUILD = '20260921-0740';
+const BUILD = '20260921-0750';
 const API   = 'https://api.github.com';
 const ID    = 'issues';
 
@@ -881,9 +893,11 @@ window.calNav      = calNav;
 
 // ── Boot ──────────────────────────────────────────────────────────────────
 // Fall back to ops namespace so the first open works without a separate setup step.
-REPO  = ls(K('repo')) || ls('dash:ops:repo') || '';
-TOKEN = ls(K('pat'))  || ls('dash:ops:pat')  || '';
-load();
+document.addEventListener('DOMContentLoaded', function() {
+  REPO  = ls(K('repo')) || ls('dash:ops:repo') || '';
+  TOKEN = ls(K('pat'))  || ls('dash:ops:pat')  || '';
+  load();
+});
 </script>
 </body>
 </html>
