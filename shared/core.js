@@ -30,7 +30,7 @@
 window.DashCore = (function(){
 
 const API = "https://api.github.com";
-const BUILD = "20260921-0730";
+const BUILD = "20260921-1231";
 
 let M       = null;
 let REPO    = "";
@@ -138,6 +138,11 @@ function isSnoozed(n){ return !!SNOOZE[String(n)]; }
 function toggleSnooze(n){
   const k = String(n);
   if(SNOOZE[k]) delete SNOOZE[k]; else SNOOZE[k] = true;
+  lsSet(snoozeKey(), JSON.stringify(SNOOZE));
+  render();
+}
+function unsnoozeAll(){
+  SNOOZE = {};
   lsSet(snoozeKey(), JSON.stringify(SNOOZE));
   render();
 }
@@ -920,6 +925,7 @@ function render(){
     if(!sCol && snoozed.length){
       h += "<div class='hidden-row'>" + IC.moon + " " + snoozed.length + " snoozed today"
          + snoozed.map(function(i){ return " &middot; <button class='lnk' onclick='DashCore.toggleSnooze("+i.number+")' title='Un-snooze'>#"+i.number+"</button>"; }).join("")
+         + (snoozed.length > 1 ? " &middot; <button class='lnk' onclick='DashCore.unsnoozeAll()' title='Un-snooze all'>unsnooze all</button>" : "")
          + "</div>";
     }
     h += "</div>";
@@ -1055,10 +1061,11 @@ return {
   addTask, rmTask, toggleNew:function(){ showNF=!showNF; render(); },
   toggleBD, addBraindump, rmBraindump, toggleBDEdit, saveBDEdit, toggleMic, toggleMicLang,
   dismissInbox, undoInbox, toggleIB, convertInbox,
-  toggleStar, toggleSnooze, push, toggleHide, toggleSection, dismissWarn, toggleSubForm, addSubtask, toggleBDExpand, closeModal, toggleTask,
+  toggleStar, toggleSnooze, unsnoozeAll, push, toggleHide, toggleSection, dismissWarn, toggleSubForm, addSubtask, toggleBDExpand, closeModal, toggleTask,
   toggleNtP, saveNtLog, saveNtDate, toggleStarNt, toggleNtDone
 };
 })();
+
 
 
 
