@@ -1,0 +1,888 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#F7F6F3" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#141412" media="(prefers-color-scheme: dark)">
+<meta name="robots" content="noindex, nofollow">
+<title>Issues — rfl-ops</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%232563EB'/><text x='50' y='68' font-size='56' text-anchor='middle' fill='white'>📋</text></svg>">
+<link rel="stylesheet" href="../shared/style.css?v=20260921-0730">
+<style>
+/* ── Issues dashboard ───────────────────────────────────────────────────── */
+body { min-height: 100vh; }
+
+.iss-wrap {
+  max-width: 1600px;
+  margin: 0 auto;
+  padding: 20px 16px calc(60px + env(safe-area-inset-bottom));
+}
+
+/* Controls row */
+.iss-controls {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+}
+
+/* Tab switcher */
+.tab-bar {
+  display: flex;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: var(--r);
+  padding: 3px;
+  gap: 2px;
+}
+.tab-btn {
+  background: none;
+  border: none;
+  padding: 5px 16px;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-2);
+  cursor: pointer;
+  border-radius: var(--rs);
+  font-family: inherit;
+  transition: background .12s, color .12s;
+  line-height: 1;
+}
+.tab-btn.active {
+  background: var(--surface);
+  color: var(--text);
+  box-shadow: 0 1px 3px rgba(0,0,0,.08);
+}
+
+/* Filter bar */
+.filter-bar {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+.filter-bar select {
+  font-size: 12px;
+  font-family: inherit;
+  border: 1px solid var(--border);
+  border-radius: var(--rs);
+  padding: 5px 9px;
+  background: var(--surface);
+  color: var(--text-2);
+  cursor: pointer;
+  height: 30px;
+}
+.filter-bar select:focus { outline: none; border-color: var(--accent); }
+.filter-count {
+  font-size: 11px;
+  color: var(--text-3);
+  white-space: nowrap;
+}
+
+/* ── Kanban ─────────────────────────────────────────────────────────────── */
+.kb-board {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 10px;
+  align-items: start;
+}
+.kb-col {
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-top: 3px solid var(--border-strong);
+  border-radius: var(--r);
+  min-width: 0;
+}
+.kb-col.col-overdue { border-top-color: var(--danger); }
+.kb-col.col-week    { border-top-color: var(--warning); }
+.kb-col.col-month   { border-top-color: var(--accent); }
+.kb-col.col-later   { border-top-color: var(--green); }
+.kb-col.col-none    { border-top-color: var(--border-strong); }
+
+.kb-col-hdr {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 12px 9px;
+  border-bottom: 1px solid var(--border);
+}
+.kb-col-title {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-3);
+  letter-spacing: .04em;
+  text-transform: uppercase;
+}
+.kb-col-count {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-3);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  padding: 0 6px;
+  border-radius: 10px;
+  min-width: 20px;
+  text-align: center;
+}
+.col-overdue .kb-col-count { color: var(--danger); border-color: var(--danger-border); background: var(--danger-bg); }
+.col-week    .kb-col-count { color: var(--warning); border-color: var(--warning-border); background: var(--warning-bg); }
+
+.kb-cards {
+  padding: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  min-height: 48px;
+}
+.kb-empty {
+  font-size: 11px;
+  color: var(--text-3);
+  text-align: center;
+  padding: 14px 6px;
+  font-style: italic;
+}
+
+/* Issue card (used in both kanban + calendar) */
+.iss-card {
+  display: block;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-left: 3px solid transparent;
+  border-radius: var(--rs);
+  padding: 8px 10px;
+  text-decoration: none;
+  color: var(--text);
+  transition: border-color .1s, box-shadow .1s;
+}
+.iss-card:hover {
+  border-color: var(--accent-border);
+  box-shadow: 0 1px 5px rgba(0,0,0,.07);
+  color: var(--text);
+}
+.iss-card.is-overdue { border-left-color: var(--danger); }
+.iss-card.is-today   { border-left-color: var(--warning); }
+
+.iss-top {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  justify-content: space-between;
+  margin-bottom: 5px;
+}
+.iss-title {
+  font-size: 12px;
+  font-weight: 500;
+  flex: 1;
+  line-height: 1.4;
+  color: var(--text);
+  word-break: break-word;
+}
+.iss-num {
+  font-size: 10px;
+  color: var(--text-3);
+  flex-shrink: 0;
+  margin-top: 1px;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: .01em;
+}
+.iss-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  align-items: center;
+}
+
+/* ── Calendar ───────────────────────────────────────────────────────────── */
+.cal-outer {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 16px;
+  align-items: start;
+}
+@media (min-width: 780px) {
+  .cal-outer { grid-template-columns: minmax(0,1.6fr) minmax(240px, 1fr); }
+}
+
+.cal-nav {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+.cal-month {
+  font-size: 14px;
+  font-weight: 600;
+  flex: 1;
+  text-align: center;
+}
+.cal-legend {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  font-size: 11px;
+  color: var(--text-3);
+  margin-bottom: 10px;
+}
+.cal-legend-item { display: flex; align-items: center; gap: 5px; }
+
+.cal-dot {
+  display: inline-block;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--accent);
+  flex-shrink: 0;
+}
+.cal-dot.dl { background: var(--danger); }
+
+.cal-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 3px;
+}
+.cal-dow {
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--text-3);
+  text-align: center;
+  padding: 3px 0 7px;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+}
+.cal-cell {
+  border: 1px solid var(--border);
+  border-radius: var(--rs);
+  padding: 5px 6px;
+  cursor: pointer;
+  position: relative;
+  background: var(--surface);
+  transition: background .1s, border-color .1s;
+  min-height: 52px;
+}
+.cal-cell:hover { background: var(--accent-bg); border-color: var(--accent-border); }
+.cal-cell.empty { background: transparent; border-color: transparent; cursor: default; pointer-events: none; }
+.cal-cell.is-today { background: var(--accent-bg); border-color: var(--accent-border); }
+.cal-cell.is-today .cal-day-num { color: var(--accent); font-weight: 700; }
+.cal-cell.is-selected { background: var(--accent-bg); border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent-border); }
+.cal-cell.has-events .cal-day-num { font-weight: 700; color: var(--text); }
+.cal-day-num { font-size: 11px; color: var(--text-3); line-height: 1; }
+.cal-dots { display: flex; gap: 3px; flex-wrap: wrap; margin-top: 5px; }
+
+/* Calendar detail panel */
+.cal-detail {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r);
+  overflow: hidden;
+}
+.cal-detail-hdr {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--border);
+  background: var(--surface2);
+}
+.cal-detail-day {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text);
+}
+.cal-detail-x {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--text-3);
+  font-size: 13px;
+  padding: 2px 5px;
+  border-radius: var(--rs);
+  line-height: 1;
+}
+.cal-detail-x:hover { color: var(--text); background: var(--surface2); }
+.cal-detail-body { padding: 8px; display: flex; flex-direction: column; gap: 5px; }
+.cal-detail-empty {
+  font-size: 11px;
+  color: var(--text-3);
+  font-style: italic;
+  padding: 12px;
+  text-align: center;
+}
+.cal-detail-placeholder {
+  padding: 24px 16px;
+  text-align: center;
+  font-size: 12px;
+  color: var(--text-3);
+  font-style: italic;
+}
+
+/* Section label for no-date section in calendar detail */
+.cal-section-label {
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--text-3);
+  letter-spacing: .04em;
+  text-transform: uppercase;
+  padding: 4px 2px 2px;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 4px;
+}
+
+/* Responsive */
+@media (max-width: 900px) {
+  .kb-board { grid-template-columns: repeat(3, minmax(0,1fr)); }
+}
+@media (max-width: 600px) {
+  .kb-board { grid-template-columns: repeat(2, minmax(0,1fr)); }
+  .iss-controls { flex-direction: column; align-items: flex-start; }
+  .tab-bar, .filter-bar { width: 100%; }
+}
+@media (max-width: 380px) {
+  .kb-board { grid-template-columns: minmax(0,1fr); }
+}
+
+/* chip.dl in card */
+.iss-card .chip.dl { background: transparent; border: 1px solid var(--border-strong); color: var(--text-2); font-size: 10.5px; }
+.iss-card .chip.dl.overdue { border-color: var(--danger-border); color: var(--danger); }
+.iss-card .chip.dl.today { border-color: var(--warning-border); color: var(--warning); }
+
+/* Loading SVG spin */
+.iss-spin svg { animation: spin 1s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+</style>
+</head>
+<body>
+<div id="app"></div>
+<script>
+'use strict';
+
+const BUILD = '20260921-0730';
+const API   = 'https://api.github.com';
+const ID    = 'issues';
+
+// Today as YYYY-MM-DD (local time)
+const TODAY = (function() {
+  var d = new Date();
+  return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+})();
+
+// State
+var REPO    = '';
+var TOKEN   = '';
+var view    = 'boot';   // setup | loading | ready | error
+var errMsg  = '';
+var issues  = [];       // all open, non-PR issues, parsed
+var lastLoad = null;
+
+// Filter state
+var filtTopic  = 'all';
+var filtType   = 'all';
+
+// Tab + calendar state
+var activeTab  = 'kanban';
+var calDate    = new Date();   // current month being viewed
+var dayDetail  = null;         // selected YYYY-MM-DD string
+
+// ── Storage ───────────────────────────────────────────────────────────────
+function K(s) { return 'dash:'+ID+':'+s; }
+function ls(k)      { try { return localStorage.getItem(k); }   catch(e) { return null; } }
+function lsSet(k,v) { try { localStorage.setItem(k,v); }        catch(e) {} }
+function lsDel(k)   { try { localStorage.removeItem(k); }       catch(e) {} }
+
+// ── Helpers ───────────────────────────────────────────────────────────────
+function esc(s) {
+  return String(s == null ? '' : s).replace(/[&<>"']/g, function(c) {
+    return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];
+  });
+}
+function fd(d) {
+  if(!d) return '';
+  var p = String(d).split('-');
+  return p[2] + '/' + p[1];
+}
+function addDays(dateStr, n) {
+  var dt = new Date(dateStr + 'T00:00:00');
+  dt.setDate(dt.getDate() + n);
+  return dt.toISOString().slice(0, 10);
+}
+
+// ── Issue parsing ─────────────────────────────────────────────────────────
+function parseDate(body, field) {
+  if(!body) return '';
+  var re = new RegExp('^' + field.replace(/[.*+?^${}()|[\]\\]/g,'\\$&') + '[ \\t]*([0-9]{4}-[0-9]{2}-[0-9]{2})', 'm');
+  var m = body.match(re);
+  return m ? m[1] : '';
+}
+
+var TOPIC_NAMES = ['project','paper','grant','talk','review','patents','IT','admin','lab',
+  'people:lab','people:alumni','people:networking',
+  'MITO','DNA Repair','DNA Replication','Shelterin','Methods','Other'];
+
+function parseLabels(labels) {
+  var names = (labels || []).map(function(l) { return l.name; });
+  var type = 'task';
+  if(names.some(function(n){ return n.startsWith('people:'); })) type = 'person';
+  else if(names.indexOf('thread') !== -1) type = 'thread';
+  else if(names.indexOf('task') !== -1) type = 'task';
+  // topic: prefer known topic labels, fall back to first non-type label
+  var topic = names.find(function(n) { return TOPIC_NAMES.indexOf(n) !== -1 || n.startsWith('people:'); })
+           || names.find(function(n) { return n !== 'task' && n !== 'thread'; })
+           || '';
+  return { type: type, topic: topic };
+}
+
+// ── Buckets ───────────────────────────────────────────────────────────────
+// Returns 'overdue' | 'week' | 'month' | 'later' | 'none'
+function bucket(issue) {
+  var r = issue.reminder;
+  if(!r) return 'none';
+  if(r < TODAY) return 'overdue';
+  if(r <= addDays(TODAY, 7)) return 'week';
+  if(r <= addDays(TODAY, 30)) return 'month';
+  return 'later';
+}
+
+// ── Topic colors (mirror ops manifest) ───────────────────────────────────
+var TOPIC_COLORS = {
+  paper:              { bg:'#FFF7ED', tx:'#C2410C' },
+  project:            { bg:'#EFF6FF', tx:'#1D4ED8' },
+  grant:              { bg:'#F0FDF4', tx:'#15803D' },
+  talk:               { bg:'#F5F3FF', tx:'#6D28D9' },
+  review:             { bg:'#FFF1F2', tx:'#BE123C' },
+  patents:            { bg:'#FEFCE8', tx:'#A16207' },
+  IT:                 { bg:'#F1F5F9', tx:'#475569' },
+  admin:              { bg:'#F8FAFC', tx:'#64748B' },
+  lab:                { bg:'#ECFDF5', tx:'#065F46' },
+  'people:lab':       { bg:'#FDF4FF', tx:'#7E22CE' },
+  'people:alumni':    { bg:'#FDF4FF', tx:'#7E22CE' },
+  'people:networking':{ bg:'#FDF4FF', tx:'#7E22CE' },
+  'MITO':             { bg:'#FFF7ED', tx:'#9A3412' },
+  'DNA Repair':       { bg:'#F0FDF4', tx:'#166534' },
+  'DNA Replication':  { bg:'#EFF6FF', tx:'#1E40AF' },
+  'Shelterin':        { bg:'#F5F3FF', tx:'#5B21B6' },
+  'Methods':          { bg:'#F8FAFC', tx:'#334155' },
+};
+
+function ttag(t) {
+  var c = TOPIC_COLORS[t] || { bg:'#F1F5F9', tx:'#475569' };
+  return '<span class="tag" style="background:' + c.bg + ';color:' + c.tx + '">' + esc(t || '—') + '</span>';
+}
+
+function dlChipClass(d) {
+  if(!d) return '';
+  if(d < TODAY) return 'overdue';
+  if(d <= addDays(TODAY, 7)) return 'today';
+  return '';
+}
+
+// ── GitHub API ────────────────────────────────────────────────────────────
+async function apiGet(path) {
+  var headers = {
+    'Authorization': 'Bearer ' + TOKEN,
+    'Accept': 'application/vnd.github+json',
+    'X-GitHub-Api-Version': '2022-11-28'
+  };
+  var r;
+  try {
+    r = await fetch(API + path, { headers: headers, cache: 'no-store' });
+  } catch(e) {
+    throw new Error('Network error — check your connection.');
+  }
+  if(!r.ok) {
+    var msg = String(r.status);
+    if(r.status === 401) msg = '401 · Token invalid or revoked.';
+    else if(r.status === 404) msg = '404 · Repo not found. Check the repo name.';
+    else if(r.status === 403) msg += ' · Forbidden or rate-limited.';
+    throw new Error(msg);
+  }
+  return r.json();
+}
+
+async function fetchAllIssues() {
+  var page = 1, all = [];
+  while(true) {
+    var batch = await apiGet('/repos/' + REPO + '/issues?state=open&per_page=100&page=' + page);
+    if(!batch.length) break;
+    for(var i = 0; i < batch.length; i++) {
+      var iss = batch[i];
+      if(iss.pull_request) continue;
+      var lab = parseLabels(iss.labels);
+      all.push({
+        number:    iss.number,
+        title:     iss.title,
+        url:       iss.html_url,
+        type:      lab.type,
+        topic:     lab.topic,
+        reminder:  parseDate(iss.body, '📅 Reminder:'),
+        deadline:  parseDate(iss.body, '📅 Deadline:'),
+        updatedAt: iss.updated_at
+      });
+    }
+    if(batch.length < 100) break;
+    page++;
+  }
+  return all;
+}
+
+// ── Load ──────────────────────────────────────────────────────────────────
+async function load() {
+  if(!TOKEN || !REPO) { view = 'setup'; render(); return; }
+  view = 'loading'; render();
+  try {
+    issues   = await fetchAllIssues();
+    lastLoad = new Date();
+    view     = 'ready';
+  } catch(e) {
+    errMsg = e.message || String(e);
+    view   = 'error';
+  }
+  render();
+}
+
+function saveConfig() {
+  var rp = document.getElementById('rp').value.trim()
+    .replace(/^https?:\/\/github\.com\//, '').replace(/\.git$/, '').replace(/\/+$/, '');
+  var tk = document.getElementById('tk').value.trim();
+  var e  = document.getElementById('tk-err');
+  if(!/^[\w.-]+\/[\w.-]+$/.test(rp)) { e.textContent = 'Format: owner/repo'; return; }
+  if(!tk) { e.textContent = 'Paste the token.'; return; }
+  REPO = rp; TOKEN = tk;
+  lsSet(K('repo'), rp);
+  lsSet(K('pat'),  tk);
+  load();
+}
+function resetConfig() {
+  if(!confirm('Clear saved credentials for the Issues dashboard?')) return;
+  REPO = ''; TOKEN = '';
+  lsDel(K('repo')); lsDel(K('pat'));
+  view = 'setup'; render();
+}
+
+// ── Derived lists ─────────────────────────────────────────────────────────
+function filtered() {
+  return issues.filter(function(i) {
+    if(filtTopic !== 'all' && i.topic !== filtTopic) return false;
+    if(filtType  !== 'all' && i.type  !== filtType)  return false;
+    return true;
+  });
+}
+function allTopics() {
+  var seen = {};
+  issues.forEach(function(i) { if(i.topic) seen[i.topic] = true; });
+  return Object.keys(seen).sort();
+}
+
+// ── Issue card HTML ───────────────────────────────────────────────────────
+function issueCard(iss) {
+  var cls = '';
+  if(iss.reminder) {
+    if(iss.reminder < TODAY)            cls = 'is-overdue';
+    else if(iss.reminder <= addDays(TODAY, 1)) cls = 'is-today';
+  }
+  var dlc = dlChipClass(iss.deadline);
+  return '<a class="iss-card ' + cls + '" href="' + esc(iss.url) + '" target="_blank" rel="noopener">'
+    + '<div class="iss-top">'
+    + '<span class="iss-title">' + esc(iss.title) + '</span>'
+    + '<span class="iss-num">#' + iss.number + '</span>'
+    + '</div>'
+    + '<div class="iss-meta">'
+    + ttag(iss.topic)
+    + (iss.reminder ? '<span class="chip ' + cls.replace('is-','') + '">' + fd(iss.reminder) + '</span>' : '')
+    + (iss.deadline ? '<span class="chip dl ' + dlc + '">⚑ ' + fd(iss.deadline) + '</span>' : '')
+    + '</div>'
+    + '</a>';
+}
+
+// ── Kanban ────────────────────────────────────────────────────────────────
+function renderKanban() {
+  var list = filtered();
+  var COLS = [
+    { id:'overdue', label:'Overdue',      cls:'col-overdue' },
+    { id:'week',    label:'This week',    cls:'col-week'    },
+    { id:'month',   label:'Next 30 days', cls:'col-month'   },
+    { id:'later',   label:'Later',        cls:'col-later'   },
+    { id:'none',    label:'No date',      cls:'col-none'    },
+  ];
+  var bucketed = {};
+  COLS.forEach(function(c) { bucketed[c.id] = []; });
+  list.forEach(function(i) {
+    var b = bucket(i);
+    (bucketed[b] || bucketed.none).push(i);
+  });
+
+  return '<div class="kb-board">'
+    + COLS.map(function(col) {
+        var items = bucketed[col.id];
+        return '<div class="kb-col ' + col.cls + '">'
+          + '<div class="kb-col-hdr">'
+          + '<span class="kb-col-title">' + esc(col.label) + '</span>'
+          + '<span class="kb-col-count">' + items.length + '</span>'
+          + '</div>'
+          + '<div class="kb-cards">'
+          + (items.length
+              ? items.map(issueCard).join('')
+              : '<div class="kb-empty">—</div>')
+          + '</div>'
+          + '</div>';
+      }).join('')
+    + '</div>';
+}
+
+// ── Calendar ──────────────────────────────────────────────────────────────
+function renderCalendar() {
+  var list   = filtered();
+  var year   = calDate.getFullYear();
+  var month  = calDate.getMonth();  // 0-indexed
+  var monthLabel = calDate.toLocaleString('en-GB', { month:'long', year:'numeric' });
+
+  // Group by day (reminder date)
+  var byDay  = {};
+  var dlByDay = {};
+  list.forEach(function(i) {
+    if(i.reminder) {
+      var d = new Date(i.reminder + 'T00:00:00');
+      if(d.getFullYear() === year && d.getMonth() === month) {
+        var day = d.getDate();
+        (byDay[day] = byDay[day] || []).push(i);
+      }
+    }
+    if(i.deadline) {
+      var d2 = new Date(i.deadline + 'T00:00:00');
+      if(d2.getFullYear() === year && d2.getMonth() === month) {
+        var day2 = d2.getDate();
+        (dlByDay[day2] = dlByDay[day2] || []).push(i);
+      }
+    }
+  });
+
+  // Calendar grid
+  var firstDayOfWeek = new Date(year, month, 1).getDay(); // 0=Sun
+  var startOffset    = (firstDayOfWeek + 6) % 7;          // Mon-based offset
+  var daysInMonth    = new Date(year, month + 1, 0).getDate();
+
+  var todayD = new Date(TODAY + 'T00:00:00');
+  var todayNum   = todayD.getDate();
+  var todayMonth = todayD.getMonth();
+  var todayYear  = todayD.getFullYear();
+  var isThisMonth = (year === todayYear && month === todayMonth);
+
+  var DAYS = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
+  var dowHdr = DAYS.map(function(d) {
+    return '<div class="cal-dow">' + d + '</div>';
+  }).join('');
+
+  var cells = '';
+  for(var b = 0; b < startOffset; b++) cells += '<div class="cal-cell empty"></div>';
+
+  for(var d = 1; d <= daysInMonth; d++) {
+    var dateStr  = year + '-' + String(month+1).padStart(2,'0') + '-' + String(d).padStart(2,'0');
+    var isToday  = isThisMonth && d === todayNum;
+    var hasDue   = byDay[d]   && byDay[d].length > 0;
+    var hasDl    = dlByDay[d] && dlByDay[d].length > 0;
+    var isSel    = dayDetail === dateStr;
+    var cls      = 'cal-cell'
+      + (isToday ? ' is-today' : '')
+      + (hasDue || hasDl ? ' has-events' : '')
+      + (isSel ? ' is-selected' : '');
+
+    cells += '<div class="' + cls + '" onclick="selectDay(\'' + dateStr + '\')">'
+      + '<span class="cal-day-num">' + d + '</span>'
+      + '<div class="cal-dots">'
+      + (hasDue ? '<span class="cal-dot" title="' + byDay[d].length + ' reminder' + (byDay[d].length!==1?'s':'') + '"></span>' : '')
+      + (hasDl  ? '<span class="cal-dot dl" title="' + dlByDay[d].length + ' deadline' + (dlByDay[d].length!==1?'s':'') + '"></span>' : '')
+      + '</div>'
+      + '</div>';
+  }
+
+  // Detail panel
+  var detailHtml = '';
+  if(dayDetail) {
+    var dayNum  = parseInt(dayDetail.split('-')[2], 10);
+    var dueList = byDay[dayNum]  || [];
+    var dlList  = dlByDay[dayNum] || [];
+
+    // Combine, de-dupe by number
+    var seen    = {};
+    var dueOnly = [], dlOnly = [], both = [];
+    dueList.forEach(function(i) { seen[i.number] = 'due'; });
+    dlList.forEach(function(i) {
+      if(seen[i.number]) seen[i.number] = 'both';
+      else seen[i.number] = 'dl';
+    });
+
+    var allItems = [];
+    var added = {};
+    dueList.concat(dlList).forEach(function(i) {
+      if(!added[i.number]) { allItems.push(i); added[i.number] = true; }
+    });
+
+    var selLabel = new Date(dayDetail + 'T00:00:00').toLocaleDateString('en-GB', {
+      weekday:'long', day:'numeric', month:'long'
+    });
+    detailHtml = '<div class="cal-detail">'
+      + '<div class="cal-detail-hdr">'
+      + '<span class="cal-detail-day">' + esc(selLabel) + '</span>'
+      + '<button class="cal-detail-x" onclick="selectDay(null)" title="Close">✕</button>'
+      + '</div>'
+      + '<div class="cal-detail-body">'
+      + (allItems.length
+          ? allItems.map(issueCard).join('')
+          : '<div class="cal-detail-empty">Nothing on this day</div>')
+      + '</div>'
+      + '</div>';
+  } else {
+    detailHtml = '<div class="cal-detail"><div class="cal-detail-placeholder">Click a day to see its issues</div></div>';
+  }
+
+  return '<div class="cal-outer">'
+    + '<div>'
+    + '<div class="cal-nav">'
+    + '<button class="btn" onclick="calNav(-1)">← Prev</button>'
+    + '<span class="cal-month">' + esc(monthLabel) + '</span>'
+    + '<button class="btn" onclick="calNav(1)">Next →</button>'
+    + '</div>'
+    + '<div class="cal-legend">'
+    + '<span class="cal-legend-item"><span class="cal-dot"></span> reminder</span>'
+    + '<span class="cal-legend-item"><span class="cal-dot dl"></span> deadline</span>'
+    + '</div>'
+    + '<div class="cal-grid">'
+    + dowHdr
+    + cells
+    + '</div>'
+    + '</div>'
+    + detailHtml
+    + '</div>';
+}
+
+// ── Render ────────────────────────────────────────────────────────────────
+function render() {
+  var app = document.getElementById('app');
+
+  if(view === 'setup') {
+    app.innerHTML = '<div class="center">'
+      + '<a class="back" href="../">← dashboards</a>'
+      + '<h2>Issues <span class="hdr-id">issues</span></h2>'
+      + '<p>Kanban and calendar view of all open issues. Fetches live from GitHub — no daily build needed.</p>'
+      + '<div class="steps"><ol>'
+      + '<li>Same repo and token as your ops dashboard — or create a token with <strong>Contents: Read-only</strong></li>'
+      + '<li>This dashboard is read-only and never writes to issues or the journal</li>'
+      + '</ol></div>'
+      + '<div class="pfield" style="margin-bottom:8px"><label>Data repository</label>'
+      + '<input id="rp" type="text" placeholder="owner/repo" autocomplete="off" spellcheck="false">'
+      + '</div>'
+      + '<div class="pfield"><label>Token</label>'
+      + '<input id="tk" type="password" placeholder="github_pat_\u2026" autocomplete="off" spellcheck="false">'
+      + '</div>'
+      + '<p class="err" id="tk-err"></p>'
+      + '<div class="pbtns" style="margin-top:10px">'
+      + '<button class="btn btn-p" onclick="saveConfig()">Load issues</button>'
+      + '</div>'
+      + '<p class="muted">Requests go only to api.github.com. Token stored only on this device.</p>'
+      + '</div>';
+    var rpEl = document.getElementById('rp');
+    var tkEl = document.getElementById('tk');
+    rpEl.addEventListener('keydown', function(e) { if(e.key==='Enter') saveConfig(); });
+    tkEl.addEventListener('keydown', function(e) { if(e.key==='Enter') saveConfig(); });
+    rpEl.focus();
+    return;
+  }
+
+  if(view === 'loading') {
+    app.innerHTML = '<div class="load">'
+      + '<span class="iss-spin"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg></span>'
+      + ' Fetching issues\u2026'
+      + '</div>';
+    return;
+  }
+
+  if(view === 'error') {
+    app.innerHTML = '<div class="center">'
+      + '<a class="back" href="../">← dashboards</a>'
+      + '<h2>Couldn\u2019t load</h2>'
+      + '<div class="ebox">' + esc(errMsg) + '</div>'
+      + '<div class="pbtns">'
+      + '<button class="lnk" onclick="resetConfig()">Change token</button>'
+      + '<button class="btn btn-p" onclick="load()">Retry</button>'
+      + '</div></div>';
+    return;
+  }
+
+  // Ready
+  var list   = filtered();
+  var topics = allTopics();
+  var hhmm   = function(d) { return d.toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'}); };
+
+  var controls = '<div class="iss-controls">'
+    + '<div class="tab-bar">'
+    + '<button class="tab-btn' + (activeTab==='kanban'?' active':'') + '" onclick="setTab(\'kanban\')">Kanban</button>'
+    + '<button class="tab-btn' + (activeTab==='calendar'?' active':'') + '" onclick="setTab(\'calendar\')">Calendar</button>'
+    + '</div>'
+    + '<div class="filter-bar">'
+    + '<select onchange="setFiltTopic(this.value)">'
+    + '<option value="all"' + (filtTopic==='all'?' selected':'') + '>All topics</option>'
+    + topics.map(function(t) {
+        return '<option value="' + esc(t) + '"' + (filtTopic===t?' selected':'') + '>' + esc(t) + '</option>';
+      }).join('')
+    + '</select>'
+    + '<select onchange="setFiltType(this.value)">'
+    + '<option value="all"'   + (filtType==='all'   ?' selected':'') + '>All types</option>'
+    + '<option value="task"'  + (filtType==='task'  ?' selected':'') + '>Tasks</option>'
+    + '<option value="thread"'+ (filtType==='thread'?' selected':'') + '>Threads</option>'
+    + '<option value="person"'+ (filtType==='person'?' selected':'') + '>People</option>'
+    + '</select>'
+    + '<span class="filter-count">' + list.length + ' / ' + issues.length + '</span>'
+    + '</div>'
+    + '</div>';
+
+  app.innerHTML = '<div class="iss-wrap">'
+    + '<a class="back" href="../">← dashboards</a>'
+    + '<div class="hdr">'
+    + '<div>'
+    + '<h1>Issues <span class="hdr-id">issues</span></h1>'
+    + '<div class="hdr-date">' + issues.length + ' open issues'
+    + (lastLoad ? ' \u00b7 loaded ' + hhmm(lastLoad) : '')
+    + '</div>'
+    + '</div>'
+    + '<div class="hdr-r">'
+    + '<button class="btn btn-icon" onclick="load()" title="Refresh all issues">'
+    + '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>'
+    + '</button>'
+    + '</div>'
+    + '</div>'
+    + controls
+    + (activeTab === 'kanban' ? renderKanban() : renderCalendar())
+    + '<div class="foot">'
+    + '<span>' + issues.length + ' issues \u00b7 <span class="build">build ' + BUILD + '</span></span>'
+    + '<button class="lnk" onclick="resetConfig()">change token</button>'
+    + '</div>'
+    + '</div>';
+}
+
+// ── Event handlers (global, so inline onclick can reach them) ─────────────
+function setTab(t)         { activeTab = t; dayDetail = null; render(); }
+function setFiltTopic(v)   { filtTopic = v; render(); }
+function setFiltType(v)    { filtType  = v; render(); }
+function selectDay(d)      { dayDetail = d; render(); }
+function calNav(dir) {
+  calDate = new Date(calDate.getFullYear(), calDate.getMonth() + dir, 1);
+  render();
+}
+
+window.saveConfig  = saveConfig;
+window.resetConfig = resetConfig;
+window.load        = load;
+window.setTab      = setTab;
+window.setFiltTopic= setFiltTopic;
+window.setFiltType = setFiltType;
+window.selectDay   = selectDay;
+window.calNav      = calNav;
+
+// ── Boot ──────────────────────────────────────────────────────────────────
+REPO  = ls(K('repo')) || '';
+TOKEN = ls(K('pat'))  || '';
+load();
+</script>
+</body>
+</html>
