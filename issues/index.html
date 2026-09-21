@@ -8,7 +8,7 @@
 <meta name="robots" content="noindex, nofollow">
 <title>Issues — rfl-ops</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%232563EB'/><text x='50' y='68' font-size='56' text-anchor='middle' fill='white'>📋</text></svg>">
-<link rel="stylesheet" href="../shared/style.css?v=20260921-0730">
+<link rel="stylesheet" href="../shared/style.css?v=20260921-0740">
 <style>
 /* ── Issues dashboard ───────────────────────────────────────────────────── */
 body { min-height: 100vh; }
@@ -358,7 +358,7 @@ body { min-height: 100vh; }
 <script>
 'use strict';
 
-const BUILD = '20260921-0730';
+const BUILD = '20260921-0740';
 const API   = 'https://api.github.com';
 const ID    = 'issues';
 
@@ -880,8 +880,9 @@ window.selectDay   = selectDay;
 window.calNav      = calNav;
 
 // ── Boot ──────────────────────────────────────────────────────────────────
-REPO  = ls(K('repo')) || '';
-TOKEN = ls(K('pat'))  || '';
+// Fall back to ops namespace so the first open works without a separate setup step.
+REPO  = ls(K('repo')) || ls('dash:ops:repo') || '';
+TOKEN = ls(K('pat'))  || ls('dash:ops:pat')  || '';
 load();
 </script>
 </body>
