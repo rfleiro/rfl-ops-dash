@@ -8,7 +8,7 @@
 <meta name="robots" content="noindex, nofollow">
 <title>Issues — rfl-ops</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%232563EB'/><text x='50' y='68' font-size='56' text-anchor='middle' fill='white'>📋</text></svg>">
-<link rel="stylesheet" href="../shared/style.css?v=20260921-0800">
+<link rel="stylesheet" href="../shared/style.css?v=20260921-0815">
 <style>
 /* ── Issues dashboard ───────────────────────────────────────────────────── */
 body { min-height: 100vh; }
@@ -370,7 +370,7 @@ window.addEventListener('unhandledrejection', function(e) {
 });
 'use strict';
 
-const BUILD = '20260921-0800';
+const BUILD = '20260921-0815';
 const API   = 'https://api.github.com';
 const ID    = 'issues';
 
@@ -778,8 +778,10 @@ function render() {
       + '<h2>Issues <span class="hdr-id">issues</span></h2>'
       + '<p>Kanban and calendar view of all open issues. Fetches live from GitHub — no daily build needed.</p>'
       + '<div class="steps"><ol>'
-      + '<li>Same repo and token as your ops dashboard — or create a token with <strong>Contents: Read-only</strong></li>'
-      + '<li>This dashboard is read-only and never writes to issues or the journal</li>'
+      + '<li>Create a fine-grained token at <a href="https://github.com/settings/personal-access-tokens/new" target="_blank" rel="noopener">GitHub Settings → Developer settings → Fine-grained tokens</a></li>'
+      + '<li><b>Repository access:</b> Only select repositories → rfl_ops</li>'
+      + '<li><b>Permissions:</b> Issues: Read-only <em>(required)</em> · Contents: Read-only <em>(optional, for body parsing)</em></li>'
+      + '<li>The rfl_ops PAT from project instructions already has these permissions</li>'
       + '</ol></div>'
       + '<div class="pfield" style="margin-bottom:8px"><label>Data repository</label>'
       + '<input id="rp" type="text" placeholder="owner/repo" autocomplete="off" spellcheck="false">'
@@ -826,6 +828,15 @@ function render() {
   var topics = allTopics();
   var hhmm   = function(d) { return d.toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'}); };
 
+  var zeroWarn = '';
+  if(issues.length === 0) {
+    zeroWarn = '<div class="warn" style="margin-bottom:12px">'
+      + '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>'
+      + '<span>0 issues returned. Your token probably needs <strong>Issues: Read-only</strong> permission on the repo. '
+      + '<button class="lnk" onclick="resetConfig()" style="font-size:12px">Re-enter token →</button></span>'
+      + '</div>';
+  }
+
   var controls = '<div class="iss-controls">'
     + '<div class="tab-bar">'
     + '<button class="tab-btn' + (activeTab==='kanban'?' active':'') + '" onclick="setTab(\'kanban\')">Kanban</button>'
@@ -864,6 +875,7 @@ function render() {
     + '</div>'
     + '</div>'
     + controls
+    + zeroWarn
     + (activeTab === 'kanban' ? renderKanban() : renderCalendar())
     + '<div class="foot">'
     + '<span>' + issues.length + ' issues \u00b7 <span class="build">build ' + BUILD + '</span></span>'
@@ -892,9 +904,10 @@ window.selectDay   = selectDay;
 window.calNav      = calNav;
 
 // ── Boot ──────────────────────────────────────────────────────────────────
-// Fall back to ops namespace so the first open works without a separate setup step.
-REPO  = ls(K('repo')) || ls('dash:ops:repo') || '';
-TOKEN = ls(K('pat'))  || ls('dash:ops:pat')  || '';
+// Do NOT fall back to ops namespace — that token only has Contents permission,
+// not Issues: Read, so the issues API returns 0 results silently.
+REPO  = ls(K('repo')) || '';
+TOKEN = ls(K('pat'))  || '';
 load();
 </script>
 </body>
