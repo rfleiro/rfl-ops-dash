@@ -30,7 +30,7 @@
 window.DashCore = (function(){
 
 const API = "https://api.github.com";
-const BUILD = "20260921-1231";
+const BUILD = "20260921-1240";
 
 let M       = null;
 let REPO    = "";
@@ -141,8 +141,8 @@ function toggleSnooze(n){
   lsSet(snoozeKey(), JSON.stringify(SNOOZE));
   render();
 }
-function unsnoozeAll(){
-  SNOOZE = {};
+function unsnoozeSection(nums){
+  nums.forEach(function(n){ delete SNOOZE[String(n)]; });
   lsSet(snoozeKey(), JSON.stringify(SNOOZE));
   render();
 }
@@ -925,7 +925,7 @@ function render(){
     if(!sCol && snoozed.length){
       h += "<div class='hidden-row'>" + IC.moon + " " + snoozed.length + " snoozed today"
          + snoozed.map(function(i){ return " &middot; <button class='lnk' onclick='DashCore.toggleSnooze("+i.number+")' title='Un-snooze'>#"+i.number+"</button>"; }).join("")
-         + (snoozed.length > 1 ? " &middot; <button class='lnk' onclick='DashCore.unsnoozeAll()' title='Un-snooze all'>unsnooze all</button>" : "")
+         + (snoozed.length > 1 ? " &middot; <button class='lnk' onclick='DashCore.unsnoozeSection([" + snoozed.map(function(i){return i.number;}).join(",") + "])' title='Un-snooze all'>unsnooze all</button>" : "")
          + "</div>";
     }
     h += "</div>";
@@ -1061,7 +1061,7 @@ return {
   addTask, rmTask, toggleNew:function(){ showNF=!showNF; render(); },
   toggleBD, addBraindump, rmBraindump, toggleBDEdit, saveBDEdit, toggleMic, toggleMicLang,
   dismissInbox, undoInbox, toggleIB, convertInbox,
-  toggleStar, toggleSnooze, unsnoozeAll, push, toggleHide, toggleSection, dismissWarn, toggleSubForm, addSubtask, toggleBDExpand, closeModal, toggleTask,
+  toggleStar, toggleSnooze, unsnoozeSection, push, toggleHide, toggleSection, dismissWarn, toggleSubForm, addSubtask, toggleBDExpand, closeModal, toggleTask,
   toggleNtP, saveNtLog, saveNtDate, toggleStarNt, toggleNtDone
 };
 })();
