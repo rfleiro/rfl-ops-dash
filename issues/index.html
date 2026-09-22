@@ -452,9 +452,8 @@ function parseDate(body, field) {
 }
 
 var TOPIC_NAMES = ['project','paper','grant','talk','review','patents','IT','admin','lab',
-  'people:lab','people:alumni','people:networking',
-  'MITO','DNA Repair','DNA Replication','Shelterin','Methods','Other'];
-var LINE_NAMES     = ['MITO','DNA Repair','DNA Replication','Shelterin','Methods','Other'];
+  'people:lab','people:alumni','people:networking'];
+var LINE_NAMES     = ['Cancer','Contracts','DNA Repair','DNA Replication','MITO','Methods','Other','Shelterin'];
 var PRIORITY_NAMES = ['HIGH','MEDIUM','LOW'];
 
 function parseLabels(labels) {
@@ -467,8 +466,10 @@ function parseLabels(labels) {
   var topic = names.find(function(n) { return TOPIC_NAMES.indexOf(n) !== -1 || n.startsWith('people:'); })
            || names.find(function(n) { return n !== 'task' && n !== 'thread'; })
            || '';
-  var priority = names.find(function(n){ return PRIORITY_NAMES.indexOf(n)!==-1; }) || '';
-  var line     = names.find(function(n){ return LINE_NAMES.indexOf(n)!==-1; })     || '';
+  var _pri  = names.find(function(n){ return n.startsWith('priority:'); }) || '';
+  var priority = _pri  ? _pri.slice('priority:'.length)  : '';
+  var _ln   = names.find(function(n){ return n.startsWith('line:'); })     || '';
+  var line     = _ln   ? _ln.slice('line:'.length)   : '';
   return { type: type, topic: topic, priority: priority, line: line };
 }
 
