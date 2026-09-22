@@ -87,6 +87,29 @@
 .past-toggle{background:none;border:none;font-family:inherit;font-size:11px;color:var(--text-2);cursor:pointer;padding:2px 0;margin-bottom:8px;display:flex;align-items:center;gap:5px}
 .past-toggle:hover{color:var(--accent)}
 
+.ln-card{background:var(--surface);border:1px solid var(--border);border-left:3px solid var(--c);border-radius:var(--r);margin-bottom:10px;overflow:hidden}
+.ln-hdr{display:flex;align-items:baseline;gap:9px;padding:12px 14px 8px}
+.ln-name{font-size:14px;font-weight:600;letter-spacing:-.01em}
+.ln-count{font-size:10px;color:var(--text-3);margin-left:auto;flex-shrink:0;white-space:nowrap}
+.ln-blurb{font-size:11.5px;color:var(--text-2);line-height:1.55;padding:0 14px 10px;max-width:74ch}
+.ln-body{border-top:1px solid var(--border);padding:10px 14px 12px}
+.ln-grp{margin-bottom:9px}
+.ln-grp:last-child{margin-bottom:0}
+.ln-gname{font-size:10px;font-weight:600;color:#fff;background:var(--gc);border-radius:99px;padding:2px 9px;display:inline-block;margin-bottom:5px}
+.ln-obj{display:flex;align-items:flex-start;gap:7px;padding:3px 0 3px 4px;font-size:11.5px;line-height:1.45}
+.ln-oid{font-size:10px;font-weight:600;color:var(--text-3);min-width:34px;flex-shrink:0;padding-top:1px;font-variant-numeric:tabular-nums}
+.ln-otxt{flex:1;color:var(--text-2)}
+
+.md-wrap{margin-top:9px;padding-left:38px}
+.md-hd{font-size:10px;font-weight:600;color:var(--text-3);letter-spacing:.04em;margin:7px 0 3px}
+.md-li{font-size:11px;color:var(--text-2);line-height:1.5;padding:1.5px 0 1.5px 13px;position:relative}
+.md-li::before{content:"";position:absolute;left:3px;top:8px;width:4px;height:4px;border-radius:50%;background:var(--border-strong)}
+.md-li.d::before{border-radius:1px}
+.who{font-size:10px;color:var(--text-3);margin-top:2px;padding-left:38px}
+.gnote{font-size:11px;color:var(--text-2);background:var(--surface2);border-radius:var(--rs);padding:8px 10px;margin-bottom:11px;line-height:1.55;border-left:2px solid var(--border-strong)}
+.gpart{font-size:11px;color:var(--text-2);margin-bottom:10px;line-height:1.5}
+.gpart b{color:var(--text-3);font-weight:600;font-size:10px}
+.lchip{display:inline-block;font-size:9px;padding:1px 6px;border-radius:99px;color:#fff;margin-left:3px;vertical-align:1px;font-weight:500}
 .setup{max-width:340px;margin:80px auto;text-align:center}
 .setup h2{font-size:18px;font-weight:600;margin-bottom:6px}
 .setup p{font-size:13px;color:var(--text-2);margin-bottom:20px;line-height:1.6}
@@ -125,7 +148,7 @@ const PAT_KEY  = 'dash:strategy:pat';
 const PAT_FALL = 'dash:ops:pat';
 const REPO     = 'rfleiro/rfl_ops';
 const DATAPATH = 'data/strategy.json';
-const BUILD    = '20260922-1810';
+const BUILD    = '20260922-1915';
 
 // ── Grant colours ─────────────────────────────────────────────────────────────
 const GC = {
@@ -136,17 +159,27 @@ const GC = {
   'CONSINV24':   '#EA580C',
   'PN20':        '#65A30D',
   'PN17':        '#9B9690',
+  'PROTDESIGN-CM':'#DB2777',
+  'ERC-PoC-MDK': '#4F46E5',
 };
+function gcol(id){return GC[id]||'#9B9690';}
 
 // ── Theme categories ──────────────────────────────────────────────────────────
 const THEME_CATS = [
-  {label:'Targets',      keys:['PolG','Twinkle','TDP2','mtDNA-replisome','shelterin','telomere']},
-  {label:'Methods',      keys:['cryo-EM','CRISPR','AI-design','mini-binders','optical-tweezers','drug-screening']},
-  {label:'Applications', keys:['cancer','neurology','diagnostics','spin-off']},
+  {label:'Targets',      keys:['Pol\u03b3','Twinkle','mtDNA-replisome','TDP2','MDK','RUVBL1/2','C13','shelterin','telomere']},
+  {label:'Methods',      keys:['cryo-EM','CRISPR','AI-design','BinderFlow','mini-binders','optical-tweezers','complexome','drug-screening','BLI','crystallography']},
+  {label:'Translation',  keys:['delivery','xenografts','diagnostics','spin-off','IP','training']},
+  {label:'Disease',      keys:['cancer','melanoma','neurology','immunotherapy']},
 ];
 
 // ── State ─────────────────────────────────────────────────────────────────────
-let DATA=null, TAB='timeline', EXP={}, SHOW_PAST=false;
+let DATA=null, TAB='timeline', EXP={}, SHOW_PAST=false, LNEXP={}, SHOW_DETAIL=false;
+function lineById(id){return (DATA&&DATA.lines||[]).find(l=>l.id===id)||null;}
+function lineChips(ids){
+  if(!ids||!ids.length)return'';
+  return ids.map(function(id){var l=lineById(id);
+    return l?`<span class="lchip" style="background:${l.color}" title="${esc(l.name)}">${esc(l.name)}</span>`:'';}).join('');
+}
 
 // ── Utils ─────────────────────────────────────────────────────────────────────
 function esc(s){return String(s??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
@@ -171,6 +204,8 @@ function render(){
 function switchTab(t){TAB=t;render();}
 function toggleGrant(id){EXP[id]=!EXP[id];render();}
 function togglePast(){SHOW_PAST=!SHOW_PAST;render();}
+function toggleLine(id){LNEXP[id]=!LNEXP[id];render();}
+function toggleDetail(){SHOW_DETAIL=!SHOW_DETAIL;render();}
 
 function renderSetup(){
   return`<div class="setup">
@@ -210,7 +245,7 @@ function renderPage(){
     <div class="ph">
       <div>
         <h1>strategy</h1>
-        <div class="ph-sub">Grant portfolio \u00b7 ${active.length} active \u00b7 updated ${esc(DATA.updated||'')}</div>
+        <div class="ph-sub">${active.length} active \u00b7 ${(DATA.lines||[]).length} research lines \u00b7 updated ${esc(DATA.updated||'')}</div>
       </div>
       <div class="ph-r">
         <a href="../" class="back">\u2190 hub</a>
@@ -221,10 +256,12 @@ function renderPage(){
     </div>
     <div class="tabs">
       <button class="tab${TAB==='timeline'?' on':''}" onclick="switchTab('timeline')">Timeline</button>
+      <button class="tab${TAB==='lines'?' on':''}" onclick="switchTab('lines')">Lines</button>
       <button class="tab${TAB==='objectives'?' on':''}" onclick="switchTab('objectives')">Objectives</button>
       <button class="tab${TAB==='themes'?' on':''}" onclick="switchTab('themes')">Themes</button>
     </div>
     ${TAB==='timeline'?renderTimeline(grants,active,rep):''}
+    ${TAB==='lines'?renderLines(grants):''}
     ${TAB==='objectives'?renderObjectives(grants,active,rep,past):''}
     ${TAB==='themes'?renderThemes(grants):''}
     <div class="footer">build ${esc(BUILD)}</div>
@@ -235,10 +272,13 @@ function renderPage(){
 function renderTimeline(grants,active,rep){
   const aAmt=active.reduce((s,g)=>s+(g.amount_direct||0),0);
   const rAmt=rep.reduce((s,g)=>s+(g.amount_direct||0),0);
+  const nPI=active.filter(g=>(g.role||'').indexOf('PI')===0).length;
+  const nObj=grants.filter(g=>g.status==='active').reduce((s,g)=>s+(g.objectives||[]).length,0);
   return`<div class="budget-row">
     <div class="budget-card"><div class="b-val" style="color:var(--green)">${fmtEur(aAmt)}</div><div class="b-lbl">active direct costs</div></div>
     <div class="budget-card"><div class="b-val">${active.length}</div><div class="b-lbl">active grants</div></div>
-    <div class="budget-card"><div class="b-val">${active.filter(g=>g.role==='PI').length}</div><div class="b-lbl">active as PI</div></div>
+    <div class="budget-card"><div class="b-val">${nPI}</div><div class="b-lbl">active as PI</div></div>
+    <div class="budget-card"><div class="b-val">${nObj}</div><div class="b-lbl">live objectives</div></div>
     <div class="budget-card"><div class="b-val" style="color:var(--warning)">${fmtEur(rAmt)}</div><div class="b-lbl">in reporting</div></div>
   </div>`+gantt(grants);
 }
@@ -259,16 +299,17 @@ function gantt(grants){
   s+=`<text x="${todayX.toFixed(1)}" y="11" text-anchor="middle" font-size="8" fill="var(--danger)" font-weight="600">now</text>`;
   grants.forEach((g,i)=>{
     const y0=HDR+i*(RH+RG),cy=y0+RH/2;
-    const color=GC[g.id]||'#9B9690';
-    const op=g.status==='past'?0.35:(g.status==='reporting'?0.62:1);
+    const color=gcol(g.id);
+    const op=g.status==='past'?0.32:(g.status==='reporting'?0.6:(g.status==='proposal'?0.5:1));
     const [sy,sm]=(g.start||'2020-01-01').split('-').map(Number);
     const [ey,em]=(g.end||'2025-12-31').split('-').map(Number);
     const bx=LM+(sy+(sm-1)/12-YS)*PY,bw=Math.max(((ey+(em-1)/12)-(sy+(sm-1)/12))*PY,4);
     const by=y0+6,bh=RH-12;
     s+=`<text x="${LM-7}" y="${cy+4}" text-anchor="end" font-size="11" font-weight="600" fill="var(--text)" opacity="${op}">${esc(g.shortname||g.id)}</text>`;
     s+=`<rect x="${bx.toFixed(1)}" y="${by}" width="${bw.toFixed(1)}" height="${bh}" rx="3" fill="${color}" opacity="${op}"/>`;
-    if(bw>52)s+=`<text x="${(bx+bw/2).toFixed(1)}" y="${cy+4}" text-anchor="middle" font-size="9" fill="white" opacity="${op}">${fmtEur(g.amount_direct||0)}</text>`;
-    if(g.role==='Co-PI')s+=`<text x="${(bx+4).toFixed(1)}" y="${by+bh-2}" font-size="7" fill="white" opacity="${Math.min(op,.8)}">Co-PI</text>`;
+    if(bw>52&&g.amount_direct)s+=`<text x="${(bx+bw/2).toFixed(1)}" y="${cy+4}" text-anchor="middle" font-size="9" fill="white" opacity="${op}">${fmtEur(g.amount_direct)}</text>`;
+    if(g.status==='proposal')s+=`<rect x="${bx.toFixed(1)}" y="${by}" width="${bw.toFixed(1)}" height="${bh}" rx="3" fill="none" stroke="${color}" stroke-width="1.2" stroke-dasharray="4,2"/>`;
+    if((g.role||'').indexOf('Co-PI')===0)s+=`<text x="${(bx+4).toFixed(1)}" y="${by+bh-2}" font-size="7" fill="white" opacity="${Math.min(op,.8)}">Co-PI</text>`;
   });
   s+='</svg>';
   return`<div class="gantt-wrap">${s}</div>`;
@@ -276,8 +317,10 @@ function gantt(grants){
 
 // ── Objectives ────────────────────────────────────────────────────────────────
 function renderObjectives(grants,active,rep,past){
-  let h='';
+  const prop=grants.filter(g=>g.status==='proposal');
+  let h=`<button class="past-toggle" onclick="toggleDetail()" style="margin-bottom:12px">${SHOW_DETAIL?'\u25be':'\u25b8'} Milestones and deliverables</button>`;
   if(active.length){h+=`<div class="sec-hd">ACTIVE</div>`;active.forEach(g=>h+=grantCard(g));}
+  if(prop.length){h+=`<div class="sec-hd">IN PREPARATION</div>`;prop.forEach(g=>h+=grantCard(g));}
   if(rep.length){h+=`<div class="sec-hd">REPORTING</div>`;rep.forEach(g=>h+=grantCard(g));}
   if(past.length){
     h+=`<button class="past-toggle" onclick="togglePast()">${SHOW_PAST?'\u25be':'\u25b8'} Past grants (${past.length})</button>`;
@@ -286,15 +329,58 @@ function renderObjectives(grants,active,rep,past){
   return h;
 }
 
+// ── Lines tab ───────────────────────────────────────────────────────────
+function renderLines(grants){
+  const lines=DATA.lines||[];
+  if(!lines.length)return'<p style="font-size:12px;color:var(--text-3)">No research lines defined.</p>';
+  const byId={}; grants.forEach(g=>byId[g.id]=g);
+  let h=`<p style="font-size:12px;color:var(--text-2);margin-bottom:16px;line-height:1.65;max-width:76ch">Objectives from different grants, grouped by the science they share. The same question is often funded twice from different angles — that is the portfolio working, not duplication. Open a line to see which objective in which grant carries it.</p>`;
+  lines.forEach(function(L){
+    // collect every objective / sub-objective tagged with this line
+    const hits=[];
+    grants.forEach(function(g){
+      (g.objectives||[]).forEach(function(o){
+        if((o.lines||[]).indexOf(L.id)>=0)hits.push({g:g,id:o.id,title:o.title,status:o.status});
+        (o.sub||[]).forEach(function(s){
+          if((s.lines||[]).indexOf(L.id)>=0)hits.push({g:g,id:o.id+'.'+(s.id||''),title:s.title,status:s.status});
+        });
+      });
+    });
+    // group hits by grant, preserving grant order
+    const order=[],grp={};
+    hits.forEach(function(x){ if(!grp[x.g.id]){grp[x.g.id]=[];order.push(x.g);} grp[x.g.id].push(x); });
+    const isOpen=!!LNEXP[L.id];
+    h+=`<div class="ln-card" style="--c:${L.color}">
+      <div class="ln-hdr" onclick="toggleLine('${esc(L.id)}')" style="cursor:pointer">
+        <span class="ln-name">${esc(L.name)}</span>
+        <span class="ln-count">${order.length} grant${order.length===1?'':'s'} \u00b7 ${hits.length} objective${hits.length===1?'':'s'} ${isOpen?'\u25be':'\u25b8'}</span>
+      </div>
+      <div class="ln-blurb">${esc(L.blurb||'')}</div>`;
+    if(isOpen){
+      h+=`<div class="ln-body">`;
+      order.forEach(function(g){
+        h+=`<div class="ln-grp"><span class="ln-gname" style="--gc:${gcol(g.id)}">${esc(g.shortname||g.id)}</span>`;
+        grp[g.id].forEach(function(x){
+          h+=`<div class="ln-obj"><span class="ln-oid">${esc(x.id)}</span><span class="ln-otxt">${esc(x.title)}</span><span style="flex-shrink:0">${schip(x.status)}</span></div>`;
+        });
+        h+=`</div>`;
+      });
+      h+=`</div>`;
+    }
+    h+=`</div>`;
+  });
+  return h;
+}
+
 function grantCard(g){
-  const color=GC[g.id]||'#9B9690';
+  const color=gcol(g.id);
   const isOpen=!!EXP[g.id];
-  const stMap={'active':'ch-active','reporting':'ch-reporting','past':'ch-past'};
+  const stMap={'active':'ch-active','reporting':'ch-reporting','past':'ch-past','proposal':'ch-ongoing'};
   return`<div class="gc${isOpen?' open':''}" style="--c:${color}">
     <div class="gc-hdr" onclick="toggleGrant('${esc(g.id)}')">
       <div class="gc-dot"></div>
       <div class="gc-meta">
-        <div class="gc-short">${esc(g.shortname||g.id)}${chip(g.status||'',stMap[g.status]||'ch-past')}${g.role==='Co-PI'?chip('Co-PI','ch-role'):''}${g.issue?`<a href="https://github.com/rfleiro/rfl_ops/issues/${g.issue}" target="_blank" rel="noopener" onclick="event.stopPropagation()" style="font-size:10px;color:var(--accent);text-decoration:none;font-weight:500;margin-left:2px">#${g.issue} ↗</a>`:''}</div>
+        <div class="gc-short">${esc(g.shortname||g.id)}${chip(g.status||'',stMap[g.status]||'ch-past')}${g.role?chip(g.role,'ch-role'):''}${g.issue?`<a href="https://github.com/rfleiro/rfl_ops/issues/${g.issue}" target="_blank" rel="noopener" onclick="event.stopPropagation()" style="font-size:10px;color:var(--accent);text-decoration:none;font-weight:500;margin-left:2px">#${g.issue} ↗</a>`:''}</div>
         <div class="gc-full">${esc(g.title||'')}</div>
       </div>
       <span class="gc-chev">\u25b6</span>
@@ -307,6 +393,9 @@ function grantCard(g){
         ${g.ref?`<span>${esc(g.ref)}</span>`:''}
         ${g.issue?`<span><a href="https://github.com/rfleiro/rfl_ops/issues/${g.issue}" target="_blank" rel="noopener">#${g.issue}</a></span>`:''}
       </div>
+      ${g.note?`<div class="gnote">${esc(g.note)}</div>`:''}
+      ${(g.partners||[]).length?`<div class="gpart"><b>WITH</b> ${esc((g.partners||[]).join(' \u00b7 '))}</div>`:''}
+      ${(g.team||[]).length?`<div class="gpart"><b>TEAM</b> ${esc((g.team||[]).join(' \u00b7 '))}</div>`:''}
       ${themeTags(g.themes||[])}
       ${objList(g.objectives||[])}
     </div>
@@ -318,20 +407,31 @@ function themeTags(ts){
   return`<div class="themes-tags">${ts.map(t=>`<span class="tt">${esc(t)}</span>`).join('')}</div>`;
 }
 
+function mdBlock(o){
+  if(!SHOW_DETAIL)return'';
+  const ms=o.milestones||[],dl=o.deliverables||[];
+  if(!ms.length&&!dl.length)return'';
+  let h='<div class="md-wrap">';
+  if(ms.length)h+='<div class="md-hd">MILESTONES</div>'+ms.map(m=>`<div class="md-li">${esc(m)}</div>`).join('');
+  if(dl.length)h+='<div class="md-hd">DELIVERABLES</div>'+dl.map(d=>`<div class="md-li d">${esc(d)}</div>`).join('');
+  return h+'</div>';
+}
 function objList(objs){
   if(!objs.length)return'<p style="font-size:11px;color:var(--text-3);margin-top:4px">No objectives recorded.</p>';
   return`<ul class="obj-list">${objs.map(o=>`
     <li class="obj-item">
       <div class="obj-row">
         <span class="obj-id">${esc(o.id||'')}</span>
-        <span class="obj-title">${esc(o.title||'')}</span>
+        <span class="obj-title">${esc(o.title||'')}${lineChips(o.lines)}</span>
         <span style="flex-shrink:0">${schip(o.status||'not-started')}</span>
       </div>
+      ${o.who?`<div class="who">${esc(o.who)}</div>`:''}
       ${o.notes?`<div class="obj-notes">${esc(o.notes)}</div>`:''}
+      ${mdBlock(o)}
       ${(o.sub||[]).length?`<ul class="sub-list">${(o.sub||[]).map(s=>`
         <li class="sub-item">
           <span class="obj-id">${esc(s.id||'')}</span>
-          <span class="sub-title">${esc(s.title||'')}</span>
+          <span class="sub-title">${esc(s.title||'')}${lineChips(s.lines)}${s.who?` <span style="color:var(--text-3)">\u2014 ${esc(s.who)}</span>`:''}</span>
           <span style="flex-shrink:0">${schip(s.status||'not-started')}</span>
         </li>`).join('')}</ul>`:''}
     </li>`).join('')}</ul>`;
@@ -350,7 +450,7 @@ function renderThemes(grants){
     present.forEach(t=>{
       h+=`<div class="theme-row"><span class="theme-name">${esc(t)}</span><div class="theme-pills">`;
       (map[t]||[]).forEach(g=>{
-        h+=`<span class="gpill${g.status==='past'?' past':''}" style="background:${GC[g.id]||'#9B9690'}">${esc(g.shortname||g.id)}</span>`;
+        h+=`<span class="gpill${g.status==='past'?' past':''}" style="background:${gcol(g.id)}">${esc(g.shortname||g.id)}</span>`;
       });
       h+=`</div></div>`;
     });
@@ -362,7 +462,7 @@ function renderThemes(grants){
     unk.forEach(t=>{
       h+=`<div class="theme-row"><span class="theme-name">${esc(t)}</span><div class="theme-pills">`;
       (map[t]||[]).forEach(g=>{
-        h+=`<span class="gpill${g.status==='past'?' past':''}" style="background:${GC[g.id]||'#9B9690'}">${esc(g.shortname||g.id)}</span>`;
+        h+=`<span class="gpill${g.status==='past'?' past':''}" style="background:${gcol(g.id)}">${esc(g.shortname||g.id)}</span>`;
       });
       h+=`</div></div>`;
     });
