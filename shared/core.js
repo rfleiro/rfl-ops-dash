@@ -30,7 +30,7 @@
 window.DashCore = (function(){
 
 const API = "https://api.github.com";
-const BUILD = "20260922-0900";
+const BUILD = "20260922-1031";
 
 let M       = null;
 let REPO    = "";
@@ -171,6 +171,9 @@ function effIb(id){
   return (l === null) ? null : l;          // explicit null = undo the decision
 }
 function inboxItems(){ return (BRIEF && BRIEF.inbox) || []; }
+// brief writes inbox entries with `summary`; older briefs used `subject`.
+// Accept either, and never return undefined — .length on undefined kills render().
+function ibTitle(x){ return String((x && (x.subject || x.summary || x.id)) || ""); }
 function effBraindump(){
   const fromJ = (J ? J.braindump : []).filter(b => S.bdrm.indexOf(b.id) === -1)
                                       .map(b => Object.assign({}, b, {queued:true}));
@@ -955,7 +958,7 @@ function render(){
       const done = st && st.status === "dismissed";
       const tasked = st && st.status === "task";
       return "<div class='card ib"+(done?" done":"")+"'>"
-        + "<div class='card-row'><span class='card-title"+(done?" struck":"")+"'>"+esc(x.subject)+"</span>"
+        + "<div class='card-row'><span class='card-title"+(done?" struck":"")+"'>"+esc(ibTitle(x))+"</span>"
         + "<div class='acts'>"
         + "<button class='act"+(p.open?" on":"")+(tasked?" on-green":"")+"' onclick='DashCore.toggleIB(\""+esc(x.id)+"\")' title='Turn into a task'>"+IC.plus+"</button>"
         + "<button class='act"+(done?" on":"")+"' onclick='DashCore.dismissInbox(\""+esc(x.id)+"\")' title='"+(done?"Undo dismiss":"Dismiss")+"'>"+IC.x+"</button>"
@@ -970,7 +973,7 @@ function render(){
         + "</div>"
         + (x.note?"<div class='cnote'>"+esc(x.note)+"</div>":"")
         + (p.open?"<div class='panel'>"
-            + "<div class='field'><label>Task title</label><input id='ib-t-"+esc(x.id)+"' type='text' value='"+esc(x.suggest||x.subject)+"'></div>"
+            + "<div class='field'><label>Task title</label><input id='ib-t-"+esc(x.id)+"' type='text' value='"+esc(x.suggest||ibTitle(x))+"'></div>"
             + "<div class='grid' style='display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:8px 0'>"
             + "<div class='field'><label>Topic</label><select id='ib-tp-"+esc(x.id)+"'>"
             + (M.topics||[]).map(t=>"<option"+(t===(x.topic||"")?" selected":"")+">"+esc(t)+"</option>").join("")+"</select></div>"
@@ -983,7 +986,7 @@ function render(){
     }).join("");
     if(!ibCol && dismissed.length){
       h += "<div class='hidden-row'>" + IC.x + " " + dismissed.length + " dismissed"
-         + dismissed.map(function(x){ return " &middot; <button class='lnk' onclick='DashCore.undoInbox(\""+esc(x.id)+"\")' title='Undo'>"+esc(x.subject.length>28?x.subject.slice(0,26)+"\u2026":x.subject)+"</button>"; }).join("")
+         + dismissed.map(function(x){ return " &middot; <button class='lnk' onclick='DashCore.undoInbox(\""+esc(x.id)+"\")' title='Undo'>"+esc(ibTitle(x).length>28?ibTitle(x).slice(0,26)+"\u2026":ibTitle(x))+"</button>"; }).join("")
          + "</div>";
     }
     if(!ibCol && hideSettled && tasked.length){
