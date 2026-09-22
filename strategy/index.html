@@ -125,7 +125,7 @@ const PAT_KEY  = 'dash:strategy:pat';
 const PAT_FALL = 'dash:ops:pat';
 const REPO     = 'rfleiro/rfl_ops';
 const DATAPATH = 'data/strategy.json';
-const BUILD    = '20260922-1730';
+const BUILD    = '20260922-1810';
 
 // ── Grant colours ─────────────────────────────────────────────────────────────
 const GC = {
@@ -294,7 +294,7 @@ function grantCard(g){
     <div class="gc-hdr" onclick="toggleGrant('${esc(g.id)}')">
       <div class="gc-dot"></div>
       <div class="gc-meta">
-        <div class="gc-short">${esc(g.shortname||g.id)}${chip(g.status||'',stMap[g.status]||'ch-past')}${g.role==='Co-PI'?chip('Co-PI','ch-role'):''}</div>
+        <div class="gc-short">${esc(g.shortname||g.id)}${chip(g.status||'',stMap[g.status]||'ch-past')}${g.role==='Co-PI'?chip('Co-PI','ch-role'):''}${g.issue?`<a href="https://github.com/rfleiro/rfl_ops/issues/${g.issue}" target="_blank" rel="noopener" onclick="event.stopPropagation()" style="font-size:10px;color:var(--accent);text-decoration:none;font-weight:500;margin-left:2px">#${g.issue} ↗</a>`:''}</div>
         <div class="gc-full">${esc(g.title||'')}</div>
       </div>
       <span class="gc-chev">\u25b6</span>
