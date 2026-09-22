@@ -211,7 +211,7 @@ body{
 
 <div id="app" style="display:none">
   <div class="hdr">
-    <a class="back" href="/">← dashboards</a>
+    <a class="back" href="./">← dashboards</a>
     <div class="hdr-title">health <span>· rafa</span></div>
     <div class="tabs">
       <button class="tab on" onclick="setView('day')">día</button>
@@ -276,7 +276,7 @@ async function load() {
 }
 
 function today0() { const d=new Date(); d.setHours(0,0,0,0); return d; }
-function fmt(d)    { return d.toISOString().split('T')[0]; }
+function fmt(d)    { return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); }
 function TDEE()    { return data?.meta?.tdee_base ?? 2400; }
 function entry(ds) { return (data?.entries||[]).find(e=>e.date===ds)||null; }
 
