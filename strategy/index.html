@@ -54,6 +54,8 @@
 .ch-reporting{background:var(--warning-bg);color:var(--warning);border:1px solid var(--warning-border)}
 .ch-past{background:var(--surface2);color:var(--text-3);border:1px solid var(--border)}
 .ch-role{background:var(--surface2);color:var(--text-2);border:1px solid var(--border)}
+.ch-commit{background:var(--warning-bg);color:var(--warning);border:1px dashed var(--warning)}
+.ch-unfunded{background:transparent;color:var(--text-3);border:1px dashed var(--border-strong)}
 .ch-ongoing{background:var(--accent-bg);color:var(--accent);border:1px solid var(--accent-border)}
 .ch-done{background:var(--green-bg);color:var(--green);border:1px solid var(--green-border)}
 .ch-not-started{background:var(--surface2);color:var(--text-3);border:1px solid var(--border)}
@@ -148,7 +150,7 @@ const PAT_KEY  = 'dash:strategy:pat';
 const PAT_FALL = 'dash:ops:pat';
 const REPO     = 'rfleiro/rfl_ops';
 const DATAPATH = 'data/strategy.json';
-const BUILD    = '20260922-1915';
+const BUILD    = '20260922-2030';
 
 // ── Grant colours ─────────────────────────────────────────────────────────────
 const GC = {
@@ -161,6 +163,7 @@ const GC = {
   'PN17':        '#9B9690',
   'PROTDESIGN-CM':'#DB2777',
   'ERC-PoC-MDK': '#4F46E5',
+  'GCN2':        '#B45309',
 };
 function gcol(id){return GC[id]||'#9B9690';}
 
@@ -274,12 +277,14 @@ function renderTimeline(grants,active,rep){
   const rAmt=rep.reduce((s,g)=>s+(g.amount_direct||0),0);
   const nPI=active.filter(g=>(g.role||'').indexOf('PI')===0).length;
   const nObj=grants.filter(g=>g.status==='active').reduce((s,g)=>s+(g.objectives||[]).length,0);
+  const nUnf=grants.filter(g=>g.funded===false).length;
   return`<div class="budget-row">
     <div class="budget-card"><div class="b-val" style="color:var(--green)">${fmtEur(aAmt)}</div><div class="b-lbl">active direct costs</div></div>
     <div class="budget-card"><div class="b-val">${active.length}</div><div class="b-lbl">active grants</div></div>
     <div class="budget-card"><div class="b-val">${nPI}</div><div class="b-lbl">active as PI</div></div>
     <div class="budget-card"><div class="b-val">${nObj}</div><div class="b-lbl">live objectives</div></div>
     <div class="budget-card"><div class="b-val" style="color:var(--warning)">${fmtEur(rAmt)}</div><div class="b-lbl">in reporting</div></div>
+    ${nUnf?`<div class="budget-card"><div class="b-val" style="color:var(--text-3)">${nUnf}</div><div class="b-lbl">unfunded commitments</div></div>`:''}
   </div>`+gantt(grants);
 }
 
@@ -300,7 +305,7 @@ function gantt(grants){
   grants.forEach((g,i)=>{
     const y0=HDR+i*(RH+RG),cy=y0+RH/2;
     const color=gcol(g.id);
-    const op=g.status==='past'?0.32:(g.status==='reporting'?0.6:(g.status==='proposal'?0.5:1));
+    const op=g.status==='past'?0.32:(g.status==='reporting'?0.6:((g.status==='proposal'||g.status==='commitment')?0.5:1));
     const [sy,sm]=(g.start||'2020-01-01').split('-').map(Number);
     const [ey,em]=(g.end||'2025-12-31').split('-').map(Number);
     const bx=LM+(sy+(sm-1)/12-YS)*PY,bw=Math.max(((ey+(em-1)/12)-(sy+(sm-1)/12))*PY,4);
@@ -308,7 +313,7 @@ function gantt(grants){
     s+=`<text x="${LM-7}" y="${cy+4}" text-anchor="end" font-size="11" font-weight="600" fill="var(--text)" opacity="${op}">${esc(g.shortname||g.id)}</text>`;
     s+=`<rect x="${bx.toFixed(1)}" y="${by}" width="${bw.toFixed(1)}" height="${bh}" rx="3" fill="${color}" opacity="${op}"/>`;
     if(bw>52&&g.amount_direct)s+=`<text x="${(bx+bw/2).toFixed(1)}" y="${cy+4}" text-anchor="middle" font-size="9" fill="white" opacity="${op}">${fmtEur(g.amount_direct)}</text>`;
-    if(g.status==='proposal')s+=`<rect x="${bx.toFixed(1)}" y="${by}" width="${bw.toFixed(1)}" height="${bh}" rx="3" fill="none" stroke="${color}" stroke-width="1.2" stroke-dasharray="4,2"/>`;
+    if(g.status==='proposal'||g.status==='commitment')s+=`<rect x="${bx.toFixed(1)}" y="${by}" width="${bw.toFixed(1)}" height="${bh}" rx="3" fill="none" stroke="${color}" stroke-width="1.2" stroke-dasharray="4,2"/>`;
     if((g.role||'').indexOf('Co-PI')===0)s+=`<text x="${(bx+4).toFixed(1)}" y="${by+bh-2}" font-size="7" fill="white" opacity="${Math.min(op,.8)}">Co-PI</text>`;
   });
   s+='</svg>';
@@ -318,8 +323,10 @@ function gantt(grants){
 // ── Objectives ────────────────────────────────────────────────────────────────
 function renderObjectives(grants,active,rep,past){
   const prop=grants.filter(g=>g.status==='proposal');
+  const comm=grants.filter(g=>g.status==='commitment');
   let h=`<button class="past-toggle" onclick="toggleDetail()" style="margin-bottom:12px">${SHOW_DETAIL?'\u25be':'\u25b8'} Milestones and deliverables</button>`;
   if(active.length){h+=`<div class="sec-hd">ACTIVE</div>`;active.forEach(g=>h+=grantCard(g));}
+  if(comm.length){h+=`<div class="sec-hd">SCIENCE COMMITMENTS \u2014 NO FUNDING TO THE LAB</div>`;comm.forEach(g=>h+=grantCard(g));}
   if(prop.length){h+=`<div class="sec-hd">IN PREPARATION</div>`;prop.forEach(g=>h+=grantCard(g));}
   if(rep.length){h+=`<div class="sec-hd">REPORTING</div>`;rep.forEach(g=>h+=grantCard(g));}
   if(past.length){
@@ -359,7 +366,7 @@ function renderLines(grants){
     if(isOpen){
       h+=`<div class="ln-body">`;
       order.forEach(function(g){
-        h+=`<div class="ln-grp"><span class="ln-gname" style="--gc:${gcol(g.id)}">${esc(g.shortname||g.id)}</span>`;
+        h+=`<div class="ln-grp"><span class="ln-gname" style="--gc:${gcol(g.id)}${g.funded===false?';opacity:.55':''}">${esc(g.shortname||g.id)}${g.funded===false?' \u00b7 unfunded':''}</span>`;
         grp[g.id].forEach(function(x){
           h+=`<div class="ln-obj"><span class="ln-oid">${esc(x.id)}</span><span class="ln-otxt">${esc(x.title)}</span><span style="flex-shrink:0">${schip(x.status)}</span></div>`;
         });
@@ -375,12 +382,12 @@ function renderLines(grants){
 function grantCard(g){
   const color=gcol(g.id);
   const isOpen=!!EXP[g.id];
-  const stMap={'active':'ch-active','reporting':'ch-reporting','past':'ch-past','proposal':'ch-ongoing'};
+  const stMap={'active':'ch-active','reporting':'ch-reporting','past':'ch-past','proposal':'ch-ongoing','commitment':'ch-commit'};
   return`<div class="gc${isOpen?' open':''}" style="--c:${color}">
     <div class="gc-hdr" onclick="toggleGrant('${esc(g.id)}')">
       <div class="gc-dot"></div>
       <div class="gc-meta">
-        <div class="gc-short">${esc(g.shortname||g.id)}${chip(g.status||'',stMap[g.status]||'ch-past')}${g.role?chip(g.role,'ch-role'):''}${g.issue?`<a href="https://github.com/rfleiro/rfl_ops/issues/${g.issue}" target="_blank" rel="noopener" onclick="event.stopPropagation()" style="font-size:10px;color:var(--accent);text-decoration:none;font-weight:500;margin-left:2px">#${g.issue} ↗</a>`:''}</div>
+        <div class="gc-short">${esc(g.shortname||g.id)}${chip(g.status||'',stMap[g.status]||'ch-past')}${g.role?chip(g.role,'ch-role'):''}${g.funded===false?chip('no funding','ch-unfunded'):''}${g.issue?`<a href="https://github.com/rfleiro/rfl_ops/issues/${g.issue}" target="_blank" rel="noopener" onclick="event.stopPropagation()" style="font-size:10px;color:var(--accent);text-decoration:none;font-weight:500;margin-left:2px">#${g.issue} ↗</a>`:''}</div>
         <div class="gc-full">${esc(g.title||'')}</div>
       </div>
       <span class="gc-chev">\u25b6</span>
@@ -450,7 +457,7 @@ function renderThemes(grants){
     present.forEach(t=>{
       h+=`<div class="theme-row"><span class="theme-name">${esc(t)}</span><div class="theme-pills">`;
       (map[t]||[]).forEach(g=>{
-        h+=`<span class="gpill${g.status==='past'?' past':''}" style="background:${gcol(g.id)}">${esc(g.shortname||g.id)}</span>`;
+        h+=`<span class="gpill${(g.status==='past'||g.funded===false)?' past':''}" style="background:${gcol(g.id)}">${esc(g.shortname||g.id)}</span>`;
       });
       h+=`</div></div>`;
     });
@@ -462,7 +469,7 @@ function renderThemes(grants){
     unk.forEach(t=>{
       h+=`<div class="theme-row"><span class="theme-name">${esc(t)}</span><div class="theme-pills">`;
       (map[t]||[]).forEach(g=>{
-        h+=`<span class="gpill${g.status==='past'?' past':''}" style="background:${gcol(g.id)}">${esc(g.shortname||g.id)}</span>`;
+        h+=`<span class="gpill${(g.status==='past'||g.funded===false)?' past':''}" style="background:${gcol(g.id)}">${esc(g.shortname||g.id)}</span>`;
       });
       h+=`</div></div>`;
     });
