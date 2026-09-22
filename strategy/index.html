@@ -1,0 +1,378 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#F7F6F3" media="(prefers-color-scheme:light)">
+<meta name="theme-color" content="#141412" media="(prefers-color-scheme:dark)">
+<meta name="robots" content="noindex,nofollow">
+<title>strategy</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%230D9488'/><polygon points='50,16 84,50 50,84 16,50' fill='white'/></svg>">
+<link rel="stylesheet" href="../shared/style.css?v=20260922-1150">
+<style>
+.page{max-width:1100px;margin:0 auto;padding:20px 16px 80px}
+.ph{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:20px;padding-bottom:16px;border-bottom:1px solid var(--border)}
+.ph h1{font-size:16px;font-weight:600;letter-spacing:-.01em}
+.ph-sub{font-size:12px;color:var(--text-3);margin-top:2px}
+.ph-r{display:flex;gap:6px;align-items:center}
+.back{font-size:11px;color:var(--text-2);text-decoration:none;display:inline-flex;align-items:center;gap:4px}
+.back:hover{color:var(--accent);text-decoration:none}
+.btn-icon{padding:6px;width:28px;height:28px;justify-content:center}
+
+.tabs{display:flex;margin-bottom:20px;border-bottom:1px solid var(--border)}
+.tab{padding:7px 16px;font-size:12px;font-weight:500;border:none;background:none;color:var(--text-2);cursor:pointer;font-family:inherit;border-bottom:2px solid transparent;margin-bottom:-1px;transition:color .1s,border-color .1s}
+.tab:hover{color:var(--text)}
+.tab.on{color:var(--accent);border-bottom-color:var(--accent)}
+
+.budget-row{display:grid;grid-template-columns:repeat(auto-fill,minmax(155px,1fr));gap:8px;margin-bottom:20px}
+.budget-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:10px 13px}
+.b-val{font-size:20px;font-weight:700;letter-spacing:-.03em;margin-bottom:1px}
+.b-lbl{font-size:10px;color:var(--text-2)}
+
+.gantt-wrap{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);overflow-x:auto;margin-bottom:8px;padding:14px 10px}
+.gantt-wrap svg{display:block;min-width:600px;width:100%}
+
+.sec-hd{font-size:10px;font-weight:600;color:var(--text-3);letter-spacing:.05em;margin:16px 0 8px}
+
+.gc{background:var(--surface);border:1.5px solid var(--border);border-left:3px solid var(--c,var(--border));border-radius:var(--r);margin-bottom:8px;overflow:hidden}
+.gc-hdr{display:flex;align-items:center;gap:10px;padding:11px 14px;cursor:pointer;user-select:none}
+.gc-hdr:hover{background:var(--surface2)}
+.gc-dot{width:8px;height:8px;border-radius:50%;background:var(--c,var(--text-3));flex-shrink:0}
+.gc-meta{flex:1;min-width:0}
+.gc-short{font-size:13px;font-weight:600;letter-spacing:-.01em;display:flex;align-items:center;gap:7px;flex-wrap:wrap}
+.gc-full{font-size:11px;color:var(--text-2);margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:min(540px,70vw)}
+.gc-chev{color:var(--text-3);font-size:10px;transition:transform .15s;flex-shrink:0}
+.gc.open .gc-chev{transform:rotate(90deg)}
+.gc-body{border-top:1px solid var(--border);padding:13px 14px;display:none}
+.gc.open .gc-body{display:block}
+
+.ginfo{display:flex;flex-wrap:wrap;gap:10px;margin-bottom:11px;font-size:11px;color:var(--text-2)}
+.ginfo b{color:var(--text);font-weight:600}
+
+.chip{display:inline-flex;align-items:center;font-size:9px;font-weight:600;padding:2px 7px;border-radius:99px;letter-spacing:.02em;white-space:nowrap;flex-shrink:0}
+.ch-active{background:var(--green-bg);color:var(--green);border:1px solid var(--green-border)}
+.ch-reporting{background:var(--warning-bg);color:var(--warning);border:1px solid var(--warning-border)}
+.ch-past{background:var(--surface2);color:var(--text-3);border:1px solid var(--border)}
+.ch-role{background:var(--surface2);color:var(--text-2);border:1px solid var(--border)}
+.ch-ongoing{background:var(--accent-bg);color:var(--accent);border:1px solid var(--accent-border)}
+.ch-done{background:var(--green-bg);color:var(--green);border:1px solid var(--green-border)}
+.ch-not-started{background:var(--surface2);color:var(--text-3);border:1px solid var(--border)}
+.ch-blocked{background:var(--danger-bg);color:var(--danger);border:1px solid var(--danger-border)}
+
+.themes-tags{display:flex;flex-wrap:wrap;gap:5px;margin-bottom:12px}
+.tt{font-size:10px;padding:2px 8px;border-radius:99px;background:var(--surface2);color:var(--text-2);border:1px solid var(--border)}
+
+.obj-list{list-style:none}
+.obj-item{padding:6px 0;border-bottom:1px solid var(--border)}
+.obj-item:last-child{border-bottom:none}
+.obj-row{display:flex;align-items:flex-start;gap:8px}
+.obj-id{font-size:10px;font-weight:600;color:var(--text-3);min-width:30px;flex-shrink:0;padding-top:1px;font-variant-numeric:tabular-nums}
+.obj-title{font-size:12px;flex:1;line-height:1.45}
+.obj-notes{font-size:11px;color:var(--text-2);margin-top:3px;padding-left:38px;line-height:1.5}
+
+.sub-list{list-style:none;margin-top:6px;padding-left:12px;border-left:2px solid var(--border)}
+.sub-item{display:flex;align-items:flex-start;gap:6px;padding:4px 0;border-bottom:1px solid var(--border)}
+.sub-item:last-child{border-bottom:none}
+.sub-title{font-size:11px;color:var(--text-2);flex:1;line-height:1.4}
+
+.theme-sec{margin-bottom:22px}
+.theme-sec-hd{font-size:10px;font-weight:600;color:var(--text-3);letter-spacing:.06em;padding-bottom:6px;border-bottom:1px solid var(--border);margin-bottom:8px}
+.theme-row{display:flex;align-items:center;gap:10px;padding:7px 0;border-bottom:1px solid var(--border)}
+.theme-row:last-child{border-bottom:none}
+.theme-name{font-size:12px;font-weight:500;min-width:155px;flex-shrink:0}
+.theme-pills{display:flex;flex-wrap:wrap;gap:5px}
+.gpill{font-size:10px;padding:2px 9px;border-radius:99px;color:#fff;font-weight:500}
+.gpill.past{opacity:.4}
+
+.past-toggle{background:none;border:none;font-family:inherit;font-size:11px;color:var(--text-2);cursor:pointer;padding:2px 0;margin-bottom:8px;display:flex;align-items:center;gap:5px}
+.past-toggle:hover{color:var(--accent)}
+
+.setup{max-width:340px;margin:80px auto;text-align:center}
+.setup h2{font-size:18px;font-weight:600;margin-bottom:6px}
+.setup p{font-size:13px;color:var(--text-2);margin-bottom:20px;line-height:1.6}
+.setup input{width:100%;padding:8px 11px;border:1px solid var(--border);border-radius:var(--rs);background:var(--surface);color:var(--text);font-family:inherit;font-size:13px;margin-bottom:10px;outline:none;display:block}
+.setup input:focus{border-color:var(--accent)}
+.spin{text-align:center;padding:60px 20px;color:var(--text-3);font-size:13px}
+.footer{font-size:10px;color:var(--text-3);text-align:right;margin-top:24px}
+</style>
+<script>(function(){var t=localStorage.getItem('dash:theme');if(t&&t!=='auto')document.documentElement.setAttribute('data-theme',t);})()</script>
+</head>
+<body>
+<div id="app"></div>
+<script>
+// ── Theme ─────────────────────────────────────────────────────────────────────
+var THEME_CYCLE=['auto','light','dark'];
+function themeIcon(t){
+  if(t==='dark')return'<svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M12 9.5A5.5 5.5 0 014.5 2a5.5 5.5 0 100 10 5.5 5.5 0 007.5-2.5z" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round"/></svg>';
+  if(t==='light')return'<svg width="14" height="14" viewBox="0 0 14 14" fill="none"><circle cx="7" cy="7" r="3" stroke="currentColor" stroke-width="1.2"/><path d="M7 1v2M7 11v2M1 7h2M11 7h2M3.2 3.2l1.4 1.4M9.4 9.4l1.4 1.4M10.8 3.2l-1.4 1.4M4.6 9.4l-1.4 1.4" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>';
+  return'<svg width="14" height="14" viewBox="0 0 14 14" fill="none"><circle cx="7" cy="7" r="5.5" stroke="currentColor" stroke-width="1.2"/><path d="M7 1.5v11" stroke="currentColor" stroke-width="1.2"/><path d="M7 1.5A5.5 5.5 0 0112.5 7 5.5 5.5 0 017 12.5z" fill="currentColor" opacity=".3"/></svg>';
+}
+function applyTheme(t){
+  if(t==='auto'){document.documentElement.removeAttribute('data-theme');}
+  else{document.documentElement.setAttribute('data-theme',t);}
+  localStorage.setItem('dash:theme',t);
+  var btn=document.getElementById('theme-btn');
+  if(btn){btn.innerHTML=themeIcon(t);btn.title='Theme: '+t;}
+}
+function toggleTheme(){
+  var cur=localStorage.getItem('dash:theme')||'auto';
+  var next=THEME_CYCLE[(THEME_CYCLE.indexOf(cur)+1)%THEME_CYCLE.length];
+  applyTheme(next);
+}
+
+// ── Constants ─────────────────────────────────────────────────────────────────
+const PAT_KEY  = 'dash:strategy:pat';
+const PAT_FALL = 'dash:ops:pat';
+const REPO     = 'rfleiro/rfl_ops';
+const DATAPATH = 'data/strategy.json';
+const BUILD    = '20260922-1730';
+
+// ── Grant colours ─────────────────────────────────────────────────────────────
+const GC = {
+  'AECC25-TDP2': '#7C3AED',
+  'PN24':        '#0D9488',
+  'CH24':        '#2563EB',
+  'CI24':        '#D97706',
+  'CONSINV24':   '#EA580C',
+  'PN20':        '#65A30D',
+  'PN17':        '#9B9690',
+};
+
+// ── Theme categories ──────────────────────────────────────────────────────────
+const THEME_CATS = [
+  {label:'Targets',      keys:['PolG','Twinkle','TDP2','mtDNA-replisome','shelterin','telomere']},
+  {label:'Methods',      keys:['cryo-EM','CRISPR','AI-design','mini-binders','optical-tweezers','drug-screening']},
+  {label:'Applications', keys:['cancer','neurology','diagnostics','spin-off']},
+];
+
+// ── State ─────────────────────────────────────────────────────────────────────
+let DATA=null, TAB='timeline', EXP={}, SHOW_PAST=false;
+
+// ── Utils ─────────────────────────────────────────────────────────────────────
+function esc(s){return String(s??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+function getPat(){return localStorage.getItem(PAT_KEY)||localStorage.getItem(PAT_FALL)||'';}
+function fmtEur(n){if(!n)return'\u2014';if(n>=1e6)return'\u20ac'+(n/1e6).toFixed(1)+'M';return'\u20ac'+Math.round(n/1e3)+'k';}
+function fmtDates(g){return((g.start||'').slice(0,7)||'?')+' \u2192 '+((g.end||'').slice(0,7)||'?');}
+function sClass(s){return({'ongoing':'ch-ongoing','done':'ch-done','not-started':'ch-not-started','blocked':'ch-blocked'})[s]||'ch-not-started';}
+function sLabel(s){return({'ongoing':'ongoing','done':'done','not-started':'not started','blocked':'blocked'})[s]||s||'?';}
+function chip(s,cls){return`<span class="chip ${esc(cls)}">${esc(s)}</span>`;}
+function schip(s){return`<span class="chip ${sClass(s)}">${sLabel(s)}</span>`;}
+
+// ── Render ────────────────────────────────────────────────────────────────────
+function render(){
+  const app=document.getElementById('app');
+  if(!app)return;
+  const pat=getPat();
+  if(!pat){app.innerHTML=renderSetup();return;}
+  if(!DATA){app.innerHTML='<div class="spin">Loading\u2026</div>';fetchData(pat);return;}
+  app.innerHTML=renderPage();
+  setTimeout(()=>applyTheme(localStorage.getItem('dash:theme')||'auto'),20);
+}
+function switchTab(t){TAB=t;render();}
+function toggleGrant(id){EXP[id]=!EXP[id];render();}
+function togglePast(){SHOW_PAST=!SHOW_PAST;render();}
+
+function renderSetup(){
+  return`<div class="setup">
+    <h2>strategy</h2>
+    <p>Enter your GitHub token to load grant data from the private repo.</p>
+    <input id="pat-in" type="password" placeholder="github_pat_\u2026" autocomplete="off">
+    <button class="btn btn-p" style="width:100%;justify-content:center" onclick="doSetup()">Connect</button>
+  </div>`;
+}
+function doSetup(){
+  const v=(document.getElementById('pat-in')?.value||'').trim();
+  if(!v)return;
+  localStorage.setItem(PAT_KEY,v);
+  render();
+}
+
+async function fetchData(pat){
+  try{
+    const url=`https://api.github.com/repos/${REPO}/contents/${DATAPATH}?ref=HEAD&t=${Date.now()}`;
+    const res=await fetch(url,{headers:{'Authorization':`token ${pat}`,'Accept':'application/vnd.github.v3+json'}});
+    if(!res.ok)throw new Error('HTTP '+res.status);
+    const j=await res.json();
+    DATA=JSON.parse(atob(j.content.replace(/\n/g,'')));
+    render();
+  }catch(e){
+    document.getElementById('app').innerHTML=`<div class="spin">Failed to load: ${esc(String(e))}<br><br><button class="btn" onclick="localStorage.removeItem('${PAT_KEY}');DATA=null;render()">Clear token</button></div>`;
+  }
+}
+
+// ── Page ──────────────────────────────────────────────────────────────────────
+function renderPage(){
+  const grants=DATA.grants||[];
+  const active=grants.filter(g=>g.status==='active');
+  const rep=grants.filter(g=>g.status==='reporting');
+  const past=grants.filter(g=>g.status==='past');
+  return`<div class="page">
+    <div class="ph">
+      <div>
+        <h1>strategy</h1>
+        <div class="ph-sub">Grant portfolio \u00b7 ${active.length} active \u00b7 updated ${esc(DATA.updated||'')}</div>
+      </div>
+      <div class="ph-r">
+        <a href="../" class="back">\u2190 hub</a>
+        <button class="btn btn-icon" onclick="toggleTheme()" id="theme-btn" title="Theme: auto">
+          <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><circle cx="7" cy="7" r="5.5" stroke="currentColor" stroke-width="1.2"/><path d="M7 1.5v11" stroke="currentColor" stroke-width="1.2"/><path d="M7 1.5A5.5 5.5 0 0112.5 7 5.5 5.5 0 017 12.5z" fill="currentColor" opacity=".3"/></svg>
+        </button>
+      </div>
+    </div>
+    <div class="tabs">
+      <button class="tab${TAB==='timeline'?' on':''}" onclick="switchTab('timeline')">Timeline</button>
+      <button class="tab${TAB==='objectives'?' on':''}" onclick="switchTab('objectives')">Objectives</button>
+      <button class="tab${TAB==='themes'?' on':''}" onclick="switchTab('themes')">Themes</button>
+    </div>
+    ${TAB==='timeline'?renderTimeline(grants,active,rep):''}
+    ${TAB==='objectives'?renderObjectives(grants,active,rep,past):''}
+    ${TAB==='themes'?renderThemes(grants):''}
+    <div class="footer">build ${esc(BUILD)}</div>
+  </div>`;
+}
+
+// ── Timeline ──────────────────────────────────────────────────────────────────
+function renderTimeline(grants,active,rep){
+  const aAmt=active.reduce((s,g)=>s+(g.amount_direct||0),0);
+  const rAmt=rep.reduce((s,g)=>s+(g.amount_direct||0),0);
+  return`<div class="budget-row">
+    <div class="budget-card"><div class="b-val" style="color:var(--green)">${fmtEur(aAmt)}</div><div class="b-lbl">active direct costs</div></div>
+    <div class="budget-card"><div class="b-val">${active.length}</div><div class="b-lbl">active grants</div></div>
+    <div class="budget-card"><div class="b-val">${active.filter(g=>g.role==='PI').length}</div><div class="b-lbl">active as PI</div></div>
+    <div class="budget-card"><div class="b-val" style="color:var(--warning)">${fmtEur(rAmt)}</div><div class="b-lbl">in reporting</div></div>
+  </div>`+gantt(grants);
+}
+
+function gantt(grants){
+  const YS=2017,YE=2031,YN=YE-YS;
+  const LM=115,RM=12,TW=900,DW=TW-LM-RM,PY=DW/YN;
+  const RH=30,RG=8,HDR=30,H=HDR+grants.length*(RH+RG);
+  const now=new Date(),todayF=now.getFullYear()+(now.getMonth()/12)+(now.getDate()/365);
+  const todayX=LM+(todayF-YS)*PY;
+  let s=`<svg viewBox="0 0 ${TW} ${H}" xmlns="http://www.w3.org/2000/svg" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-serif">`;
+  for(let y=YS;y<=YE;y++){
+    const x=LM+(y-YS)*PY;
+    s+=`<line x1="${x.toFixed(1)}" y1="${HDR-6}" x2="${x.toFixed(1)}" y2="${H}" stroke="var(--border)" stroke-width="0.5"/>`;
+    if(y<YE)s+=`<text x="${(x+PY/2).toFixed(1)}" y="18" text-anchor="middle" font-size="9" fill="var(--text-3)">${y}</text>`;
+  }
+  s+=`<line x1="${todayX.toFixed(1)}" y1="${HDR-10}" x2="${todayX.toFixed(1)}" y2="${H}" stroke="var(--danger)" stroke-width="1" stroke-dasharray="3,2" opacity="0.6"/>`;
+  s+=`<text x="${todayX.toFixed(1)}" y="11" text-anchor="middle" font-size="8" fill="var(--danger)" font-weight="600">now</text>`;
+  grants.forEach((g,i)=>{
+    const y0=HDR+i*(RH+RG),cy=y0+RH/2;
+    const color=GC[g.id]||'#9B9690';
+    const op=g.status==='past'?0.35:(g.status==='reporting'?0.62:1);
+    const [sy,sm]=(g.start||'2020-01-01').split('-').map(Number);
+    const [ey,em]=(g.end||'2025-12-31').split('-').map(Number);
+    const bx=LM+(sy+(sm-1)/12-YS)*PY,bw=Math.max(((ey+(em-1)/12)-(sy+(sm-1)/12))*PY,4);
+    const by=y0+6,bh=RH-12;
+    s+=`<text x="${LM-7}" y="${cy+4}" text-anchor="end" font-size="11" font-weight="600" fill="var(--text)" opacity="${op}">${esc(g.shortname||g.id)}</text>`;
+    s+=`<rect x="${bx.toFixed(1)}" y="${by}" width="${bw.toFixed(1)}" height="${bh}" rx="3" fill="${color}" opacity="${op}"/>`;
+    if(bw>52)s+=`<text x="${(bx+bw/2).toFixed(1)}" y="${cy+4}" text-anchor="middle" font-size="9" fill="white" opacity="${op}">${fmtEur(g.amount_direct||0)}</text>`;
+    if(g.role==='Co-PI')s+=`<text x="${(bx+4).toFixed(1)}" y="${by+bh-2}" font-size="7" fill="white" opacity="${Math.min(op,.8)}">Co-PI</text>`;
+  });
+  s+='</svg>';
+  return`<div class="gantt-wrap">${s}</div>`;
+}
+
+// ── Objectives ────────────────────────────────────────────────────────────────
+function renderObjectives(grants,active,rep,past){
+  let h='';
+  if(active.length){h+=`<div class="sec-hd">ACTIVE</div>`;active.forEach(g=>h+=grantCard(g));}
+  if(rep.length){h+=`<div class="sec-hd">REPORTING</div>`;rep.forEach(g=>h+=grantCard(g));}
+  if(past.length){
+    h+=`<button class="past-toggle" onclick="togglePast()">${SHOW_PAST?'\u25be':'\u25b8'} Past grants (${past.length})</button>`;
+    if(SHOW_PAST)past.forEach(g=>h+=grantCard(g));
+  }
+  return h;
+}
+
+function grantCard(g){
+  const color=GC[g.id]||'#9B9690';
+  const isOpen=!!EXP[g.id];
+  const stMap={'active':'ch-active','reporting':'ch-reporting','past':'ch-past'};
+  return`<div class="gc${isOpen?' open':''}" style="--c:${color}">
+    <div class="gc-hdr" onclick="toggleGrant('${esc(g.id)}')">
+      <div class="gc-dot"></div>
+      <div class="gc-meta">
+        <div class="gc-short">${esc(g.shortname||g.id)}${chip(g.status||'',stMap[g.status]||'ch-past')}${g.role==='Co-PI'?chip('Co-PI','ch-role'):''}</div>
+        <div class="gc-full">${esc(g.title||'')}</div>
+      </div>
+      <span class="gc-chev">\u25b6</span>
+    </div>
+    <div class="gc-body">
+      <div class="ginfo">
+        <span>${esc(fmtDates(g))}</span>
+        <span><b>${fmtEur(g.amount_direct||0)}</b> direct</span>
+        <span><b>${esc(g.agency||'')}</b></span>
+        ${g.ref?`<span>${esc(g.ref)}</span>`:''}
+        ${g.issue?`<span><a href="https://github.com/rfleiro/rfl_ops/issues/${g.issue}" target="_blank" rel="noopener">#${g.issue}</a></span>`:''}
+      </div>
+      ${themeTags(g.themes||[])}
+      ${objList(g.objectives||[])}
+    </div>
+  </div>`;
+}
+
+function themeTags(ts){
+  if(!ts.length)return'';
+  return`<div class="themes-tags">${ts.map(t=>`<span class="tt">${esc(t)}</span>`).join('')}</div>`;
+}
+
+function objList(objs){
+  if(!objs.length)return'<p style="font-size:11px;color:var(--text-3);margin-top:4px">No objectives recorded.</p>';
+  return`<ul class="obj-list">${objs.map(o=>`
+    <li class="obj-item">
+      <div class="obj-row">
+        <span class="obj-id">${esc(o.id||'')}</span>
+        <span class="obj-title">${esc(o.title||'')}</span>
+        <span style="flex-shrink:0">${schip(o.status||'not-started')}</span>
+      </div>
+      ${o.notes?`<div class="obj-notes">${esc(o.notes)}</div>`:''}
+      ${(o.sub||[]).length?`<ul class="sub-list">${(o.sub||[]).map(s=>`
+        <li class="sub-item">
+          <span class="obj-id">${esc(s.id||'')}</span>
+          <span class="sub-title">${esc(s.title||'')}</span>
+          <span style="flex-shrink:0">${schip(s.status||'not-started')}</span>
+        </li>`).join('')}</ul>`:''}
+    </li>`).join('')}</ul>`;
+}
+
+// ── Themes ────────────────────────────────────────────────────────────────────
+function renderThemes(grants){
+  const map={};
+  grants.forEach(g=>(g.themes||[]).forEach(t=>{(map[t]=map[t]||[]).push(g);}));
+  const all=new Set(THEME_CATS.flatMap(c=>c.keys));
+  let h=`<p style="font-size:12px;color:var(--text-2);margin-bottom:18px;line-height:1.6">Where grants converge reveals the lab\u2019s scientific core. Active grants are shown solid; past are dimmed.</p>`;
+  THEME_CATS.forEach(cat=>{
+    const present=cat.keys.filter(k=>map[k]);
+    if(!present.length)return;
+    h+=`<div class="theme-sec"><div class="theme-sec-hd">${esc(cat.label)}</div>`;
+    present.forEach(t=>{
+      h+=`<div class="theme-row"><span class="theme-name">${esc(t)}</span><div class="theme-pills">`;
+      (map[t]||[]).forEach(g=>{
+        h+=`<span class="gpill${g.status==='past'?' past':''}" style="background:${GC[g.id]||'#9B9690'}">${esc(g.shortname||g.id)}</span>`;
+      });
+      h+=`</div></div>`;
+    });
+    h+=`</div>`;
+  });
+  const unk=Object.keys(map).filter(t=>!all.has(t));
+  if(unk.length){
+    h+=`<div class="theme-sec"><div class="theme-sec-hd">Other</div>`;
+    unk.forEach(t=>{
+      h+=`<div class="theme-row"><span class="theme-name">${esc(t)}</span><div class="theme-pills">`;
+      (map[t]||[]).forEach(g=>{
+        h+=`<span class="gpill${g.status==='past'?' past':''}" style="background:${GC[g.id]||'#9B9690'}">${esc(g.shortname||g.id)}</span>`;
+      });
+      h+=`</div></div>`;
+    });
+    h+=`</div>`;
+  }
+  return h;
+}
+
+// ── Init ──────────────────────────────────────────────────────────────────────
+render();
+</script>
+</body>
+</html>
