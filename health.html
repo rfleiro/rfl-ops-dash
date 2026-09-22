@@ -1,0 +1,556 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Rafa · Health Hub</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
+<style>
+:root {
+  --bg:       #101218;
+  --s1:       #181b24;
+  --s2:       #1f2333;
+  --border:   #252a3a;
+  --text:     #dde1f0;
+  --muted:    #636b8a;
+  --accent:   #5b8af8;
+  --green:    #3ecf82;
+  --red:      #e05870;
+  --swim:     #38bdf8;
+  --run:      #4ade80;
+  --str:      #fb923c;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:system-ui,-apple-system,sans-serif;background:var(--bg);color:var(--text);min-height:100vh;font-size:14px}
+a{color:inherit;text-decoration:none}
+
+/* ── HEADER ── */
+header{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:0 1.5rem;height:52px;
+  border-bottom:1px solid var(--border);
+  position:sticky;top:0;background:var(--bg);z-index:10;
+}
+.logo{font-weight:700;letter-spacing:.02em;font-size:.95rem}
+.logo em{font-style:normal;color:var(--accent)}
+.tabs{display:flex;background:var(--s1);border:1px solid var(--border);border-radius:8px;padding:3px;gap:2px}
+.tab{
+  padding:.35rem 1rem;border:none;border-radius:6px;cursor:pointer;
+  font-size:.8rem;font-weight:500;color:var(--muted);background:transparent;
+  transition:background .15s,color .15s;
+}
+.tab.on{background:var(--accent);color:#fff}
+
+/* ── SETUP ── */
+#setup{
+  max-width:420px;margin:5rem auto;padding:2rem;
+  background:var(--s1);border:1px solid var(--border);border-radius:14px;
+}
+#setup h2{font-size:1rem;margin-bottom:.5rem}
+#setup p{color:var(--muted);font-size:.85rem;line-height:1.5;margin-bottom:1.25rem}
+#setup input{
+  width:100%;padding:.65rem .9rem;background:var(--bg);
+  border:1px solid var(--border);border-radius:8px;color:var(--text);
+  font-size:.85rem;margin-bottom:.75rem;outline:none;
+}
+#setup input:focus{border-color:var(--accent)}
+#setup button{
+  width:100%;padding:.65rem;background:var(--accent);border:none;
+  border-radius:8px;color:#fff;font-weight:600;cursor:pointer;font-size:.875rem;
+}
+
+/* ── MAIN ── */
+main{max-width:960px;margin:0 auto;padding:1.25rem 1.5rem}
+
+/* date nav */
+.dnav{display:flex;align-items:center;gap:.75rem;margin-bottom:1.25rem}
+.dnav button{
+  background:var(--s1);border:1px solid var(--border);color:var(--text);
+  border-radius:7px;padding:.35rem .8rem;cursor:pointer;font-size:.8rem;
+}
+.dnav button:hover{background:var(--s2)}
+.dlabel{font-size:.95rem;font-weight:600;min-width:220px;text-align:center;flex:1}
+.dnav .today-btn{margin-left:auto}
+
+/* grid */
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:1rem}
+.g3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:1rem}
+
+/* card */
+.card{background:var(--s1);border:1px solid var(--border);border-radius:12px;padding:1.1rem}
+.ctitle{
+  font-size:.7rem;font-weight:600;color:var(--muted);
+  margin-bottom:.85rem;letter-spacing:.04em;
+  /* no all-caps to avoid the template tell */
+  text-transform:none;
+}
+
+/* stat */
+.big{font-size:2.2rem;font-weight:700;line-height:1;letter-spacing:-.02em}
+.unit{font-size:.85rem;color:var(--muted);margin-left:.15rem}
+.sub{font-size:.75rem;color:var(--muted);margin-top:.3rem}
+.pos{color:var(--green)}
+.neg{color:var(--red)}
+.acc{color:var(--accent)}
+
+/* bar */
+.bar-wrap{height:6px;background:var(--bg);border-radius:3px;overflow:hidden;margin-top:.85rem}
+.bar{height:100%;border-radius:3px;transition:width .4s}
+
+/* activity row */
+.arow{display:flex;align-items:center;gap:.65rem;padding:.5rem 0;border-bottom:1px solid var(--border)}
+.arow:last-child{border:none}
+.aicon{width:30px;height:30px;border-radius:7px;display:flex;align-items:center;justify-content:center;font-size:.95rem;flex-shrink:0}
+.swim-bg{background:rgba(56,189,248,.12)}
+.run-bg{background:rgba(74,222,128,.12)}
+.str-bg{background:rgba(251,146,60,.12)}
+.aname{font-size:.875rem;font-weight:500}
+.ameta{font-size:.72rem;color:var(--muted);margin-top:.1rem}
+.akcal{font-size:.8rem;font-weight:600;color:var(--red);margin-left:auto;white-space:nowrap}
+
+/* food row */
+.frow{padding:.5rem 0;border-bottom:1px solid var(--border)}
+.frow:last-child{border:none}
+.fhead{display:flex;justify-content:space-between;align-items:baseline}
+.fmeal{font-size:.7rem;color:var(--muted)}
+.fkcal{font-size:.8rem;font-weight:600;color:var(--accent)}
+.fitems{font-size:.82rem;margin-top:.15rem;color:var(--text)}
+
+/* month grid */
+.mgrid{display:grid;grid-template-columns:repeat(7,1fr);gap:.35rem}
+.mhead{font-size:.68rem;color:var(--muted);text-align:center;padding-bottom:.3rem}
+.mday{
+  aspect-ratio:1;border-radius:7px;display:flex;flex-direction:column;
+  align-items:center;justify-content:center;font-size:.75rem;
+  cursor:pointer;border:1px solid transparent;transition:.15s;
+}
+.mday:hover{border-color:var(--accent)}
+.mday.today{border-color:var(--accent)}
+.mday.has-data{background:var(--s2)}
+.mday.deficit{background:rgba(62,207,130,.1)}
+.mday.surplus{background:rgba(224,88,112,.08)}
+.mday.blank{opacity:.15;pointer-events:none}
+.mnum{font-weight:600}
+.mdots{display:flex;gap:2px;margin-top:2px}
+.dot{width:4px;height:4px;border-radius:50%}
+
+/* week detail row */
+.wrow{display:flex;align-items:center;gap:.75rem;padding:.45rem 0;border-bottom:1px solid var(--border)}
+.wrow:last-child{border:none}
+.wrow.is-today{background:var(--s2);border-radius:8px;padding:.45rem .6rem}
+.wlabel{width:70px;font-size:.75rem;color:var(--muted);flex-shrink:0}
+.wacts{flex:1;font-size:.8rem;display:flex;flex-wrap:wrap;gap:.4rem;align-items:center}
+.wkcal{font-size:.78rem;font-weight:600;color:var(--accent);white-space:nowrap}
+
+/* chart */
+.chart-wrap{position:relative;height:200px}
+
+/* empty */
+.empty{color:var(--muted);font-size:.82rem;padding:1.25rem 0;text-align:center}
+.loading{text-align:center;color:var(--muted);padding:3rem}
+
+/* weight chip */
+.wt-chip{
+  display:inline-flex;align-items:baseline;gap:.25rem;
+  background:var(--s2);border-radius:8px;padding:.5rem 1rem;margin-top:.75rem
+}
+
+@media(max-width:640px){
+  .g2,.g3{grid-template-columns:1fr}
+  main{padding:1rem}
+  header{padding:0 1rem}
+}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">rafa · <em>health hub</em></div>
+  <div class="tabs">
+    <button class="tab on" onclick="setView('day')">Día</button>
+    <button class="tab" onclick="setView('week')">Semana</button>
+    <button class="tab" onclick="setView('month')">Mes</button>
+  </div>
+</header>
+
+<div id="setup" style="display:none">
+  <h2>Conectar repositorio</h2>
+  <p>Introduce tu GitHub Personal Access Token para leer los datos del repo privado. Se guarda solo en este navegador.</p>
+  <input type="password" id="tkInput" placeholder="github_pat_…" autocomplete="off">
+  <button onclick="saveToken()">Conectar →</button>
+</div>
+
+<main id="app" style="display:none">
+  <div class="dnav">
+    <button onclick="navPrev()">←</button>
+    <div class="dlabel" id="dlabel">—</div>
+    <button onclick="navNext()">→</button>
+    <button class="today-btn" onclick="goToday()">hoy</button>
+  </div>
+  <div id="content"><div class="loading">Cargando…</div></div>
+</main>
+
+<script>
+// ─── CONFIG ────────────────────────────────────────────
+const REPO      = 'rfleiro/FamilyOps';
+const DATA_PATH = 'health/data.json';
+
+// ─── STATE ─────────────────────────────────────────────
+let view    = 'day';
+let cursor  = today0();
+let data    = null;
+let token   = null;
+let wchart  = null;
+
+// ─── BOOT ──────────────────────────────────────────────
+async function init() {
+  token = localStorage.getItem('rh_token');
+  if (!token) { show('setup'); return; }
+  show('app');
+  await load();
+  render();
+}
+
+function show(id) {
+  document.getElementById('setup').style.display = id === 'setup' ? 'block' : 'none';
+  document.getElementById('app').style.display   = id === 'app'   ? 'block' : 'none';
+}
+
+async function saveToken() {
+  const t = document.getElementById('tkInput').value.trim();
+  if (!t) return;
+  localStorage.setItem('rh_token', t);
+  token = t;
+  show('app');
+  await load();
+  render();
+}
+
+// ─── GITHUB ────────────────────────────────────────────
+async function load() {
+  try {
+    const r = await fetch(
+      `https://api.github.com/repos/${REPO}/contents/${DATA_PATH}`,
+      { headers:{ Authorization:`Bearer ${token}`, 'X-GitHub-Api-Version':'2022-11-28' } }
+    );
+    if (!r.ok) throw new Error(r.status);
+    const j = await r.json();
+    data = JSON.parse(atob(j.content.replace(/\n/g,'')));
+  } catch(e) {
+    console.error(e);
+    data = { meta:{ tdee_base:2200, weight_goal_kg:78 }, entries:[] };
+  }
+}
+
+// ─── UTILS ─────────────────────────────────────────────
+function today0() {
+  const d = new Date(); d.setHours(0,0,0,0); return d;
+}
+function fmt(d)     { return d.toISOString().split('T')[0]; }
+function TDEE()     { return data?.meta?.tdee_base ?? 2200; }
+function entry(ds)  { return (data?.entries||[]).find(e=>e.date===ds)||null; }
+
+function balance(e) {
+  if (!e) return null;
+  const kin  = (e.food||[]).reduce((s,f)=>s+(f.kcal||0),0);
+  const kact = (e.activities||[]).reduce((s,a)=>s+(a.kcal_out||0),0);
+  return { in:kin, act:kact, net:kin-(TDEE()+kact) };
+}
+
+function weekDates(ref) {
+  const m = new Date(ref);
+  const diff = (m.getDay()+6)%7;
+  m.setDate(m.getDate()-diff);
+  return Array.from({length:7},(_,i)=>{ const d=new Date(m); d.setDate(d.getDate()+i); return d; });
+}
+
+function monthDates(ref) {
+  const [y,mo] = [ref.getFullYear(), ref.getMonth()];
+  const first  = new Date(y,mo,1);
+  const last   = new Date(y,mo+1,0);
+  const pad    = (first.getDay()+6)%7;
+  const out    = Array(pad).fill(null);
+  for (let i=1;i<=last.getDate();i++) out.push(new Date(y,mo,i));
+  return out;
+}
+
+function icon(type) {
+  return {swim:'🏊',run:'🏃',strength:'💪'}[type]||'🏅';
+}
+function iconBg(type) {
+  return {swim:'swim-bg',run:'run-bg',strength:'str-bg'}[type]||'str-bg';
+}
+function dotColor(type) {
+  return {swim:'var(--swim)',run:'var(--run)',strength:'var(--str)'}[type]||'var(--muted)';
+}
+
+// ─── NAV ───────────────────────────────────────────────
+function navPrev() {
+  if (view==='day')   cursor.setDate(cursor.getDate()-1);
+  else if (view==='week') cursor.setDate(cursor.getDate()-7);
+  else cursor.setMonth(cursor.getMonth()-1);
+  render();
+}
+function navNext() {
+  if (view==='day')   cursor.setDate(cursor.getDate()+1);
+  else if (view==='week') cursor.setDate(cursor.getDate()+7);
+  else cursor.setMonth(cursor.getMonth()+1);
+  render();
+}
+function goToday()   { cursor=today0(); render(); }
+function goDay(y,m,d){ cursor=new Date(y,m,d); setView('day'); }
+function setView(v)  {
+  view=v;
+  document.querySelectorAll('.tab').forEach((t,i)=>{
+    t.classList.toggle('on',['day','week','month'][i]===v);
+  });
+  render();
+}
+
+// ─── RENDER ────────────────────────────────────────────
+function render() {
+  if (!data) return;
+  setLabel();
+  if (view==='day')   renderDay();
+  else if (view==='week') renderWeek();
+  else                renderMonth();
+}
+
+function setLabel() {
+  const el = document.getElementById('dlabel');
+  const loc = {timeZone:'Europe/Madrid'};
+  if (view==='day') {
+    el.textContent = cursor.toLocaleDateString('es-ES',{weekday:'long',day:'numeric',month:'long',...loc});
+  } else if (view==='week') {
+    const days = weekDates(cursor);
+    el.textContent = `${days[0].getDate()}–${days[6].getDate()} ${days[6].toLocaleDateString('es-ES',{month:'long',...loc})} ${days[6].getFullYear()}`;
+  } else {
+    el.textContent = cursor.toLocaleDateString('es-ES',{month:'long',year:'numeric',...loc});
+  }
+}
+
+// ─── DAY ───────────────────────────────────────────────
+function renderDay() {
+  const ds  = fmt(cursor);
+  const e   = entry(ds);
+  const bal = balance(e);
+  const kin  = bal?.in  ?? 0;
+  const kact = bal?.act ?? 0;
+  const net  = bal?.net ?? null;
+  const tdee = TDEE();
+
+  let netClass='', netSign='';
+  if (net!==null) { netClass=net<=0?'pos':'neg'; netSign=net>0?'+':''; }
+
+  document.getElementById('content').innerHTML = `
+    <div class="g3" style="margin-bottom:1rem">
+      <div class="card">
+        <div class="ctitle">Calorías ingeridas</div>
+        <div class="big acc">${kin||'—'}<span class="unit">kcal</span></div>
+        <div class="sub">objetivo ≤ ${tdee} kcal</div>
+        ${kin?`<div class="bar-wrap"><div class="bar" style="width:${Math.min(100,kin/tdee*100).toFixed(0)}%;background:var(--accent)"></div></div>`:''}
+      </div>
+      <div class="card">
+        <div class="ctitle">Quemadas en actividad</div>
+        <div class="big pos">${kact||'—'}<span class="unit">kcal</span></div>
+        <div class="sub">TDEE base: ${tdee} kcal</div>
+        ${kact?`<div class="bar-wrap"><div class="bar" style="width:${Math.min(100,kact/900*100).toFixed(0)}%;background:var(--green)"></div></div>`:''}
+      </div>
+      <div class="card">
+        <div class="ctitle">Balance del día</div>
+        ${net!==null
+          ? `<div class="big ${netClass}">${netSign}${net}<span class="unit">kcal</span></div>
+             <div class="sub">${net<=0?'déficit ✓':'exceso sobre TDEE + actividad'}</div>`
+          : `<div class="big" style="color:var(--muted)">—</div><div class="sub">sin datos registrados</div>`
+        }
+        ${e?.weight_kg?`<div class="wt-chip"><span style="font-size:1.3rem;font-weight:700">${e.weight_kg}</span><span style="color:var(--muted);font-size:.8rem">kg</span></div>`:''}
+      </div>
+    </div>
+    <div class="g2">
+      <div class="card">
+        <div class="ctitle">Actividades</div>
+        ${renderActs(e)}
+      </div>
+      <div class="card">
+        <div class="ctitle">Registro de comida</div>
+        ${renderFood(e)}
+      </div>
+    </div>
+    ${e?.notes?`<div class="card" style="margin-top:1rem;font-size:.82rem;color:var(--muted)">${e.notes}</div>`:''}
+  `;
+}
+
+function renderActs(e) {
+  const acts = e?.activities||[];
+  if (!acts.length) return `<div class="empty">Sin actividades registradas hoy</div>`;
+  return acts.map(a=>`
+    <div class="arow">
+      <div class="aicon ${iconBg(a.type)}">${icon(a.type)}</div>
+      <div>
+        <div class="aname">${a.label||a.type}</div>
+        <div class="ameta">
+          ${a.duration_min?`${a.duration_min} min`:''}
+          ${a.distance_m?` · ${(a.distance_m/1000).toFixed(1)} km`:''}
+        </div>
+      </div>
+      <div class="akcal">−${a.kcal_out||0} kcal</div>
+    </div>
+  `).join('');
+}
+
+function renderFood(e) {
+  const food = e?.food||[];
+  if (!food.length) return `<div class="empty">Sin comidas registradas hoy</div>`;
+  return food.map(f=>`
+    <div class="frow">
+      <div class="fhead">
+        <span class="fmeal">${f.meal}</span>
+        <span class="fkcal">${f.kcal} kcal</span>
+      </div>
+      <div class="fitems">${f.items}</div>
+    </div>
+  `).join('');
+}
+
+// ─── WEEK ──────────────────────────────────────────────
+function renderWeek() {
+  const days = weekDates(cursor);
+  const toStr = d=>fmt(d);
+  const labels = days.map(d=>d.toLocaleDateString('es-ES',{weekday:'short',day:'numeric'}));
+  const kin  = days.map(d=>(entry(toStr(d))?.food||[]).reduce((s,f)=>s+(f.kcal||0),0));
+  const kout = days.map(d=>TDEE()+(entry(toStr(d))?.activities||[]).reduce((s,a)=>s+(a.kcal_out||0),0));
+
+  const totalIn   = kin.reduce((s,v)=>s+v,0);
+  const totalOut  = kout.reduce((s,v)=>s+v,0);
+  const activeDays = days.filter(d=>(entry(toStr(d))?.activities||[]).length>0).length;
+  const td = fmt(today0());
+
+  document.getElementById('content').innerHTML = `
+    <div class="g3" style="margin-bottom:1rem">
+      <div class="card">
+        <div class="ctitle">Ingesta semanal</div>
+        <div class="big acc">${totalIn||'—'}<span class="unit">kcal</span></div>
+        <div class="sub">promedio ${totalIn?Math.round(totalIn/7):0} kcal/día</div>
+      </div>
+      <div class="card">
+        <div class="ctitle">Gasto semanal</div>
+        <div class="big pos">${totalOut||'—'}<span class="unit">kcal</span></div>
+        <div class="sub">TDEE + actividad total</div>
+      </div>
+      <div class="card">
+        <div class="ctitle">Días activos</div>
+        <div class="big">${activeDays}<span class="unit" style="font-size:1rem">/ 7</span></div>
+        <div class="sub">con actividad registrada</div>
+      </div>
+    </div>
+    <div class="card" style="margin-bottom:1rem">
+      <div class="ctitle">Calorías diarias — ingeridas vs. gasto</div>
+      <div class="chart-wrap"><canvas id="wc"></canvas></div>
+    </div>
+    <div class="card">
+      <div class="ctitle">Detalle por día</div>
+      ${days.map((d,i)=>{
+        const e   = entry(toStr(d));
+        const acts = e?.activities||[];
+        const isT  = toStr(d)===td;
+        return `
+          <div class="wrow${isT?' is-today':''}">
+            <div class="wlabel">${d.toLocaleDateString('es-ES',{weekday:'short',day:'numeric'})}</div>
+            <div class="wacts">
+              ${acts.length
+                ? acts.map(a=>`<span>${icon(a.type)} ${a.label||a.type}</span>`).join('')
+                : `<span style="color:var(--muted)">—</span>`}
+            </div>
+            <div class="wkcal">${kin[i]?kin[i]+' kcal':'—'}</div>
+          </div>
+        `;
+      }).join('')}
+    </div>
+  `;
+
+  // chart
+  if (wchart) wchart.destroy();
+  wchart = new Chart(document.getElementById('wc').getContext('2d'),{
+    type:'bar',
+    data:{
+      labels,
+      datasets:[
+        { label:'Kcal ingeridas', data:kin,  backgroundColor:'rgba(91,138,248,.65)', borderRadius:5 },
+        { label:'Gasto (TDEE+act)', data:kout, backgroundColor:'rgba(62,207,130,.4)', borderRadius:5 }
+      ]
+    },
+    options:{
+      responsive:true, maintainAspectRatio:false,
+      plugins:{ legend:{ labels:{ color:'#636b8a', font:{size:11}, boxWidth:12 } } },
+      scales:{
+        x:{ ticks:{color:'#636b8a'}, grid:{color:'#252a3a'} },
+        y:{ ticks:{color:'#636b8a'}, grid:{color:'#252a3a'} }
+      }
+    }
+  });
+}
+
+// ─── MONTH ─────────────────────────────────────────────
+function renderMonth() {
+  const days = monthDates(cursor);
+  const td   = fmt(today0());
+  const [y,mo] = [cursor.getFullYear(),cursor.getMonth()];
+
+  const entries = (data?.entries||[]).filter(e=>{
+    const d=new Date(e.date);
+    return d.getFullYear()===y&&d.getMonth()===mo;
+  });
+
+  const sw  = entries.filter(e=>e.activities?.some(a=>a.type==='swim')).length;
+  const ru  = entries.filter(e=>e.activities?.some(a=>a.type==='run')).length;
+  const st  = entries.filter(e=>e.activities?.some(a=>a.type==='strength')).length;
+
+  document.getElementById('content').innerHTML = `
+    <div class="card" style="margin-bottom:1rem">
+      <div class="ctitle">Actividad mensual</div>
+      <div class="mgrid">
+        ${['Lu','Ma','Mi','Ju','Vi','Sá','Do'].map(l=>`<div class="mhead">${l}</div>`).join('')}
+        ${days.map(d=>{
+          if (!d) return '<div></div>';
+          const ds  = fmt(d);
+          const e   = entry(ds);
+          const bal = balance(e);
+          const isT = ds===td;
+          const acts = [...new Set((e?.activities||[]).map(a=>a.type))];
+          let cls='mday';
+          if (!e)      cls+=' ';
+          else if (bal&&bal.net<=-100) cls+=' deficit';
+          else if (e)  cls+=' has-data';
+          if (isT)     cls+=' today';
+          return `
+            <div class="${cls}" onclick="goDay(${d.getFullYear()},${d.getMonth()},${d.getDate()})">
+              <div class="mnum">${d.getDate()}</div>
+              <div class="mdots">
+                ${acts.slice(0,3).map(t=>`<div class="dot" style="background:${dotColor(t)}"></div>`).join('')}
+              </div>
+            </div>
+          `;
+        }).join('')}
+      </div>
+    </div>
+    <div class="g3">
+      <div class="card" style="text-align:center">
+        <div class="big" style="color:var(--swim)">${sw}</div>
+        <div class="sub">🏊 sesiones natación</div>
+      </div>
+      <div class="card" style="text-align:center">
+        <div class="big" style="color:var(--run)">${ru}</div>
+        <div class="sub">🏃 sesiones carrera</div>
+      </div>
+      <div class="card" style="text-align:center">
+        <div class="big" style="color:var(--str)">${st}</div>
+        <div class="sub">💪 sesiones fuerza</div>
+      </div>
+    </div>
+  `;
+}
+
+init();
+</script>
+</body>
+</html>
