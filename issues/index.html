@@ -8,7 +8,7 @@
 <meta name="robots" content="noindex, nofollow">
 <title>Issues — rfl-ops</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%232563EB'/><text x='50' y='68' font-size='56' text-anchor='middle' fill='white'>📋</text></svg>">
-<link rel="stylesheet" href="../shared/style.css?v=20260922-1150">
+<link rel="stylesheet" href="../shared/style.css?v=20260922-1235">
 <style>
 /* ── Issues dashboard ───────────────────────────────────────────────────── */
 body { min-height: 100vh; }
@@ -391,7 +391,7 @@ window.addEventListener('unhandledrejection', function(e) {
 });
 'use strict';
 
-const BUILD = '20260922-1150';
+const BUILD = '20260922-1235';
 const API   = 'https://api.github.com';
 const ID    = 'issues';
 
@@ -410,8 +410,10 @@ var issues  = [];       // all open, non-PR issues, parsed
 var lastLoad = null;
 
 // Filter state
-var filtTopic  = 'all';
-var filtType   = 'all';
+var filtTopic    = 'all';
+var filtType     = 'all';
+var filtPriority = 'all';
+var filtLine     = 'all';
 
 // Tab + calendar state
 var activeTab  = 'kanban';
@@ -452,6 +454,8 @@ function parseDate(body, field) {
 var TOPIC_NAMES = ['project','paper','grant','talk','review','patents','IT','admin','lab',
   'people:lab','people:alumni','people:networking',
   'MITO','DNA Repair','DNA Replication','Shelterin','Methods','Other'];
+var LINE_NAMES     = ['MITO','DNA Repair','DNA Replication','Shelterin','Methods','Other'];
+var PRIORITY_NAMES = ['HIGH','MEDIUM','LOW'];
 
 function parseLabels(labels) {
   var names = (labels || []).map(function(l) { return l.name; });
@@ -463,7 +467,9 @@ function parseLabels(labels) {
   var topic = names.find(function(n) { return TOPIC_NAMES.indexOf(n) !== -1 || n.startsWith('people:'); })
            || names.find(function(n) { return n !== 'task' && n !== 'thread'; })
            || '';
-  return { type: type, topic: topic };
+  var priority = names.find(function(n){ return PRIORITY_NAMES.indexOf(n)!==-1; }) || '';
+  var line     = names.find(function(n){ return LINE_NAMES.indexOf(n)!==-1; })     || '';
+  return { type: type, topic: topic, priority: priority, line: line };
 }
 
 // ── Buckets ───────────────────────────────────────────────────────────────
@@ -548,6 +554,8 @@ async function fetchAllIssues() {
         url:       iss.html_url,
         type:      lab.type,
         topic:     lab.topic,
+        priority:  lab.priority,
+        line:      lab.line,
         reminder:  parseDate(iss.body, '📅 Reminder:'),
         deadline:  parseDate(iss.body, '📅 Deadline:'),
         updatedAt: iss.updated_at
@@ -596,8 +604,10 @@ function resetConfig() {
 // ── Derived lists ─────────────────────────────────────────────────────────
 function filtered() {
   return issues.filter(function(i) {
-    if(filtTopic !== 'all' && i.topic !== filtTopic) return false;
-    if(filtType  !== 'all' && i.type  !== filtType)  return false;
+    if(filtTopic    !== 'all' && i.topic    !== filtTopic)    return false;
+    if(filtType     !== 'all' && i.type     !== filtType)     return false;
+    if(filtPriority !== 'all' && i.priority !== filtPriority) return false;
+    if(filtLine     !== 'all' && i.line     !== filtLine)     return false;
     return true;
   });
 }
@@ -605,6 +615,16 @@ function allTopics() {
   var seen = {};
   issues.forEach(function(i) { if(i.topic) seen[i.topic] = true; });
   return Object.keys(seen).sort();
+}
+function allPriorities() {
+  var seen = {};
+  issues.forEach(function(i) { if(i.priority) seen[i.priority] = true; });
+  return ['HIGH','MEDIUM','LOW'].filter(function(p){ return seen[p]; });
+}
+function allLines() {
+  var seen = {};
+  issues.forEach(function(i) { if(i.line) seen[i.line] = true; });
+  return LINE_NAMES.filter(function(l){ return seen[l]; });
 }
 
 // ── Issue card HTML ───────────────────────────────────────────────────────
@@ -615,6 +635,9 @@ function issueCard(iss) {
     else if(iss.reminder <= addDays(TODAY, 1)) cls = 'is-today';
   }
   var dlc = dlChipClass(iss.deadline);
+  var PCOLOR = {HIGH:'background:#FEF2F2;color:#DC2626;border-color:#FECACA',
+               MEDIUM:'background:#FFFBEB;color:#D97706;border-color:#FDE68A',
+               LOW:'background:#F8FAFC;color:#64748B;border-color:#E2E8F0'};
   return '<a class="iss-card ' + cls + '" href="' + esc(iss.url) + '" target="_blank" rel="noopener">'
     + '<div class="iss-top">'
     + '<span class="iss-title">' + esc(iss.title) + '</span>'
@@ -622,6 +645,8 @@ function issueCard(iss) {
     + '</div>'
     + '<div class="iss-meta">'
     + ttag(iss.topic)
+    + (iss.priority ? '<span class="chip" style="'+PCOLOR[iss.priority]+'">' + esc(iss.priority) + '</span>' : '')
+    + (iss.line     ? '<span class="chip" style="background:#EFF6FF;color:#1D4ED8;border-color:#BFDBFE">' + esc(iss.line) + '</span>' : '')
     + (iss.reminder ? '<span class="chip ' + cls.replace('is-','') + '">' + fd(iss.reminder) + '</span>' : '')
     + (iss.deadline ? '<span class="chip dl ' + dlc + '">⚑ ' + fd(iss.deadline) + '</span>' : '')
     + '</div>'
@@ -876,6 +901,18 @@ function render() {
     + '<option value="thread"'+ (filtType==='thread'?' selected':'') + '>Threads</option>'
     + '<option value="person"'+ (filtType==='person'?' selected':'') + '>People</option>'
     + '</select>'
+    + '<select onchange="setFiltPriority(this.value)">'
+    + '<option value="all"' + (filtPriority==='all'?' selected':'') + '>All priorities</option>'
+    + allPriorities().map(function(p){
+        return '<option value="' + esc(p) + '"' + (filtPriority===p?' selected':'') + '>' + esc(p) + '</option>';
+      }).join('')
+    + '</select>'
+    + '<select onchange="setFiltLine(this.value)">'
+    + '<option value="all"' + (filtLine==='all'?' selected':'') + '>All lines</option>'
+    + allLines().map(function(l){
+        return '<option value="' + esc(l) + '"' + (filtLine===l?' selected':'') + '>' + esc(l) + '</option>';
+      }).join('')
+    + '</select>'
     + '<span class="filter-count">' + list.length + ' / ' + issues.length + '</span>'
     + '<button class="btn btn-icon" id="theme-btn" onclick="toggleTheme()" title="Theme: auto">' + themeIcon(localStorage.getItem('dash:theme')||'auto') + '</button>'
     + '</div>'
@@ -908,8 +945,10 @@ function render() {
 
 // ── Event handlers (global, so inline onclick can reach them) ─────────────
 function setTab(t)         { activeTab = t; dayDetail = null; render(); }
-function setFiltTopic(v)   { filtTopic = v; render(); }
-function setFiltType(v)    { filtType  = v; render(); }
+function setFiltTopic(v)    { filtTopic    = v; render(); }
+function setFiltType(v)     { filtType     = v; render(); }
+function setFiltPriority(v) { filtPriority = v; render(); }
+function setFiltLine(v)     { filtLine     = v; render(); }
 function selectDay(d)      { dayDetail = d; render(); }
 function calNav(dir) {
   calDate = new Date(calDate.getFullYear(), calDate.getMonth() + dir, 1);
@@ -920,8 +959,10 @@ window.saveConfig  = saveConfig;
 window.resetConfig = resetConfig;
 window.load        = load;
 window.setTab      = setTab;
-window.setFiltTopic= setFiltTopic;
-window.setFiltType = setFiltType;
+window.setFiltTopic    = setFiltTopic;
+window.setFiltType     = setFiltType;
+window.setFiltPriority = setFiltPriority;
+window.setFiltLine     = setFiltLine;
 window.selectDay   = selectDay;
 window.calNav      = calNav;
 
