@@ -30,7 +30,7 @@
 window.DashCore = (function(){
 
 const API = "https://api.github.com";
-const BUILD = "20260921-1240";
+const BUILD = "20260922-0900";
 
 let M       = null;
 let REPO    = "";
@@ -738,6 +738,8 @@ function card(item){
     + "<button class='act"+(p.date?" on":"")+"' onclick='DashCore.toggleP("+n+",\"date\")' title='"+dlabel+"'>"+IC.cal+"</button>"
     + (item.url?"<a class='act' href='"+esc(item.url)+"' target='_blank' rel='noopener' title='GitHub'>"+IC.ext+"</a>":"")
     + "</div></div><div class='card-meta'>"+ttag(item.topic)
+    + (item.line ? "<span class='tag tag-line'>"+esc(item.line)+"</span>" : "")
+    + (item.priority ? "<span class='tag tag-pri "+item.priority.toLowerCase()+"'>"+esc(item.priority)+"</span>" : "")
     + (dd?"<span class='chip "+dcs+"'>"+(dcs==="overdue"?"overdue · ":"")+fd(dd)+(c.reminder?" \u2713":"")+"</span>":"")
     + (ddl?"<span class='chip dl "+dc(ddl)+"'>deadline "+fd(ddl)+(c.deadline?" \u2713":"")+"</span>":"")
     + (c.log?"<span class='chip logged'>"+IC.msg+" note</span>":"")
