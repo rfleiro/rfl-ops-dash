@@ -61,6 +61,11 @@
   .act.rm:hover{background:var(--danger-bg);color:var(--danger);border-color:var(--danger-border)}
   .card-meta{display:flex;gap:5px;align-items:center;margin-top:6px;flex-wrap:wrap}
   .tag{font-size:11px;font-weight:500;padding:2px 7px;border-radius:20px}
+  .tag-line{background:#e4c5ff;color:#5a2d91}
+  .tag-pri{font-weight:700;letter-spacing:.02em}
+  .tag-pri.high{background:#ffd0d0;color:#c0392b}
+  .tag-pri.medium{background:#ffeaa0;color:#7a5a00}
+  .tag-pri.low{background:#d0e8ff;color:#1a5a8c}
   .chip{font-size:11px;padding:2px 6px;border-radius:var(--rs);background:var(--surface2);color:var(--text-2)}
   .chip.overdue{background:var(--danger-bg);color:var(--danger)}
   .chip.today{background:var(--warning-bg);color:var(--warning)}
