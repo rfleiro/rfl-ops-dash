@@ -28,9 +28,29 @@
 "use strict";
 
 window.DashCore = (function(){
+// ─── Theme toggle (shared with standalone dashes via dash:theme key) ──────────
+function themeIcon(t){
+  if(t==='dark')  return '<svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M12 9.5A5.5 5.5 0 014.5 2a5.5 5.5 0 100 10 5.5 5.5 0 007.5-2.5z" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round"/></svg>';
+  if(t==='light') return '<svg width="14" height="14" viewBox="0 0 14 14" fill="none"><circle cx="7" cy="7" r="3" stroke="currentColor" stroke-width="1.2"/><path d="M7 1v2M7 11v2M1 7h2M11 7h2M3.2 3.2l1.4 1.4M9.4 9.4l1.4 1.4M10.8 3.2l-1.4 1.4M4.6 9.4l-1.4 1.4" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>';
+  return '<svg width="14" height="14" viewBox="0 0 14 14" fill="none"><circle cx="7" cy="7" r="5.5" stroke="currentColor" stroke-width="1.2"/><path d="M7 1.5v11" stroke="currentColor" stroke-width="1.2"/><path d="M7 1.5A5.5 5.5 0 0112.5 7 5.5 5.5 0 017 12.5z" fill="currentColor" opacity=".3"/></svg>';
+}
+function applyTheme(t){
+  const CYCLE=['auto','light','dark'];
+  if(t==='auto'){document.documentElement.removeAttribute('data-theme');}
+  else{document.documentElement.setAttribute('data-theme',t);}
+  localStorage.setItem('dash:theme',t);
+  const btn=document.getElementById('theme-btn');
+  if(btn){btn.innerHTML=themeIcon(t);btn.title='Theme: '+t;}
+}
+function toggleTheme(){
+  const CYCLE=['auto','light','dark'];
+  const cur=localStorage.getItem('dash:theme')||'auto';
+  applyTheme(CYCLE[(CYCLE.indexOf(cur)+1)%CYCLE.length]);
+}
+
 
 const API = "https://api.github.com";
-const BUILD = "20260922-1031";
+const BUILD = "20260922-1150";
 
 let M       = null;
 let REPO    = "";
@@ -815,6 +835,8 @@ function render(){
      + (nSettled ? "<button class='btn btn-icon"+(hideSettled?" on":"")+"' onclick='DashCore.toggleHide()' title='"
          + (hideSettled ? "Show "+nSettled+" settled" : "Hide "+nSettled+" settled until applied")
          + "'>"+(hideSettled?IC.eyeOff:IC.eye)+"</button>" : "")
+     + "<button class='btn btn-icon' id='theme-btn' onclick='toggleTheme()' title='Theme: auto'>"
+     + themeIcon(localStorage.getItem('dash:theme')||'auto') + "</button>"
      + "<button class='btn "+(nLocal?"btn-p pulse":"")+"' onclick='DashCore.push()' "+(nLocal?"":"disabled")+">"
      + IC.up + (nLocal?" Save ("+nLocal+")":" Save") + "</button></div></div>";
 
