@@ -325,7 +325,10 @@ async function load(){
     const r=await fetch(`https://api.github.com/repos/${REPO}/contents/${DATA_PATH}`,
       {headers:{Authorization:`Bearer ${token}`,'X-GitHub-Api-Version':'2022-11-28'}});
     const j=await r.json();
-    data=JSON.parse(atob(j.content.replace(/\n/g,'')));
+    const bin=atob(j.content.replace(/\n/g,''));
+    const bytes=new Uint8Array(bin.length);
+    for(let i=0;i<bin.length;i++)bytes[i]=bin.charCodeAt(i);
+    data=JSON.parse(new TextDecoder('utf-8').decode(bytes));
   }catch(e){data={meta:{tdee_base:2400},entries:[]};}
 }
 
