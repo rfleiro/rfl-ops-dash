@@ -8,7 +8,7 @@
 <meta name="robots" content="noindex, nofollow">
 <title>Issues — rfl-ops</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%232563EB'/><text x='50' y='68' font-size='56' text-anchor='middle' fill='white'>📋</text></svg>">
-<link rel="stylesheet" href="../shared/style.css?v=20260922-1235">
+<link rel="stylesheet" href="../shared/style.css?v=20260922-1240">
 <style>
 /* ── Issues dashboard ───────────────────────────────────────────────────── */
 body { min-height: 100vh; }
@@ -391,7 +391,7 @@ window.addEventListener('unhandledrejection', function(e) {
 });
 'use strict';
 
-const BUILD = '20260922-1235';
+const BUILD = '20260922-1240';
 const API   = 'https://api.github.com';
 const ID    = 'issues';
 
@@ -870,8 +870,10 @@ function render() {
   }
 
   // Ready
-  var list   = filtered();
-  var topics = allTopics();
+  var list       = filtered();
+  var topics     = allTopics();
+  var priorities = allPriorities();
+  var lines      = allLines();
   var hhmm   = function(d) { return d.toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'}); };
 
   var zeroWarn = '';
