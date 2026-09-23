@@ -171,6 +171,18 @@ button{font-family:inherit}
 .vlbls div{text-align:center;font-size:11px;color:var(--t3)}
 .vlbls .td{color:var(--text);font-weight:600}
 
+.vcol{background:none;border:none;padding:0;cursor:pointer;font:inherit;color:inherit;border-radius:6px;padding-top:4px}
+.vcol:hover,.vcol.sel{background:var(--s2)}
+.vcol.sel .vtot{color:var(--text)}
+.vdet{margin-top:12px;border-top:1px solid var(--border);padding-top:10px}
+.vdet:empty{display:none}
+.vdh{display:flex;align-items:baseline;justify-content:space-between;gap:8px;flex-wrap:wrap;margin-bottom:4px}
+.vdr{display:flex;align-items:center;gap:10px;padding:7px 0;border-bottom:1px solid var(--border)}
+.vdr:last-of-type{border-bottom:none}
+.vdr .chip{width:28px;height:28px}.vdr .chip svg{width:16px;height:16px}
+.vdm{font-family:var(--f-num);font-size:18px;font-weight:600;white-space:nowrap}
+.vgo{margin-top:8px;background:none;border:1px solid var(--border);border-radius:var(--rs);padding:6px 10px;font-size:13px;color:var(--t2);cursor:pointer}
+.vgo:hover{background:var(--s2);color:var(--text)}
 /* weight */
 .wch{position:relative;height:170px;margin-top:4px}
 .wch svg{position:absolute;inset:0;width:100%;height:100%;overflow:visible}
@@ -338,8 +350,10 @@ function render(){
   else if(view==="week"){const m=monday(cursor),s=addD(m,6);el.textContent=m.getDate()+(m.getMonth()!==s.getMonth()?" "+m.toLocaleDateString("es-ES",{month:"short"}):"")+" – "+s.getDate()+" "+s.toLocaleDateString("es-ES",{month:"long"});}
   else el.textContent=cursor.toLocaleDateString("es-ES",{month:"long",year:"numeric"});
   const c=document.getElementById("content");
+  VOL=[];
   c.innerHTML=view==="day"?rDay():view==="week"?rWeek():rMonth();
   if(view==="day")animRing();
+  if(VOL.length&&document.getElementById("vdet")){let k=VOL.length-1;while(k>0&&!VOL[k].tot)k--;selVol(view==="week"?VOL.length-1:k);}
 }
 
 /* ---------- DAY ---------- */
@@ -427,17 +441,42 @@ function weightCard(end,days,title){
   h+='<div class="legend"><span><i style="background:var(--bl)"></i>media 7 días</span><span><i style="border:1px dashed var(--t3)"></i>pesajes</span></div></div>';
   return h;
 }
+let VOL=[];
+const ALLT=["swim","run","ride","walk","strength"];
+function hm(min){min=Math.round(min);const h=Math.floor(min/60),m=min%60;return h?h+" h"+(m?" "+String(m).padStart(2,"0"):""):m+" min";}
 function volumeCard(endMonday){
-  const wk=[];for(let w=7;w>=0;w--){const m=addD(endMonday,-7*w),km={swim:0,run:0,ride:0,walk:0};let st=0;for(let i=0;i<7;i++){(ent(fmt(addD(m,i)))?.activities||[]).forEach(a=>{if(a.type in km)km[a.type]+=(+a.distance_m||0)/1000;else if(a.type==="strength")st++;});}wk.push({m,km,st,t:DIST.reduce((s,k)=>s+km[k],0)});}
-  const mx=Math.max(1,...wk.map(w=>w.t)),tm=fmt(monday(t0()));
-  const used=DIST.filter(k=>wk.some(w=>w.km[k]>0)),anySt=wk.some(w=>w.st);
-  let h='<div class="card"><div class="ch"><span class="ct">Volumen</span><span class="cs">km por semana</span></div>';
-  if(!used.length&&!anySt)return h+'<div class="empty">Sin actividades registradas en las últimas 8 semanas. Claude puede importarlas desde Strava.</div></div>';
-  h+='<div class="vol">'+wk.map(w=>'<div class="vcol">'+(w.t?'<div class="vtot">'+w.t.toFixed(w.t<10?1:0).replace(".",",")+'</div>':'')+'<div class="vstack" style="height:'+(w.t/mx*82)+'%">'+DIST.map(k=>'<i style="flex:'+w.km[k]+';background:var(--'+TVAR[k]+'-c)"></i>').join("")+'</div><div class="vst">'+'<b></b>'.repeat(Math.min(w.st,4))+'</div></div>').join("")+'</div>';
-  h+='<div class="vlbls">'+wk.map(w=>'<div class="'+(fmt(w.m)===tm?'td':'')+'">'+w.m.getDate()+'/'+(w.m.getMonth()+1)+'</div>').join("")+'</div>';
-  h+='<div class="legend">'+used.map(k=>'<span><i style="background:var(--'+TVAR[k]+'-c)"></i>'+TNAME[k]+'</span>').join("")+(anySt?'<span><i style="background:var(--st-c);border-radius:50%"></i>sesión de fuerza</span>':'')+'</div></div>';
+  VOL=[];
+  for(let w=7;w>=0;w--){
+    const m=addD(endMonday,-7*w),T={};ALLT.forEach(k=>T[k]={min:0,km:0,n:0,kcal:0});
+    for(let i=0;i<7;i++)(ent(fmt(addD(m,i)))?.activities||[]).forEach(a=>{const t=T[a.type];if(!t)return;t.min+=(+a.duration_min||0);t.km+=(+a.distance_m||0)/1000;t.n++;t.kcal+=(+a.kcal_out||0);});
+    VOL.push({m,T,tot:ALLT.reduce((s,k)=>s+T[k].min,0)});
+  }
+  const mx=Math.max(60,...VOL.map(w=>w.tot)),tm=fmt(monday(t0()));
+  const used=ALLT.filter(k=>VOL.some(w=>w.T[k].min>0));
+  let h='<div class="card"><div class="ch"><span class="ct">Volumen</span><span class="cs">horas por semana</span></div>';
+  if(!used.length)return h+'<div class="empty">Sin actividades registradas en las últimas 8 semanas. Claude puede importarlas desde Strava.</div></div>';
+  h+='<div class="vol">'+VOL.map((w,i)=>'<button class="vcol" data-i="'+i+'" onclick="selVol('+i+')" onmouseenter="selVol('+i+')" aria-label="Semana del '+w.m.getDate()+'/'+(w.m.getMonth()+1)+': '+hm(w.tot)+'">'+(w.tot?'<div class="vtot">'+(w.tot/60).toFixed(1).replace(".",",")+'</div>':'')+'<div class="vstack" style="height:'+(w.tot/mx*84)+'%">'+ALLT.map(k=>'<i style="flex:'+w.T[k].min+';background:var(--'+TVAR[k]+'-c)"></i>').join("")+'</div></button>').join("")+'</div>';
+  h+='<div class="vlbls">'+VOL.map(w=>'<div class="'+(fmt(w.m)===tm?'td':'')+'">'+w.m.getDate()+'/'+(w.m.getMonth()+1)+'</div>').join("")+'</div>';
+  h+='<div class="legend">'+used.map(k=>'<span><i style="background:var(--'+TVAR[k]+'-c)"></i>'+TNAME[k]+'</span>').join("")+'</div>';
+  h+='<div class="vdet" id="vdet"></div></div>';
   return h;
 }
+function selVol(i){
+  const w=VOL[i],box=document.getElementById("vdet");if(!w||!box)return;
+  document.querySelectorAll(".vcol").forEach(c=>c.classList.toggle("sel",+c.dataset.i===i));
+  const e=addD(w.m,6),rows=ALLT.filter(k=>w.T[k].n);
+  const kc=rows.reduce((s,k)=>s+w.T[k].kcal,0),n=rows.reduce((s,k)=>s+w.T[k].n,0);
+  let h='<div class="vdh"><span class="ct">'+w.m.getDate()+(w.m.getMonth()!==e.getMonth()?' '+w.m.toLocaleDateString("es-ES",{month:"short"}).replace(".",""):'')+' – '+e.getDate()+' '+e.toLocaleDateString("es-ES",{month:"short"}).replace(".","")+'</span>';
+  h+='<span class="cs">'+(n?hm(w.tot)+', '+n+' '+(n===1?'sesión':'sesiones')+', '+nf(kc)+' kcal':'sin actividad')+'</span></div>';
+  if(rows.length){
+    h+=rows.map(k=>{const t=w.T[k],d=k==="swim"?nf(t.km*1000)+' m':k==="strength"?'':t.km.toFixed(1).replace(".",",")+' km';
+      const pace=k==="run"&&t.km?pace_(t.min/t.km)+' /km':k==="swim"&&t.km?pace_(t.min/(t.km*10))+' /100 m':k==="ride"&&t.min?(t.km/(t.min/60)).toFixed(1).replace(".",",")+' km/h':'';
+      return'<div class="vdr">'+chip(k)+'<div class="ai"><div class="an">'+TNAME[k][0].toUpperCase()+TNAME[k].slice(1)+'</div><div class="am">'+[t.n+'×',d,pace].filter(Boolean).join(', ')+'</div></div><div class="vdm">'+hm(t.min)+'</div></div>';}).join("");
+  }
+  if(view!=="week"||fmt(monday(cursor))!==fmt(w.m))h+='<button class="vgo" onclick="cursor=new Date('+w.m.getFullYear()+','+w.m.getMonth()+','+w.m.getDate()+');setView(\'week\')">Ver esta semana</button>';
+  box.innerHTML=h;
+}
+function pace_(m){const mm=Math.floor(m),ss=Math.round((m-mm)*60);return ss===60?(mm+1)+":00":mm+":"+String(ss).padStart(2,"0");}
 
 /* ---------- WEEK ---------- */
 function rWeek(){
@@ -502,6 +541,7 @@ function rMonth(){
   const SUB={swim:m=>nf(m)+' m nadados',run:m=>(m/1000).toFixed(1).replace(".",",")+' km corridos',ride:m=>(m/1000).toFixed(0)+' km en bici',walk:m=>(m/1000).toFixed(1).replace(".",",")+' km andados'};
   const DEF={swim:'sesiones de natación',run:'sesiones de carrera',strength:'sesiones de fuerza',ride:'salidas en bici',walk:'caminatas'};
   h+='<div class="tri">'+["swim","run","strength","ride","walk"].filter(k=>k in {swim:1,run:1,strength:1}||cnt[k]).map(k=>'<div class="card">'+chip(k)+'<div><div class="sv">'+cnt[k]+'</div><div class="sl">'+(dist[k]?SUB[k](dist[k]):DEF[k])+'</div></div></div>').join("")+'</div>';
+  h+=volumeCard(monday(l<today?l:today));
   h+=weightCard(l<today?l:today,90,"Peso");
   return h;
 }
