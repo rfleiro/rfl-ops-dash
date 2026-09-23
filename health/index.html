@@ -25,6 +25,8 @@
   --sw-c:#0369a1;--sw-bg:rgba(3,105,161,.11);
   --ru-c:#15803d;--ru-bg:rgba(21,128,61,.11);
   --st-c:#c2410c;--st-bg:rgba(194,65,12,.11);
+  --ri-c:#7c3aed;--ri-bg:rgba(124,58,237,.11);
+  --wa-c:#a16207;--wa-bg:rgba(161,98,7,.12);
   --track:#ECE9E3;
   --f-body:"Barlow",-apple-system,BlinkMacSystemFont,"Segoe UI",system-ui,sans-serif;
   --f-num:"Barlow Condensed","Arial Narrow",-apple-system,system-ui,sans-serif;
@@ -35,6 +37,7 @@
   --vi:#c4b5fd;--vi-bg:#1a1030;--gn:#86efac;--gn-bg:#052e16;--ro:#fca5a5;--ro-bg:#2a1215;
   --am:#fcd34d;--am-bg:#1c1500;--bl:#93c5fd;--bl-bg:#0c1a2e;
   --sw-c:#7dd3fc;--sw-bg:rgba(125,211,252,.12);--ru-c:#86efac;--ru-bg:rgba(134,239,172,.12);--st-c:#fdba74;--st-bg:rgba(253,186,116,.12);
+  --ri-c:#c4b5fd;--ri-bg:rgba(196,181,253,.12);--wa-c:#fde68a;--wa-bg:rgba(253,230,138,.12);
   --track:#2A2825;
 }}
 :root[data-theme="dark"]{
@@ -43,6 +46,7 @@
   --vi:#c4b5fd;--vi-bg:#1a1030;--gn:#86efac;--gn-bg:#052e16;--ro:#fca5a5;--ro-bg:#2a1215;
   --am:#fcd34d;--am-bg:#1c1500;--bl:#93c5fd;--bl-bg:#0c1a2e;
   --sw-c:#7dd3fc;--sw-bg:rgba(125,211,252,.12);--ru-c:#86efac;--ru-bg:rgba(134,239,172,.12);--st-c:#fdba74;--st-bg:rgba(253,186,116,.12);
+  --ri-c:#c4b5fd;--ri-bg:rgba(196,181,253,.12);--wa-c:#fde68a;--wa-bg:rgba(253,230,138,.12);
   --track:#2A2825;
 }
 *{box-sizing:border-box;margin:0;padding:0}
@@ -115,7 +119,7 @@ button{font-family:inherit}
 .row:last-child{border-bottom:none}
 .chip{width:32px;height:32px;border-radius:8px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
 .chip svg{width:18px;height:18px}
-.c-swim{background:var(--sw-bg);color:var(--sw-c)}.c-run{background:var(--ru-bg);color:var(--ru-c)}.c-strength{background:var(--st-bg);color:var(--st-c)}
+.c-swim{background:var(--sw-bg);color:var(--sw-c)}.c-run{background:var(--ru-bg);color:var(--ru-c)}.c-strength{background:var(--st-bg);color:var(--st-c)}.c-ride{background:var(--ri-bg);color:var(--ri-c)}.c-walk{background:var(--wa-bg);color:var(--wa-c)}
 .ai{flex:1;min-width:0}.an{font-size:14px;font-weight:500}.am{font-size:13px;color:var(--t3)}
 .ak{font-family:var(--f-num);font-size:18px;font-weight:600;white-space:nowrap;color:var(--gn)}
 .fr{display:block;padding:9px 0;border-bottom:1px solid var(--border)}
@@ -208,7 +212,7 @@ button{font-family:inherit}
 .h-d2 span,.h-s2 span{color:var(--text)}
 .mdots{display:flex;gap:2px;height:5px;margin-top:1px}
 .mdots i{width:5px;height:5px;border-radius:50%}
-.tri{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:10px}
+.tri{display:grid;grid-template-columns:repeat(auto-fit,minmax(104px,1fr));gap:10px;margin-bottom:10px}
 .tri .card{margin-bottom:0;display:flex;gap:10px;align-items:center;padding:12px 14px}
 .tri .sv{font-size:26px}
 
@@ -309,9 +313,13 @@ function heat(n){if(n===null)return"";if(n<=-TARGET())return"h-d2";if(n<=-100)re
 const ICONS={
   swim:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 18c1.7 0 1.7-1.2 3.3-1.2S7 18 8.7 18s1.7-1.2 3.3-1.2 1.7 1.2 3.3 1.2 1.7-1.2 3.4-1.2S20.3 18 22 18"/><circle cx="16.5" cy="7.5" r="2"/><path d="M3.5 14l5-4.5 3 2.5 3.5-2.5"/></svg>',
   run:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="14.5" cy="4" r="2"/><path d="M7 21l3.5-6.5 3 2.5V22"/><path d="M5 11.5l3.5-3.5 4.5 1 3 4h3.5"/><path d="M10.5 14.5L13 9"/></svg>',
-  strength:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6.5 6.5v11M17.5 6.5v11M3 9.5v5M21 9.5v5M6.5 12h11"/></svg>'
+  strength:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6.5 6.5v11M17.5 6.5v11M3 9.5v5M21 9.5v5M6.5 12h11"/></svg>',
+  ride:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="5.5" cy="16.5" r="3.5"/><circle cx="18.5" cy="16.5" r="3.5"/><path d="M5.5 16.5l4-7h6l3 7M9.5 9.5l3 7h-7M14 6h2.5l-1 3.5"/></svg>',
+  walk:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="13" cy="4" r="2"/><path d="M9 21l2.5-6 2.5 2v4"/><path d="M8 11l2-3h3l2 3 2.5 1"/><path d="M11.5 15L13 8"/></svg>'
 };
-const TNAME={swim:"natación",run:"carrera",strength:"fuerza"};
+const TNAME={swim:"natación",run:"carrera",strength:"fuerza",ride:"bici",walk:"caminar"};
+const TVAR={swim:"sw",run:"ru",strength:"st",ride:"ri",walk:"wa"};
+const DIST=["swim","run","ride","walk"];
 function chip(t){const k=ICONS[t]?t:"strength";return'<div class="chip c-'+k+'" title="'+(TNAME[k])+'">'+ICONS[k]+'</div>';}
 function cssv(n){return getComputedStyle(document.documentElement).getPropertyValue(n).trim();}
 
@@ -420,14 +428,14 @@ function weightCard(end,days,title){
   return h;
 }
 function volumeCard(endMonday){
-  const wk=[];for(let w=7;w>=0;w--){const m=addD(endMonday,-7*w);let sw=0,ru=0,st=0;for(let i=0;i<7;i++){(ent(fmt(addD(m,i)))?.activities||[]).forEach(a=>{if(a.type==="swim")sw+=(+a.distance_m||0);else if(a.type==="run")ru+=(+a.distance_m||0);else if(a.type==="strength")st++;});}wk.push({m,sw:sw/1000,ru:ru/1000,st});}
-  const mx=Math.max(1,...wk.map(w=>w.sw+w.ru)),tm=fmt(monday(t0()));
-  const any=wk.some(w=>w.sw||w.ru||w.st);
+  const wk=[];for(let w=7;w>=0;w--){const m=addD(endMonday,-7*w),km={swim:0,run:0,ride:0,walk:0};let st=0;for(let i=0;i<7;i++){(ent(fmt(addD(m,i)))?.activities||[]).forEach(a=>{if(a.type in km)km[a.type]+=(+a.distance_m||0)/1000;else if(a.type==="strength")st++;});}wk.push({m,km,st,t:DIST.reduce((s,k)=>s+km[k],0)});}
+  const mx=Math.max(1,...wk.map(w=>w.t)),tm=fmt(monday(t0()));
+  const used=DIST.filter(k=>wk.some(w=>w.km[k]>0)),anySt=wk.some(w=>w.st);
   let h='<div class="card"><div class="ch"><span class="ct">Volumen</span><span class="cs">km por semana</span></div>';
-  if(!any)return h+'<div class="empty">Sin actividades registradas en las últimas 8 semanas. Claude puede importarlas desde Strava.</div></div>';
-  h+='<div class="vol">'+wk.map(w=>{const t=w.sw+w.ru;return'<div class="vcol">'+(t?'<div class="vtot">'+t.toFixed(t<10?1:0).replace(".",",")+'</div>':'')+'<div class="vstack" style="height:'+(t/mx*82)+'%"><i style="flex:'+w.sw+';background:var(--sw-c)"></i><i style="flex:'+w.ru+';background:var(--ru-c)"></i></div><div class="vst">'+'<b></b>'.repeat(Math.min(w.st,4))+'</div></div>';}).join("")+'</div>';
+  if(!used.length&&!anySt)return h+'<div class="empty">Sin actividades registradas en las últimas 8 semanas. Claude puede importarlas desde Strava.</div></div>';
+  h+='<div class="vol">'+wk.map(w=>'<div class="vcol">'+(w.t?'<div class="vtot">'+w.t.toFixed(w.t<10?1:0).replace(".",",")+'</div>':'')+'<div class="vstack" style="height:'+(w.t/mx*82)+'%">'+DIST.map(k=>'<i style="flex:'+w.km[k]+';background:var(--'+TVAR[k]+'-c)"></i>').join("")+'</div><div class="vst">'+'<b></b>'.repeat(Math.min(w.st,4))+'</div></div>').join("")+'</div>';
   h+='<div class="vlbls">'+wk.map(w=>'<div class="'+(fmt(w.m)===tm?'td':'')+'">'+w.m.getDate()+'/'+(w.m.getMonth()+1)+'</div>').join("")+'</div>';
-  h+='<div class="legend"><span><i style="background:var(--sw-c)"></i>natación</span><span><i style="background:var(--ru-c)"></i>carrera</span><span><i style="background:var(--st-c);border-radius:50%"></i>sesión de fuerza</span></div></div>';
+  h+='<div class="legend">'+used.map(k=>'<span><i style="background:var(--'+TVAR[k]+'-c)"></i>'+TNAME[k]+'</span>').join("")+(anySt?'<span><i style="background:var(--st-c);border-radius:50%"></i>sesión de fuerza</span>':'')+'</div></div>';
   return h;
 }
 
@@ -471,10 +479,9 @@ function streak(){
 function rMonth(){
   const y=cursor.getFullYear(),mo=cursor.getMonth(),f=new Date(y,mo,1),l=new Date(y,mo+1,0),td=fmt(t0()),today=t0();
   const cells=Array((f.getDay()+6)%7).fill(null);for(let i=1;i<=l.getDate();i++)cells.push(new Date(y,mo,i));
-  let sw=0,ru=0,st=0,swm=0,rum=0,sum=0,nl=0,dd=0;
+  const cnt={swim:0,run:0,strength:0,ride:0,walk:0},dist={swim:0,run:0,ride:0,walk:0};let sum=0,nl=0,dd=0;
   for(let i=1;i<=l.getDate();i++){const e=ent(fmt(new Date(y,mo,i)));if(!e)continue;const n=net(e);if(n!==null){nl++;sum+=n;if(n<=0)dd++;}
-    const ts=new Set();(e.activities||[]).forEach(a=>{ts.add(a.type);if(a.type==="swim")swm+=(+a.distance_m||0);if(a.type==="run")rum+=(+a.distance_m||0);});
-    if(ts.has("swim"))sw++;if(ts.has("run"))ru++;if(ts.has("strength"))st++;}
+    (e.activities||[]).forEach(a=>{if(a.type in cnt)cnt[a.type]++;if(a.type in dist)dist[a.type]+=(+a.distance_m||0);});}
   const sk=streak();
   let h='<div class="card"><div class="ch"><span class="ct">Balance del mes</span><span class="cs">'+(nl?dd+' de '+nl+' días en déficit':'sin comida apuntada')+'</span></div><div class="mgrid">';
   ["L","M","X","J","V","S","D"].forEach(x=>h+='<div class="mh">'+x+'</div>');
@@ -483,7 +490,7 @@ function rMonth(){
     const ds=fmt(d),e=ent(ds),n=net(e),fut=d>today;
     const ts=[...new Set((e?.activities||[]).map(a=>a.type))];
     const cls="md "+(fut?"fut":heat(n))+(ds===td?" mt":"");
-    h+='<div class="'+cls+'" onclick="goDay(\''+ds+'\')" title="'+(n===null?'sin datos':sgn(n)+' kcal')+'"><span>'+d.getDate()+'</span><div class="mdots">'+ts.slice(0,3).map(t=>'<i style="background:var(--'+({swim:"sw",run:"ru",strength:"st"}[t]||"st")+'-c)"></i>').join("")+'</div></div>';
+    h+='<div class="'+cls+'" onclick="goDay(\''+ds+'\')" title="'+(n===null?'sin datos':sgn(n)+' kcal')+'"><span>'+d.getDate()+'</span><div class="mdots">'+ts.slice(0,4).map(t=>'<i style="background:var(--'+(TVAR[t]||"st")+'-c)"></i>').join("")+'</div></div>';
   });
   h+='</div><div class="legend"><span><i class="h-d2"></i>déficit ≥ '+nf(TARGET())+'</span><span><i class="h-d1"></i>déficit</span><span><i class="h-n"></i>equilibrio</span><span><i class="h-s1"></i>exceso</span><span><i class="h-s2"></i>exceso ≥ '+nf(TARGET())+'</span></div></div>';
   h+='<div class="strip">';
@@ -492,11 +499,9 @@ function rMonth(){
   h+='<div><div class="sv">'+sk+'<small> '+(sk===1?'día':'días')+'</small></div><div class="sl">racha actual en déficit</div></div>';
   h+='<div><div class="sv">'+nl+'<small>/'+l.getDate()+'</small></div><div class="sl">días registrados</div></div>';
   h+='</div>';
-  h+='<div class="tri">';
-  h+='<div class="card">'+chip("swim")+'<div><div class="sv">'+sw+'</div><div class="sl">'+(swm?nf(swm)+' m nadados':'sesiones de natación')+'</div></div></div>';
-  h+='<div class="card">'+chip("run")+'<div><div class="sv">'+ru+'</div><div class="sl">'+(rum?(rum/1000).toFixed(1).replace(".",",")+' km corridos':'sesiones de carrera')+'</div></div></div>';
-  h+='<div class="card">'+chip("strength")+'<div><div class="sv">'+st+'</div><div class="sl">sesiones de fuerza</div></div></div>';
-  h+='</div>';
+  const SUB={swim:m=>nf(m)+' m nadados',run:m=>(m/1000).toFixed(1).replace(".",",")+' km corridos',ride:m=>(m/1000).toFixed(0)+' km en bici',walk:m=>(m/1000).toFixed(1).replace(".",",")+' km andados'};
+  const DEF={swim:'sesiones de natación',run:'sesiones de carrera',strength:'sesiones de fuerza',ride:'salidas en bici',walk:'caminatas'};
+  h+='<div class="tri">'+["swim","run","strength","ride","walk"].filter(k=>k in {swim:1,run:1,strength:1}||cnt[k]).map(k=>'<div class="card">'+chip(k)+'<div><div class="sv">'+cnt[k]+'</div><div class="sl">'+(dist[k]?SUB[k](dist[k]):DEF[k])+'</div></div></div>').join("")+'</div>';
   h+=weightCard(l<today?l:today,90,"Peso");
   return h;
 }
