@@ -183,6 +183,13 @@ button{font-family:inherit}
 .vdm{font-family:var(--f-num);font-size:18px;font-weight:600;white-space:nowrap}
 .vgo{margin-top:8px;background:none;border:1px solid var(--border);border-radius:var(--rs);padding:6px 10px;font-size:13px;color:var(--t2);cursor:pointer}
 .vgo:hover{background:var(--s2);color:var(--text)}
+.rec{display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:12px}
+.rec .sv{font-size:26px}
+.stp{display:grid;grid-template-columns:repeat(7,1fr);gap:6px;height:90px;align-items:end}
+.stc{display:flex;flex-direction:column;justify-content:flex-end;align-items:center;height:100%}
+.stb{width:40%;max-width:22px;background:var(--bl);border-radius:3px 3px 0 0;opacity:.75;min-height:0}
+.stv{font-family:var(--f-num);font-size:12px;font-weight:600;color:var(--t2);margin-bottom:2px}
+.hr{font-family:var(--f-num);font-size:14px;font-weight:600;color:var(--ro)}
 /* weight */
 .wch{position:relative;height:170px;margin-top:4px}
 .wch svg{position:absolute;inset:0;width:100%;height:100%;overflow:visible}
@@ -278,7 +285,7 @@ button{font-family:inherit}
 </div>
 <script>
 const REPO="rfleiro/FamilyOps",DPATH="health/data.json",KCAL_KG=7700;
-let view="day",cursor=t0(),data=null,token=null,IDX={};
+let view="day",cursor=t0(),data=null,token=null,IDX={},APPLE={},WEIGHTS={};
 const RM=window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
 /* ---------- theme ---------- */
@@ -299,10 +306,23 @@ async function load(){
     const j=await res.json();
     data=JSON.parse(b64utf8(j.content));
     IDX={};(data.entries||[]).forEach(e=>IDX[e.date]=e);
+    await loadApple();
   }catch(e){
     console.error(e);data=null;
     document.getElementById("content").innerHTML='<div class="err">No se pudieron cargar los datos. '+esc(e.message)+'<br><a href="#" onclick="localStorage.removeItem(\'rh_token\');location.reload()">Conectar con otro token</a></div>';
   }
+}
+
+async function loadApple(){
+  APPLE={};WEIGHTS={};
+  try{
+    const H={Authorization:"Bearer "+token,"X-GitHub-Api-Version":"2022-11-28"};
+    const r=await fetch("https://api.github.com/repos/"+REPO+"/contents/health/apple",{headers:H,cache:"no-store"});
+    if(!r.ok)return;
+    const files=(await r.json()).filter(f=>/^\d{4}-\d{2}-\d{2}\.json$/.test(f.name)).sort((a,b)=>a.name<b.name?1:-1).slice(0,200);
+    const got=await Promise.all(files.map(f=>fetch(f.url,{headers:Object.assign({Accept:"application/vnd.github.raw"},H),cache:"no-store"}).then(x=>x.ok?x.text():null).catch(()=>null)));
+    got.forEach((t,i)=>{if(!t)return;try{const o=JSON.parse(t),ds=o.date||files[i].name.slice(0,10);APPLE[ds]=o;const w=+o.weight_kg,wd=o.weight_date;if(w>30&&wd)WEIGHTS[wd]=w;}catch(e){}});
+  }catch(e){console.warn("apple",e);}
 }
 
 /* ---------- helpers ---------- */
@@ -320,7 +340,12 @@ function ent(ds){return IDX[ds]||null;}
 function kIn(e){return(e?.food||[]).reduce((s,f)=>s+(+f.kcal||0),0);}
 function kAct(e){return(e?.activities||[]).reduce((s,a)=>s+(+a.kcal_out||0),0);}
 function logged(e){return kIn(e)>0;}
-function net(e){return logged(e)?kIn(e)-(TDEE()+kAct(e)):null;}
+function A(ds){return APPLE[ds]||null;}
+function measured(ds){const a=A(ds);return !!(a&&+a.basal_kcal>0&&+a.active_kcal>0);}
+function burn(ds){const a=A(ds);if(measured(ds))return{total:Math.round(+a.basal_kcal+ +a.active_kcal),base:Math.round(+a.basal_kcal),act:Math.round(+a.active_kcal),src:"apple"};const e=ent(ds),k=kAct(e);return{total:TDEE()+k,base:TDEE(),act:k,src:"est"};}
+function net(e){return logged(e)?kIn(e)-burn(e.date).total:null;}
+function wOf(ds){const e=ent(ds);return e?.weight_kg?+e.weight_kg:(WEIGHTS[ds]||null);}
+function allWeights(){const m=Object.assign({},WEIGHTS);(data.entries||[]).forEach(e=>{if(e.weight_kg)m[e.date]=+e.weight_kg;});return Object.keys(m).sort().map(d=>({date:d,w:m[d]}));}
 function heat(n){if(n===null)return"";if(n<=-TARGET())return"h-d2";if(n<=-100)return"h-d1";if(n<100)return"h-n";if(n<TARGET())return"h-s1";return"h-s2";}
 const ICONS={
   swim:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 18c1.7 0 1.7-1.2 3.3-1.2S7 18 8.7 18s1.7-1.2 3.3-1.2 1.7 1.2 3.3 1.2 1.7-1.2 3.4-1.2S20.3 18 22 18"/><circle cx="16.5" cy="7.5" r="2"/><path d="M3.5 14l5-4.5 3 2.5 3.5-2.5"/></svg>',
@@ -358,7 +383,7 @@ function render(){
 
 /* ---------- DAY ---------- */
 function rDay(){
-  const ds=fmt(cursor),e=ent(ds),ki=kIn(e),ka=kAct(e),T=TDEE(),B=T+ka,tg=TARGET();
+  const ds=fmt(cursor),e=ent(ds),ki=kIn(e),ka=kAct(e),bu=burn(ds),T=bu.base,B=bu.total,tg=TARGET(),ap=bu.src==="apple";
   const has=ki>0,rem=B-ki,n=has?ki-B:null;
   const R=84,C=2*Math.PI*R,frac=has?Math.min(ki/B,1):0;
   const col=!has?"var(--track)":ki<=B-tg?"var(--gn)":ki<=B?"var(--am)":"var(--ro)";
@@ -378,18 +403,41 @@ function rDay(){
   h+='<line class="tick" x1="'+tx1.toFixed(1)+'" y1="'+ty1.toFixed(1)+'" x2="'+tx2.toFixed(1)+'" y2="'+ty2.toFixed(1)+'"'+(has?'':' style="display:none"')+'/></svg>';
   h+='<div class="rc">'+center+'</div></div>';
   h+='<div class="hside"><div class="eq">';
-  h+='<span class="num">'+nf(T)+'</span><span class="lbl">gasto base</span>';
-  h+='<span class="num" style="color:var(--gn)">+'+nf(ka)+'</span><span class="lbl">entreno</span>';
+  h+='<span class="num">'+nf(T)+'</span><span class="lbl">'+(ap?'reposo (Apple)':'gasto base')+'</span>';
+  h+='<span class="num" style="color:var(--gn)">+'+nf(bu.act)+'</span><span class="lbl">'+(ap?'activo, entreno incluido':'entreno')+'</span>';
   h+='<span class="num" style="color:var(--vi)">−'+nf(ki)+'</span><span class="lbl">comido</span>';
   h+='<span class="num tot">'+(has?sgn(rem):'—')+'</span><span class="lbl tot">'+(has?(rem>=0?'margen':'exceso'):'margen')+'</span>';
   h+='</div><div class="verdict">'+verdict+'</div>';
-  if(e?.weight_kg){const g=data.meta.weight_goal_kg;h+='<div class="pill"><span class="num">'+kgf(e.weight_kg)+'</span>kg'+(g?' · faltan '+kgf(Math.max(0,e.weight_kg-g))+' para '+kgf(g,0):'')+'</div>';}
+  const wd=wOf(ds);if(wd){const g=data.meta.weight_goal_kg;h+='<div class="pill"><span class="num">'+kgf(wd)+'</span>kg'+(g?' · faltan '+kgf(Math.max(0,wd-g))+' para '+kgf(g,0):'')+'</div>';}
   h+='</div></div>';
   h+='<div class="g2">';
   h+='<div class="card"><div class="ch"><span class="ct">Entreno</span>'+(ka?'<span class="cs">'+nf(ka)+' kcal</span>':'')+'</div>'+rActs(e)+'</div>';
   h+='<div class="card"><div class="ch"><span class="ct">Comida</span>'+(ki?'<span class="cs">'+nf(ki)+' kcal</span>':'')+'</div>'+rFood(e,ki)+'</div>';
   h+='</div>';
+  h+=recoveryDay(ds);
   if(e?.notes)h+='<div class="card"><div class="ch"><span class="ct">Notas</span></div><div style="font-size:14px;color:var(--t2)">'+esc(e.notes)+'</div></div>';
+  return h;
+}
+function recoveryDay(ds){
+  const a=A(ds),prev=A(fmt(addD(cursor,-1)));
+  const sl=prev&&+prev.sleep_h>0?+prev.sleep_h:null;
+  if(!a&&!sl)return'';
+  const cells=[];
+  if(sl)cells.push(['sueño anoche',kgf(sl),'h']);
+  if(a&&+a.resting_hr>0)cells.push(['FC en reposo',Math.round(a.resting_hr),'ppm']);
+  if(a&&+a.steps>0)cells.push(['pasos',nf(a.steps),'']);
+  if(a&&+a.active_kcal>0)cells.push(['energía activa',nf(a.active_kcal),'kcal']);
+  if(!cells.length)return'';
+  return'<div class="card"><div class="ch"><span class="ct">Recuperación y movimiento</span><span class="cs">Apple Salud</span></div><div class="rec">'+cells.map(c=>'<div><div class="sv">'+c[1]+(c[2]?'<small> '+c[2]+'</small>':'')+'</div><div class="sl">'+c[0]+'</div></div>').join("")+'</div></div>';
+}
+function recoveryWeek(days){
+  const rows=days.map(d=>({d,a:A(fmt(d))}));
+  if(!rows.some(r=>r.a))return'';
+  const mx=Math.max(8000,...rows.map(r=>+r.a?.steps||0)),td=fmt(t0());
+  let h='<div class="card"><div class="ch"><span class="ct">Movimiento y reposo</span><span class="cs">Apple Salud</span></div>';
+  h+='<div class="stp">'+rows.map(r=>{const st=+r.a?.steps||0;return'<div class="stc"><div class="stv">'+(st?(st/1000).toFixed(1).replace(".",",")+'k':'')+'</div><div class="stb" style="height:'+(st/mx*100)+'%"></div></div>';}).join("")+'</div>';
+  h+='<div class="dlbls">'+rows.map(r=>'<div class="'+(fmt(r.d)===td?'td':'')+'">'+r.d.toLocaleDateString("es-ES",{weekday:"short"}).replace(".","")+'<br>'+(+r.a?.resting_hr>0?'<b class="hr">'+Math.round(r.a.resting_hr)+'</b>':'<span>·</span>')+'</div>').join("")+'</div>';
+  h+='<div class="legend"><span><i style="background:var(--bl)"></i>pasos</span><span><b class="hr">52</b> FC en reposo (ppm)</span></div></div>';
   return h;
 }
 function rActs(e){
@@ -414,12 +462,12 @@ function animRing(){
 /* ---------- shared blocks ---------- */
 function weightCard(end,days,title){
   const start=addD(end,-(days-1)),pts=[];
-  for(let i=0;i<days;i++){const d=addD(start,i),e=ent(fmt(d));if(e?.weight_kg)pts.push({i,d,w:+e.weight_kg});}
+  for(let i=0;i<days;i++){const d=addD(start,i),w=wOf(fmt(d));if(w)pts.push({i,d,w});}
   const g=data.meta.weight_goal_kg,ref=data.meta.weight_ref_kg;
   let h='<div class="card"><div class="ch"><span class="ct">'+title+'</span><span class="cs">últimos '+days+' días</span></div>';
   if(!pts.length){
-    const all=(data.entries||[]).filter(e=>e.weight_kg).sort((a,b)=>a.date<b.date?-1:1),last=all[all.length-1];
-    h+='<div class="empty">'+(last?'Sin pesajes en este periodo. El último: <b>'+kgf(last.weight_kg)+' kg</b> el '+last.date.split("-").reverse().slice(0,2).join("/")+'.':'Todavía no hay pesajes. Pésate por la mañana, en ayunas, y díselo a Claude.')+(g?'<br>Objetivo: <b>'+g+' kg</b>.':'')+'</div></div>';
+    const all=allWeights(),last=all[all.length-1];
+    h+='<div class="empty">'+(last?'Sin pesajes en este periodo. El último: <b>'+kgf(last.w)+' kg</b> el '+last.date.split("-").reverse().slice(0,2).join("/")+'.':'Todavía no hay pesajes. Pésate por la mañana, en ayunas: llegará solo desde Apple Salud o díselo a Claude.')+(g?'<br>Objetivo: <b>'+g+' kg</b>.':'')+'</div></div>';
     return h;
   }
   const avg=pts.map(p=>{const w=pts.filter(q=>q.i<=p.i&&q.i>p.i-7);return{i:p.i,w:w.reduce((s,q)=>s+q.w,0)/w.length};});
@@ -487,7 +535,7 @@ function rWeek(){
   const mx=Math.max(TARGET()*1.4,...L.map(r=>Math.abs(r.n)))*1.3;
   let h='<div class="strip">';
   h+='<div><div class="sv '+(L.length?(sum<=0?'neg':'pos'):'')+'">'+(L.length?sgn(sum):'—')+'</div><div class="sl">balance de la semana (kcal)</div></div>';
-  h+='<div><div class="sv">'+(L.length?(kg>=0?'−':'+')+Math.abs(kg).toFixed(2).replace(".",","):'—')+'<small> kg</small></div><div class="sl">estimado por balance</div></div>';
+  h+='<div><div class="sv">'+(L.length?(kg>=0?'−':'+')+Math.abs(kg).toFixed(2).replace(".",","):'—')+'<small> kg</small></div><div class="sl">estimado por balance'+(rows.some(r=>measured(r.ds))?', gasto medido por Apple':'')+'</div></div>';
   h+='<div><div class="sv">'+L.length+'<small>/7</small></div><div class="sl">días con comida apuntada</div></div>';
   h+='<div><div class="sv">'+act+'<small>/7</small></div><div class="sl">días con entreno</div></div>';
   h+='</div>';
@@ -502,6 +550,7 @@ function rWeek(){
   h+='</div><div class="dlbls">'+rows.map(r=>'<div class="'+(r.ds===td?'td':'')+'">'+r.d.toLocaleDateString("es-ES",{weekday:"short"}).replace(".","")+'<br>'+r.d.getDate()+'</div>').join("")+'</div>';
   h+='<div class="legend"><span><i style="background:var(--gn)"></i>déficit</span><span><i style="background:var(--ro)"></i>exceso</span><span><i style="border:1.5px dashed var(--border-s);border-radius:50%"></i>sin datos (no cuenta)</span></div></div>';
   h+=volumeCard(m);
+  h+=recoveryWeek(days);
   h+=weightCard(addD(m,6),30,"Peso");
   h+='<div class="card"><div class="ch"><span class="ct">Día a día</span><span class="cs">toca un día para verlo</span></div>';
   rows.forEach(r=>{h+='<div class="wr'+(r.ds===td?' td':'')+'" onclick="goDay(\''+r.ds+'\')"><div class="wd">'+r.d.toLocaleDateString("es-ES",{weekday:"short",day:"numeric"}).replace(".","")+'</div><div class="wa">'+(r.acts.length?r.acts.map(a=>chip(a.type)).join(""):'<span style="color:var(--t3);font-size:13px">—</span>')+'</div><div class="wk">'+(r.ki?nf(r.ki):'—')+'</div><div class="wn '+(r.n===null?'':r.n<=0?'neg':'pos')+'">'+(r.n===null?'':sgn(r.n))+'</div></div>';});
