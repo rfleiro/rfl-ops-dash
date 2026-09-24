@@ -9,11 +9,12 @@
 <title>people</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%237C3AED'/><text y='70' x='50' text-anchor='middle' font-size='56' font-family='sans-serif' font-weight='600' fill='white'>p</text></svg>">
 <link rel="stylesheet" href="../shared/style.css?v=20260924-1100">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600&family=Barlow+Condensed:wght@500;600;700&display=swap" rel="stylesheet">
 <style>
-.page{max-width:1000px;margin:0 auto;padding:20px 16px 80px}
-.ph{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:24px;padding-bottom:16px;border-bottom:1px solid var(--border)}
-.ph h1{font-size:16px;font-weight:600;letter-spacing:-.01em}
-.ph-sub{font-size:12px;color:var(--text-3);margin-top:2px}
+.page{max-width:1000px;margin:0 auto;padding:16px 16px 80px}
+.page-sub{font-size:12px;color:var(--text-2);margin-bottom:16px}
 
 .tl-wrap{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);overflow-x:auto;margin-bottom:16px}
 .tl-svg{display:block;min-width:560px;width:100%}
@@ -44,8 +45,8 @@
 .joining{font-size:10px;color:var(--text-3);font-style:italic;display:block;margin-top:1px}
 .cwhere{font-size:10px;color:var(--text-3);margin-top:3px}
 
-.alum-btn{font-size:11px;color:var(--text-2);background:none;border:none;cursor:pointer;font-family:inherit;padding:2px 0;margin-bottom:10px;display:flex;align-items:center;gap:5px}
-.alum-btn:hover{color:var(--accent)}
+.alum-btn{display:inline-flex;align-items:center;gap:6px;font-size:12px;color:var(--text-2);background:var(--surface);border:1px solid var(--border);border-radius:var(--rs);cursor:pointer;font-family:inherit;padding:6px 11px;margin-bottom:14px;transition:background .12s,color .12s,border-color .12s}
+.alum-btn:hover{background:var(--surface2);color:var(--text);border-color:var(--border-strong)}
 
 .setup{max-width:360px;margin:80px auto;text-align:center}
 .setup h1{font-size:20px;font-weight:600;margin-bottom:6px}
@@ -86,7 +87,7 @@ const PAT_KEY = "dash:people:pat";
 const REPO    = "rfleiro/rfl_ops";
 const CSVPATH = "data/people.csv";
 const GH_ISS  = "https://github.com/rfleiro/rfl_ops/issues/";
-const BUILD   = "20260922-1150";
+const BUILD   = "20260924-1130";
 
 let persons = [], selected = null, showAlumni = false;
 
@@ -190,7 +191,7 @@ function buildTimeline(ps) {
     const x=tx(`${yr}-01-01`);
     s+=`<line x1="${x.toFixed(1)}" y1="${PT-8}" x2="${x.toFixed(1)}" y2="${H-PB}" stroke="var(--border)" stroke-width=".5"/>`;
     if(yr%2===0||yr===2017)
-      s+=`<text x="${x.toFixed(1)}" y="${PT-9}" text-anchor="middle" font-size="7.5" fill="var(--text-3)" font-family="system-ui,sans-serif">${yr}</text>`;
+      s+=`<text x="${x.toFixed(1)}" y="${PT-9}" text-anchor="middle" font-size="7.5" fill="var(--text-3)" font-family="'Barlow Condensed',Arial Narrow,sans-serif">${yr}</text>`;
   }
 
   // today
@@ -257,18 +258,16 @@ function render(){
   const alum=persons.filter(p=>!p.isCurrent&&!p.isFuture);
 
   document.getElementById("app").innerHTML=`
+<div class="dhdr"><div class="dhdr-in">
+  <a class="tbtn" href="../" title="All dashboards"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg></a>
+  <h1 class="dhdr-title">people</h1>
+  <button class="tbtn" id="theme-btn" onclick="toggleTheme()" title="Theme: auto"><svg width="14" height="14" viewBox="0 0 14 14" fill="none"><circle cx="7" cy="7" r="5.5" stroke="currentColor" stroke-width="1.2"/><path d="M7 1.5v11" stroke="currentColor" stroke-width="1.2"/><path d="M7 1.5A5.5 5.5 0 0112.5 7 5.5 5.5 0 017 12.5z" fill="currentColor" opacity=".3"/></svg></button>
+  <button class="tbtn" id="disc-btn" title="Disconnect">
+    <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M9 5l2 2-2 2M5 7h6M1 7a6 6 0 106 6" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+  </button>
+</div></div>
 <div class="page">
-  <a class="back" href="../"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg> dashboards</a>
-  <div class="ph">
-    <div>
-      <h1>people</h1>
-      <div class="ph-sub">lab since 2017 · ${curr.length} current · ${alum.length} alumni</div>
-    </div>
-    <button class="btn btn-icon" id="theme-btn" onclick="toggleTheme()" title="Theme: auto"><svg width="14" height="14" viewBox="0 0 14 14" fill="none"><circle cx="7" cy="7" r="5.5" stroke="currentColor" stroke-width="1.2"/><path d="M7 1.5v11" stroke="currentColor" stroke-width="1.2"/><path d="M7 1.5A5.5 5.5 0 0112.5 7 5.5 5.5 0 017 12.5z" fill="currentColor" opacity=".3"/></svg></button>
-    <button class="btn btn-icon" id="disc-btn" title="Disconnect">
-      <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M9 5l2 2-2 2M5 7h6M1 7a6 6 0 106 6" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
-    </button>
-  </div>
+  <div class="page-sub">lab since 2017 · ${curr.length} current · ${alum.length} alumni</div>
 
   <div class="tl-wrap">${buildTimeline(persons)}</div>
   <div class="legend">${TIER.map(t=>`<span class="leg"><span class="leg-dot" style="background:${t.color}"></span>${t.label}</span>`).join("")}</div>
@@ -282,7 +281,7 @@ function render(){
   </button>
   ${showAlumni?`<div class="grid">${alum.map(cardHTML).join("")}</div>`:""}
 
-  <div style="font-size:10px;color:var(--text-3);margin-top:32px">build ${BUILD}</div>
+  <div class="build" style="font-size:10px;margin-top:32px">build ${BUILD}</div>
 </div>`;
 
   document.getElementById("disc-btn")?.addEventListener("click",()=>{
