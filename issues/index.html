@@ -8,7 +8,10 @@
 <meta name="robots" content="noindex, nofollow">
 <title>Issues — rfl-ops</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%232563EB'/><text x='50' y='68' font-size='56' text-anchor='middle' fill='white'>📋</text></svg>">
-<link rel="stylesheet" href="../shared/style.css?v=20260924-1100">
+<link rel="stylesheet" href="../shared/style.css?v=20260924-1215">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600&family=Barlow+Condensed:wght@500;600;700&display=swap" rel="stylesheet">
 <style>
 /* ── Issues dashboard ───────────────────────────────────────────────────── */
 body { min-height: 100vh; }
@@ -16,7 +19,7 @@ body { min-height: 100vh; }
 .iss-wrap {
   max-width: 1600px;
   margin: 0 auto;
-  padding: 20px 16px calc(60px + env(safe-area-inset-bottom));
+  padding: 16px 16px calc(60px + env(safe-area-inset-bottom));
 }
 
 /* Controls row */
@@ -27,34 +30,6 @@ body { min-height: 100vh; }
   gap: 10px;
   margin-bottom: 16px;
   flex-wrap: wrap;
-}
-
-/* Tab switcher */
-.tab-bar {
-  display: flex;
-  background: var(--surface2);
-  border: 1px solid var(--border);
-  border-radius: var(--r);
-  padding: 3px;
-  gap: 2px;
-}
-.tab-btn {
-  background: none;
-  border: none;
-  padding: 5px 16px;
-  font-size: 12px;
-  font-weight: 500;
-  color: var(--text-2);
-  cursor: pointer;
-  border-radius: var(--rs);
-  font-family: inherit;
-  transition: background .12s, color .12s;
-  line-height: 1;
-}
-.tab-btn.active {
-  background: var(--surface);
-  color: var(--text);
-  box-shadow: 0 1px 3px rgba(0,0,0,.08);
 }
 
 /* Filter bar */
@@ -337,7 +312,7 @@ body { min-height: 100vh; }
 @media (max-width: 600px) {
   .kb-board { grid-template-columns: repeat(2, minmax(0,1fr)); }
   .iss-controls { flex-direction: column; align-items: flex-start; }
-  .tab-bar, .filter-bar { width: 100%; }
+  .filter-bar { width: 100%; }
 }
 @media (max-width: 380px) {
   .kb-board { grid-template-columns: minmax(0,1fr); }
@@ -391,7 +366,7 @@ window.addEventListener('unhandledrejection', function(e) {
 });
 'use strict';
 
-const BUILD = '20260922-1728';
+const BUILD = '20260924-1215';
 const API   = 'https://api.github.com';
 const ID    = 'issues';
 
@@ -887,10 +862,6 @@ function render() {
   }
 
   var controls = '<div class="iss-controls">'
-    + '<div class="tab-bar">'
-    + '<button class="tab-btn' + (activeTab==='kanban'?' active':'') + '" onclick="setTab(\'kanban\')">Kanban</button>'
-    + '<button class="tab-btn' + (activeTab==='calendar'?' active':'') + '" onclick="setTab(\'calendar\')">Calendar</button>'
-    + '</div>'
     + '<div class="filter-bar">'
     + '<select onchange="setFiltTopic(this.value)">'
     + '<option value="all"' + (filtTopic==='all'?' selected':'') + '>All topics</option>'
@@ -917,25 +888,23 @@ function render() {
       }).join('')
     + '</select>'
     + '<span class="filter-count">' + list.length + ' / ' + issues.length + '</span>'
-    + '<button class="btn btn-icon" id="theme-btn" onclick="toggleTheme()" title="Theme: auto">' + themeIcon(localStorage.getItem('dash:theme')||'auto') + '</button>'
     + '</div>'
     + '</div>';
 
-  app.innerHTML = '<div class="iss-wrap">'
-    + '<a class="back" href="../">← dashboards</a>'
-    + '<div class="hdr">'
-    + '<div>'
-    + '<h1>Issues <span class="hdr-id">issues</span></h1>'
-    + '<div class="hdr-date">' + issues.length + ' open issues'
-    + (lastLoad ? ' \u00b7 loaded ' + hhmm(lastLoad) : '')
+  app.innerHTML = '<div class="dhdr"><div class="dhdr-in">'
+    + '<a class="tbtn" href="../" title="All dashboards"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg></a>'
+    + '<h1 class="dhdr-title">Issues<span class="hdr-id">issues</span></h1>'
+    + '<span class="dhdr-date">' + issues.length + ' open' + (lastLoad ? ' · ' + hhmm(lastLoad) : '') + '</span>'
+    + '<div class="tabs">'
+    + '<button class="tab' + (activeTab==='kanban'?' on':'') + '" onclick="setTab(\'kanban\')">Kanban</button>'
+    + '<button class="tab' + (activeTab==='calendar'?' on':'') + '" onclick="setTab(\'calendar\')">Calendar</button>'
     + '</div>'
-    + '</div>'
-    + '<div class="hdr-r">'
-    + '<button class="btn btn-icon" onclick="load()" title="Refresh all issues">'
+    + '<button class="tbtn" onclick="load()" title="Refresh all issues">'
     + '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>'
     + '</button>'
-    + '</div>'
-    + '</div>'
+    + '<button class="tbtn" id="theme-btn" onclick="toggleTheme()" title="Theme: auto">' + themeIcon(localStorage.getItem('dash:theme')||'auto') + '</button>'
+    + '</div></div>'
+    + '<div class="iss-wrap">'
     + controls
     + zeroWarn
     + (activeTab === 'kanban' ? renderKanban() : renderCalendar())
