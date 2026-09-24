@@ -8,25 +8,17 @@
 <meta name="robots" content="noindex,nofollow">
 <title>strategy</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%230D9488'/><polygon points='50,16 84,50 50,84 16,50' fill='white'/></svg>">
-<link rel="stylesheet" href="../shared/style.css?v=20260924-1100">
+<link rel="stylesheet" href="../shared/style.css?v=20260924-1215">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600&family=Barlow+Condensed:wght@500;600;700&display=swap" rel="stylesheet">
 <style>
-.page{max-width:1100px;margin:0 auto;padding:20px 16px 80px}
-.ph{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:20px;padding-bottom:16px;border-bottom:1px solid var(--border)}
-.ph h1{font-size:16px;font-weight:600;letter-spacing:-.01em}
-.ph-sub{font-size:12px;color:var(--text-3);margin-top:2px}
-.ph-r{display:flex;gap:6px;align-items:center}
-.back{font-size:11px;color:var(--text-2);text-decoration:none;display:inline-flex;align-items:center;gap:4px}
-.back:hover{color:var(--accent);text-decoration:none}
-.btn-icon{padding:6px;width:28px;height:28px;justify-content:center}
-
-.tabs{display:flex;margin-bottom:20px;border-bottom:1px solid var(--border)}
-.tab{padding:7px 16px;font-size:12px;font-weight:500;border:none;background:none;color:var(--text-2);cursor:pointer;font-family:inherit;border-bottom:2px solid transparent;margin-bottom:-1px;transition:color .1s,border-color .1s}
-.tab:hover{color:var(--text)}
-.tab.on{color:var(--accent);border-bottom-color:var(--accent)}
+.page{max-width:1100px;margin:0 auto;padding:16px 16px 80px}
+.page-sub{font-size:12px;color:var(--text-2);margin-bottom:16px}
 
 .budget-row{display:grid;grid-template-columns:repeat(auto-fill,minmax(155px,1fr));gap:8px;margin-bottom:20px}
 .budget-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:10px 13px}
-.b-val{font-size:20px;font-weight:700;letter-spacing:-.03em;margin-bottom:1px}
+.b-val{font-family:var(--f-num);font-size:22px;font-weight:700;letter-spacing:-.01em;margin-bottom:1px;font-variant-numeric:tabular-nums}
 .b-lbl{font-size:10px;color:var(--text-2)}
 
 .gantt-wrap{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);overflow-x:auto;margin-bottom:8px;padding:14px 10px}
@@ -150,7 +142,7 @@ const PAT_KEY  = 'dash:strategy:pat';
 const PAT_FALL = 'dash:ops:pat';
 const REPO     = 'rfleiro/rfl_ops';
 const DATAPATH = 'data/strategy.json';
-const BUILD    = '20260922-2030';
+const BUILD    = '20260924-1215';
 
 // ── Grant colours ─────────────────────────────────────────────────────────────
 const GC = {
@@ -244,30 +236,26 @@ function renderPage(){
   const active=grants.filter(g=>g.status==='active');
   const rep=grants.filter(g=>g.status==='reporting');
   const past=grants.filter(g=>g.status==='past');
-  return`<div class="page">
-    <div class="ph">
-      <div>
-        <h1>strategy</h1>
-        <div class="ph-sub">${active.length} active \u00b7 ${(DATA.lines||[]).length} research lines \u00b7 updated ${esc(DATA.updated||'')}</div>
-      </div>
-      <div class="ph-r">
-        <a href="../" class="back">\u2190 hub</a>
-        <button class="btn btn-icon" onclick="toggleTheme()" id="theme-btn" title="Theme: auto">
-          <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><circle cx="7" cy="7" r="5.5" stroke="currentColor" stroke-width="1.2"/><path d="M7 1.5v11" stroke="currentColor" stroke-width="1.2"/><path d="M7 1.5A5.5 5.5 0 0112.5 7 5.5 5.5 0 017 12.5z" fill="currentColor" opacity=".3"/></svg>
-        </button>
-      </div>
-    </div>
+  return`<div class="dhdr"><div class="dhdr-in">
+    <a href="../" class="tbtn" title="All dashboards"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg></a>
+    <h1 class="dhdr-title">strategy</h1>
     <div class="tabs">
       <button class="tab${TAB==='timeline'?' on':''}" onclick="switchTab('timeline')">Timeline</button>
       <button class="tab${TAB==='lines'?' on':''}" onclick="switchTab('lines')">Lines</button>
       <button class="tab${TAB==='objectives'?' on':''}" onclick="switchTab('objectives')">Objectives</button>
       <button class="tab${TAB==='themes'?' on':''}" onclick="switchTab('themes')">Themes</button>
     </div>
+    <button class="tbtn" onclick="toggleTheme()" id="theme-btn" title="Theme: auto">
+      <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><circle cx="7" cy="7" r="5.5" stroke="currentColor" stroke-width="1.2"/><path d="M7 1.5v11" stroke="currentColor" stroke-width="1.2"/><path d="M7 1.5A5.5 5.5 0 0112.5 7 5.5 5.5 0 017 12.5z" fill="currentColor" opacity=".3"/></svg>
+    </button>
+  </div></div>
+  <div class="page">
+    <div class="page-sub">${active.length} active \u00b7 ${(DATA.lines||[]).length} research lines \u00b7 updated ${esc(DATA.updated||'')}</div>
     ${TAB==='timeline'?renderTimeline(grants,active,rep):''}
     ${TAB==='lines'?renderLines(grants):''}
     ${TAB==='objectives'?renderObjectives(grants,active,rep,past):''}
     ${TAB==='themes'?renderThemes(grants):''}
-    <div class="footer">build ${esc(BUILD)}</div>
+    <div class="footer build">build ${esc(BUILD)}</div>
   </div>`;
 }
 
