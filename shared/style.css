@@ -5,7 +5,9 @@
     --danger:#DC2626;--danger-bg:#FEF2F2;--danger-border:#FECACA;
     --warning:#D97706;--warning-bg:#FFFBEB;--warning-border:#FDE68A;
     --green:#16A34A;--green-bg:#F0FDF4;--green-border:#BBF7D0;
-    --r:8px;--rs:5px;
+    --r:10px;--rs:6px;
+    --f-body:"Barlow",-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-serif;
+    --f-num:"Barlow Condensed","Arial Narrow",-apple-system,system-ui,sans-serif;
   }
   @media(prefers-color-scheme:dark){:root{
     --bg:#141412;--surface:#1E1D1A;--surface2:#252320;--border:#2E2C28;--border-strong:#3E3B36;
@@ -18,15 +20,29 @@
   html[data-theme="light"]{--bg:#F7F6F3;--surface:#FFFFFF;--surface2:#F0EEE9;--border:#E2DED6;--border-strong:#C8C3BA;--text:#1A1916;--text-2:#6B6760;--text-3:#9B9690;--accent:#2563EB;--accent-bg:#EFF4FF;--accent-border:#BFCFFF;--danger:#DC2626;--danger-bg:#FEF2F2;--danger-border:#FECACA;--warning:#D97706;--warning-bg:#FFFBEB;--warning-border:#FDE68A;--green:#16A34A;--green-bg:#F0FDF4;--green-border:#BBF7D0;}
   html[data-theme="dark"]{--bg:#141412;--surface:#1E1D1A;--surface2:#252320;--border:#2E2C28;--border-strong:#3E3B36;--text:#F0EDE8;--text-2:#A09C94;--text-3:#6B6760;--accent:#4F83F7;--accent-bg:#0F1E3D;--accent-border:#1E3A7A;--danger:#F87171;--danger-bg:#2A1515;--danger-border:#7F1D1D;--warning:#FCD34D;--warning-bg:#1C1500;--warning-border:#713F12;--green:#4ADE80;--green-bg:#052E16;--green-border:#166534;}
   *{box-sizing:border-box;margin:0;padding:0}
-  body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-serif;font-size:14px;line-height:1.5;min-height:100vh;-webkit-text-size-adjust:100%}
-  .wrap{max-width:560px;margin:0 auto;padding:20px 16px calc(80px + env(safe-area-inset-bottom))}
+  body{background:var(--bg);color:var(--text);font-family:var(--f-body);font-size:14px;line-height:1.5;min-height:100vh;-webkit-text-size-adjust:100%}
+  .wrap{max-width:560px;margin:0 auto;padding:16px 16px calc(80px + env(safe-area-inset-bottom))}
   svg{display:block;flex-shrink:0}
   a{color:var(--accent)}
+  .num{font-family:var(--f-num);font-variant-numeric:tabular-nums;letter-spacing:0}
 
+  /* ── Legacy inline header (still used by the issues dashboard) ─────────── */
   .hdr{display:flex;align-items:flex-start;justify-content:space-between;gap:8px;margin-bottom:20px;padding-bottom:16px;border-bottom:1px solid var(--border)}
   .hdr h1{font-size:16px;font-weight:600;letter-spacing:-.01em}
   .hdr-date{font-size:12px;color:var(--text-3);margin-top:2px}
   .hdr-r{display:flex;gap:6px;flex-shrink:0}
+
+  /* ── Sticky dashboard header (health-style revamp, currently: ops) ──────
+     A separate component (not a restyle of .hdr above) so dashboards that
+     haven't been revamped yet keep their current header untouched. */
+  .dhdr{position:sticky;top:0;z-index:10;background:var(--bg);border-bottom:1px solid var(--border);padding-top:env(safe-area-inset-top,0px)}
+  .dhdr-in{max-width:560px;margin:0 auto;display:flex;align-items:center;gap:6px;padding:0 16px;height:52px}
+  .dhdr-title{font-family:var(--f-num);font-size:19px;font-weight:600;letter-spacing:.01em;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .dhdr-date{font-family:var(--f-num);font-size:12px;color:var(--text-3);flex-shrink:0;font-variant-numeric:tabular-nums}
+  @media(max-width:420px){.dhdr-date{display:none}}
+  .tbtn{display:inline-flex;align-items:center;justify-content:center;width:30px;height:30px;border:1px solid var(--border);border-radius:var(--rs);background:none;cursor:pointer;color:var(--text-2);flex-shrink:0;transition:background .12s,color .12s;font-family:inherit;text-decoration:none}
+  .tbtn:hover{background:var(--surface2);color:var(--text)}
+  .tbtn.on{background:var(--accent-bg);color:var(--accent);border-color:var(--accent-border)}
   .btn{display:inline-flex;align-items:center;gap:5px;padding:6px 11px;font-size:12px;font-weight:500;border-radius:var(--rs);cursor:pointer;border:1px solid var(--border);background:var(--surface);color:var(--text-2);transition:background .1s,color .1s;font-family:inherit}
   .btn:hover{background:var(--surface2);color:var(--text)}
   .btn:disabled{opacity:.5;cursor:not-allowed}
@@ -74,7 +90,7 @@
   .chip.new{background:var(--accent-bg);color:var(--accent)}
   .chip.logged{background:var(--green-bg);color:var(--green)}
   .cnote{font-size:11px;color:var(--text-3);margin-top:5px;font-style:italic}
-  .card-num{font-size:10.5px;font-weight:500;color:var(--text-3);margin-right:6px;font-variant-numeric:tabular-nums;letter-spacing:.01em}
+  .card-num{font-family:var(--f-num);font-size:11px;font-weight:500;color:var(--text-3);margin-right:6px;font-variant-numeric:tabular-nums;letter-spacing:.01em}
   a.card-num{text-decoration:none}
   a.card-num:hover{color:var(--accent);text-decoration:underline}
 
@@ -100,7 +116,7 @@
   .cal-list{margin-bottom:4px}
   .cal-row{display:flex;align-items:baseline;gap:10px;padding:5px 0;border-bottom:1px solid var(--border);font-size:13px}
   .cal-row:last-child{border-bottom:none}
-  .cal-time{font-size:11px;color:var(--text-3);min-width:80px;flex-shrink:0;font-variant-numeric:tabular-nums}
+  .cal-time{font-family:var(--f-num);font-size:11px;color:var(--text-3);min-width:80px;flex-shrink:0;font-variant-numeric:tabular-nums}
   .cal-ev{flex:1}
   .cal-ad{font-size:10px;background:var(--accent-bg);color:var(--accent);padding:1px 6px;border-radius:10px}
 
@@ -165,7 +181,7 @@
   /* Braindump */
   .bd-item{background:var(--surface);border:1px solid var(--border);border-left:3px solid var(--accent-border);border-radius:var(--r);padding:9px 11px;margin-bottom:6px}
   .bd-head{display:flex;align-items:center;gap:6px;margin-bottom:5px}
-  .bd-ts{font-size:11px;font-weight:600;color:var(--text-2);font-variant-numeric:tabular-nums}
+  .bd-ts{font-family:var(--f-num);font-size:11px;font-weight:600;color:var(--text-2);font-variant-numeric:tabular-nums}
   .bd-kind{font-size:10px;font-weight:600;letter-spacing:.03em;text-transform:uppercase;padding:1px 6px;border-radius:10px;background:var(--surface2);color:var(--text-2)}
   .bd-note{background:var(--surface2);color:var(--text-2)}
   .bd-meeting{background:var(--accent-bg);color:var(--accent)}
@@ -206,25 +222,30 @@
   .cols{display:block}
 
   @media(min-width:840px){
-    .wrap{max-width:1040px;padding:24px 24px 80px}
+    .wrap{max-width:1040px;padding:20px 24px 80px}
+    .dhdr-in{max-width:1040px;padding:0 24px}
     .cols{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:0 22px;align-items:start}
     .hdr{padding-bottom:18px}
     .hdr h1{font-size:18px}
+    .dhdr-title{font-size:21px}
     .summary{font-size:13px}
     .topgrid{display:grid;grid-template-columns:minmax(0,1.4fr) minmax(0,1fr);gap:0 22px;align-items:start}
     .topgrid .summary{margin-bottom:0}
   }
   @media(min-width:1320px){
-    .wrap{max-width:1400px;padding:28px 30px 80px}
+    .wrap{max-width:1400px;padding:24px 30px 80px}
+    .dhdr-in{max-width:1400px;padding:0 30px}
     .cols{grid-template-columns:repeat(3,minmax(0,1fr));gap:0 24px}
     .summary,.warn,.queue{max-width:1000px}
   }
   @media(min-width:1700px){
     .wrap{max-width:1780px}
+    .dhdr-in{max-width:1780px}
     .cols{grid-template-columns:repeat(4,minmax(0,1fr))}
   }
   @media(min-width:1800px){
     .wrap{max-width:1900px}
+    .dhdr-in{max-width:1900px}
     .cols{grid-template-columns:repeat(auto-fit,minmax(340px,1fr))}
   }
   .topgrid{display:block}
@@ -253,7 +274,7 @@
   .bd-interim{font-size:11.5px;color:var(--text-3);font-style:italic;padding:3px 2px 5px;line-height:1.4}
 
 
-  .build{opacity:.65;font-variant-numeric:tabular-nums}
+  .build{opacity:.65;font-family:var(--f-num);font-variant-numeric:tabular-nums}
 
   /* ── Subtasks ─────────────────────────────────────────────────────────── */
   .sub-hdr{display:flex;align-items:center;justify-content:space-between;padding:6px 0 2px;margin-top:8px;border-top:1px solid var(--border);cursor:pointer;gap:6px}
