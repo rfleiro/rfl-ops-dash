@@ -31,7 +31,7 @@ window.DashCore = (function(){
 
 
 const API = "https://api.github.com";
-const BUILD = "20260922-1150";
+const BUILD = "20260924-1100";
 
 let M       = null;
 let REPO    = "";
@@ -807,19 +807,20 @@ function render(){
   const meta = BRIEF.meta, cal = BRIEF.calendar, items = BRIEF.items;
   const nLocal = localCount(), nQueued = queuedCount(), nSettled = settledCount();
 
-  let h = "<div class='wrap'>";
-  h += "<a class='back' href='../'>"+IC.back+" dashboards</a>";
-  h += "<div class='hdr'><div><h1>"+esc(M.title)+(M.id!==M.title?"<span class='hdr-id'>"+esc(M.id)+"</span>":"")+("</h1>")
-     + "<div class='hdr-date'>"+esc(new Date().toLocaleDateString("en-GB",{weekday:"long",day:"numeric",month:"long"}))+"</div></div>"
-     + "<div class='hdr-r'>"
-     + "<button class='btn btn-icon' onclick='DashCore.loadBrief()' title='Reload'>"+IC.refresh+"</button>"
-     + (nSettled ? "<button class='btn btn-icon"+(hideSettled?" on":"")+"' onclick='DashCore.toggleHide()' title='"
+  let h = "<div class='dhdr'><div class='dhdr-in'>"
+     + "<a class='tbtn' href='../' title='All dashboards'>"+IC.back+"</a>"
+     + "<h1 class='dhdr-title'>"+esc(M.title)+(M.id!==M.title?"<span class='hdr-id'>"+esc(M.id)+"</span>":"")+"</h1>"
+     + "<span class='dhdr-date'>"+esc(new Date().toLocaleDateString("en-GB",{weekday:"short",day:"numeric",month:"short"}))+"</span>"
+     + "<button class='tbtn' onclick='DashCore.loadBrief()' title='Reload'>"+IC.refresh+"</button>"
+     + (nSettled ? "<button class='tbtn"+(hideSettled?" on":"")+"' onclick='DashCore.toggleHide()' title='"
          + (hideSettled ? "Show "+nSettled+" settled" : "Hide "+nSettled+" settled until applied")
          + "'>"+(hideSettled?IC.eyeOff:IC.eye)+"</button>" : "")
-     + "<button class='btn btn-icon' id='theme-btn' onclick='toggleTheme()' title='Theme: auto'>"
+     + "<button class='tbtn' id='theme-btn' onclick='toggleTheme()' title='Theme: auto'>"
      + themeIcon(localStorage.getItem('dash:theme')||'auto') + "</button>"
      + "<button class='btn "+(nLocal?"btn-p pulse":"")+"' onclick='DashCore.push()' "+(nLocal?"":"disabled")+">"
-     + IC.up + (nLocal?" Save ("+nLocal+")":" Save") + "</button></div></div>";
+     + IC.up + (nLocal?" Save ("+nLocal+")":" Save") + "</button>"
+     + "</div></div>";
+  h += "<div class='wrap'>";
 
   if(BRIEF.date !== TODAY)
     h += "<div class='warn'>"+IC.warn+" This data is from "+fd(BRIEF.date)+". Ask Claude to refresh it.</div>";
