@@ -43,6 +43,12 @@
   .tbtn{display:inline-flex;align-items:center;justify-content:center;width:30px;height:30px;border:1px solid var(--border);border-radius:var(--rs);background:none;cursor:pointer;color:var(--text-2);flex-shrink:0;transition:background .12s,color .12s;font-family:inherit;text-decoration:none}
   .tbtn:hover{background:var(--surface2);color:var(--text)}
   .tbtn.on{background:var(--accent-bg);color:var(--accent);border-color:var(--accent-border)}
+
+  /* ── Tab switcher (segmented control) ──────────────────────────────────── */
+  .tabs{display:flex;background:var(--surface2);border:1px solid var(--border);border-radius:var(--rs);padding:3px;gap:2px;flex-shrink:0}
+  .tab{padding:4px 12px;border:1px solid transparent;border-radius:4px;cursor:pointer;font-size:12px;font-weight:500;color:var(--text-2);background:transparent;font-family:inherit;transition:background .12s,color .12s}
+  .tab:hover:not(.on){color:var(--text)}
+  .tab.on{background:var(--surface);color:var(--text);border-color:var(--border)}
   .btn{display:inline-flex;align-items:center;gap:5px;padding:6px 11px;font-size:12px;font-weight:500;border-radius:var(--rs);cursor:pointer;border:1px solid var(--border);background:var(--surface);color:var(--text-2);transition:background .1s,color .1s;font-family:inherit}
   .btn:hover{background:var(--surface2);color:var(--text)}
   .btn:disabled{opacity:.5;cursor:not-allowed}
