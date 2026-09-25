@@ -31,7 +31,7 @@ window.DashCore = (function(){
 
 
 const API = "https://api.github.com";
-const BUILD = "20260924-1100";
+const BUILD = "20260925-0628";
 
 let M       = null;
 let REPO    = "";
@@ -659,7 +659,7 @@ function card(item){
   const n=item.number, c=eff(n), l=lch(n), p=panels[n]||{};
   const dd=c.reminder||item.reminder||item.due, dcs=dc(dd), done=!!c.done;
   const ddl=c.deadline||item.deadline;
-  const isTask=item.type==="task", isPerson=item.type==="person";
+  const isTask=item.type==="task", isPerson=item.type==="person", isThread=item.type==="thread";
   const dlabel = isPerson ? M.dateField.person : M.dateField.default;
   // is any part of this card's state still only on this device?
   const unsaved = FIELDS.some(function(f){
@@ -737,7 +737,7 @@ function card(item){
     + "<div class='card-row'><span class='card-title"+(done?" struck":"")+"'>"+(REPO?"<a class='card-num' href='https://github.com/"+esc(REPO)+"/issues/"+n+"' target='_blank' rel='noopener'>#"+n+"</a>":"<span class='card-num'>#"+n+"</span>")+esc(item.title)+"</span><div class='acts'>"
     + "<button class='act"+(star?" on-star":"")+"' onclick='DashCore.toggleStar("+n+")' title='"+(star?"Unstar":"Star \u2014 mark as important or active")+"'>"+(star?IC.starOn:IC.star)+"</button>"
     + "<button class='act"+(snz?" on-snz":"")+"' onclick='DashCore.toggleSnooze("+n+")' title='"+(snz?"Un-snooze \u2014 bring back to list":"Snooze \u2014 hide for the rest of today")+"'>"+(snz?IC.moonOn:IC.moon)+"</button>"
-    + (isTask?"<button class='act"+(done?" on-green":"")+"' onclick='DashCore.setCh("+n+",{done:"+(!done)+"})' title='"+(done?"Undo":"Done")+"'>"+IC.check+"</button>":"")
+    + ((isTask||isThread)?"<button class='act"+(done?" on-green":"")+"' onclick='DashCore.setCh("+n+",{done:"+(!done)+"})' title='"+(done?(isThread?"Reopen":"Undo"):(isThread?"Close":"Done"))+"'>"+IC.check+"</button>":"")
     + "<button class='act"+(p.log?" on":"")+(c.log&&!p.log?" on-green":"")+"' onclick='DashCore.toggleP("+n+",\"log\")' title='Log a note'>"+IC.msg+"</button>"
     + "<button class='act"+(p.date?" on":"")+"' onclick='DashCore.toggleP("+n+",\"date\")' title='"+dlabel+"'>"+IC.cal+"</button>"
     + (item.url?"<a class='act' href='"+esc(item.url)+"' target='_blank' rel='noopener' title='GitHub'>"+IC.ext+"</a>":"")
