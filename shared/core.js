@@ -11,6 +11,17 @@
 
    Effective state = brief, overlaid with journal, overlaid with local.
 
+   OFFLINE: every successful load caches {brief, journal, journalSha} to
+   localStorage (K("cache")). If a fetch fails with a network-level error
+   (api() tags these e.offline=true — distinct from 401/404/403/409 which are
+   real problems, not connectivity), the dashboard falls back to that cache and
+   sets `offline=true`, rather than showing a hard error. Local edits (layer 3
+   above) still queue normally while offline — nothing new there, `S` was
+   already localStorage-persisted. What's new is quiet auto-sync: push(true)
+   retries the write in the background (no modal) on reconnect — via the
+   `online` event, on tab refocus, and a 60s interval backstop — instead of
+   requiring the user to notice and click Save again.
+
    The dashboard never writes to issues. Claude applies the journal to issues at
    end of day, then clears it and regenerates the brief. That keeps a single
    writer to the issue tracker, so a reload can never show a stale or
@@ -31,7 +42,7 @@ window.DashCore = (function(){
 
 
 const API = "https://api.github.com";
-const BUILD = "20260927-0811";
+const BUILD = "20260927-0826";
 
 let M       = null;
 let REPO    = "";
@@ -53,6 +64,8 @@ let hideSettled = true;
 let COLL = {};
 let WDISM = {};
 let subForms = {};
+let offline = false;   // true when the current view is served from local cache, not GitHub
+let cacheTs = null;    // Date of the cached brief/journal, when offline
 const TODAY = (()=>{const d=new Date(); return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");})();
 
 // ── mic state ────────────────────────────────────────────────────────────────
@@ -103,6 +116,34 @@ function hhmm(d){ return d.toLocaleTimeString("en-GB",{hour:"2-digit",minute:"2-
 function tc(t){ return (M.topicColors && M.topicColors[t]) || {bg:"#eee",tx:"#555"}; }
 function ttag(t){ const c=tc(t); return "<span class='tag' style='background:"+c.bg+";color:"+c.tx+"'>"+esc(t)+"</span>"; }
 function emptyJournal(date){ return {date:date, updated:null, changes:{}, created:[], braindump:[], inbox:{}}; }
+
+// ── offline read cache ───────────────────────────────────────────────────────
+// Mirrors the last successful brief+journal fetch so the dashboard can still
+// render (read-only accuracy-wise — local edits still queue normally) when
+// GitHub is unreachable. Never the source of truth; only a fallback used when
+// api() reports a network-level failure (e.offline), not an auth/404/rate error.
+function cacheKey(){ return K("cache"); }
+function saveCache(){
+  if(!BRIEF) return;
+  try{ lsSet(cacheKey(), JSON.stringify({brief:BRIEF, journal:J, journalSha:J_SHA, ts:Date.now()})); }catch(e){}
+}
+function loadCache(){
+  try{
+    const raw = ls(cacheKey());
+    if(!raw) return false;
+    const c = JSON.parse(raw);
+    if(!c || !c.brief) return false;
+    BRIEF = c.brief;
+    BRIEF.items    = BRIEF.items    || [];
+    BRIEF.calendar = BRIEF.calendar || [];
+    BRIEF.meta     = BRIEF.meta     || {};
+    BRIEF.meta.warnings = BRIEF.meta.warnings || [];
+    J     = c.journal || emptyJournal(BRIEF.date);
+    J_SHA = c.journalSha || null;
+    cacheTs = c.ts ? new Date(c.ts) : null;
+    return true;
+  }catch(e){ return false; }
+}
 
 // ── local layer ──────────────────────────────────────────────────────────────
 function localKey(){ return K("local:" + (BRIEF ? BRIEF.date : "none")); }
@@ -269,7 +310,7 @@ async function api(path, method, body){
   let r;
   try{
     r = await fetch(API + path, {method:method||"GET", headers:h, body: body?JSON.stringify(body):undefined, cache:"no-store"});
-  }catch(e){ throw new Error("Can't reach GitHub. Check your connection."); }
+  }catch(e){ const off = new Error("Can't reach GitHub. Check your connection."); off.offline = true; throw off; }
   if(!r.ok){
     let msg = String(r.status);
     try{ const j = await r.json(); if(j && j.message) msg += " · " + j.message; }catch(e){}
@@ -328,12 +369,31 @@ async function loadBrief(){
     loadColl();
     loadWdism();
     lastLoad = new Date();
+    offline = false;
     view="ready";
+    saveCache();
   }catch(e){
-    errMsg = e.message || String(e);
-    view="error";
+    // A network-level failure (no signal) falls back to the last cached
+    // brief+journal instead of a hard error. An auth/404/rate-limit error
+    // (not e.offline) still surfaces as before — that's a real problem to fix,
+    // not something offline mode should paper over.
+    if(e.offline && loadCache()){
+      loadLocal();
+      loadStars();
+      loadSnooze();
+      loadColl();
+      loadWdism();
+      offline = true;
+      view="ready";
+    }else{
+      errMsg = e.message || String(e);
+      view="error";
+    }
   }
   render();
+  // Coming back online with a queue still pending (e.g. a previous auto-sync
+  // attempt failed mid-way) — try to flush it quietly.
+  if(view==="ready" && !offline && localCount() && !saving) push(true);
 }
 
 // ── push local edits into the journal ────────────────────────────────────────
@@ -368,10 +428,15 @@ function mergeLocalInto(j){
   return j;
 }
 
-async function push(){
+async function push(auto){
+  // auto=true is a quiet background sync attempt (reconnect, tab refocus,
+  // periodic retry) — same write path, but no modal, and a failure (still
+  // offline, or something else) just leaves the queue intact for next time
+  // rather than surfacing an error the user didn't ask to see.
   if(saving) return;
   if(!localCount()){ return; }
-  saving = true; saveRes = null; openModal(); renderModal();
+  saving = true; saveRes = null;
+  if(!auto){ openModal(); renderModal(); }
   try{
     // re-read first, so concurrent edits from another device aren't clobbered
     await fetchJournal();
@@ -386,11 +451,15 @@ async function push(){
     J = merged;
     S = {ch:{},nt:[],rm:[],bd:[],bdrm:[],ib:{}};
     saveLocal();
+    offline = false;
+    saveCache();
     saveRes = {ok:true, queued:queuedCount()};
   }catch(e){
     saveRes = {ok:false, error: e.message || String(e)};
   }
-  saving = false; renderModal(); render();
+  saving = false;
+  if(!auto || (saveRes && saveRes.ok)) renderModal();
+  render();
 }
 
 // ── new items ────────────────────────────────────────────────────────────────
@@ -825,6 +894,10 @@ function render(){
      + "</div></div>";
   h += "<div class='wrap'>";
 
+  if(offline)
+    h += "<div class='warn offline-warn'>"+IC.warn+"<span style='flex:1'>Offline — showing data cached at "
+       + (cacheTs?hhmm(cacheTs):"an earlier load")
+       + ". Any changes you make now are queued and will sync automatically once you're back online.</span></div>";
   if(BRIEF.date !== TODAY)
     h += "<div class='warn'>"+IC.warn+" This data is from "+fd(BRIEF.date)+". Ask Claude to refresh it.</div>";
   meta.warnings.forEach(function(w,i){ if(WDISM[i]) return; h += "<div class='warn'>"+IC.warn+"<span style='flex:1'>"+esc(w)+"</span><button class='warn-x' onclick='DashCore.dismissWarn("+i+")' title='Dismiss'>"+IC.x+"</button></div>"; });
@@ -1035,6 +1108,7 @@ function render(){
   }
   h += "</div>";   // .cols
   h += "<div class='foot'><span>"+esc(BRIEF.date)+(lastLoad?" \u00b7 "+hhmm(lastLoad):"")
+     + (offline?" \u00b7 <span class='offline-tag'>offline, cached "+(cacheTs?hhmm(cacheTs):"?")+"</span>":"")
      + " \u00b7 <span class='build'>build "+BUILD+"</span>"+(nQueued?" \u00b7 "+nQueued+" queued":"")+(nLocal?" \u00b7 "+nLocal+" unsaved":"")+"</span>"
      + "<button class='lnk' onclick='DashCore.resetConfig()'>change repo/token</button></div></div>";
 
@@ -1058,8 +1132,23 @@ function start(manifest){
     if(e.target.id==="overlay") closeModal();
   });
   document.addEventListener("visibilitychange", function(){
-    if(!document.hidden && view==="ready" && lastLoad && (Date.now()-lastLoad.getTime())>600000) loadBrief();
+    if(document.hidden || view!=="ready") return;
+    if(offline) { loadBrief(); return; }             // signal may be back — try a real refresh
+    if(lastLoad && (Date.now()-lastLoad.getTime())>600000) { loadBrief(); return; }
+    if(localCount()) push(true);                     // queued edits left over — flush quietly
   });
+  // Fires when the browser regains connectivity. Not fully reliable on every
+  // platform (some mobile browsers don't dispatch it), so the visibilitychange
+  // check above and the interval below are backstops for the same thing.
+  window.addEventListener("online", function(){
+    if(view!=="ready") return;
+    if(offline) loadBrief(); else if(localCount()) push(true);
+  });
+  setInterval(function(){
+    if(view!=="ready" || saving) return;
+    if(offline) loadBrief();
+    else if(localCount()) push(true);
+  }, 60000);
   // When user types in the braindump textarea while mic is on, treat the
   // current value as the new base so the next recognition result appends.
   document.addEventListener("input", function(e){
