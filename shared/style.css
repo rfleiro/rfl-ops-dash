@@ -73,7 +73,7 @@
   .card.overdue{border-left-color:var(--danger)}
   .card.today{border-left-color:var(--warning)}
   .card.done{opacity:.45}
-  .card.isnew{border-left-color:var(--accent);background:var(--accent-bg)}
+  .card.isnew{border-left-color:var(--accent)}
   .card-row{display:flex;align-items:flex-start;gap:8px;justify-content:space-between}
   .card-title{font-size:13px;font-weight:500;flex:1;line-height:1.4}
   .card-title.struck{text-decoration:line-through;color:var(--text-3)}
