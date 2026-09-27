@@ -31,7 +31,7 @@ window.DashCore = (function(){
 
 
 const API = "https://api.github.com";
-const BUILD = "20260925-0628";
+const BUILD = "20260927-0811";
 
 let M       = null;
 let REPO    = "";
@@ -705,7 +705,7 @@ function card(item){
     }
     if(hasSubs && !subCol){
       h2 += "<div class='sub-list'>";
-      confirmed.forEach(function(s){
+      confirmed.filter(function(s){ return !eff(s.number).done; }).forEach(function(s){
         const sc=eff(s.number), sdone=!!sc.done, sdd=sc.reminder||s.due, sdcs=dc(sdd);
         h2 += "<div class='sub-item"+(sdone?" done":"")+"'>"
           + "<button class='act"+(sdone?" on-green":"")+" ' onclick='event.stopPropagation();DashCore.setCh("+s.number+",{done:"+(!sdone)+"})'  title='"+(sdone?"Undo":"Done")+"'>" + IC.check + "</button>"
@@ -714,16 +714,19 @@ function card(item){
           + (s.url ? "<a class='act' href='" + esc(s.url) + "' target='_blank' rel='noopener' title='GitHub'>" + IC.ext + "</a>" : "")
           + "</div>";
       });
-      bodyTasks.forEach(function(t){
+      bodyTasks.filter(function(t){
         const tEff = eff(n).tasks || {};
         const isDone = (t.text in tEff) ? tEff[t.text] : t.done;
-        h2 += "<div class='sub-item"+(isDone?" done":"")+"'>"
-          + "<button class='act"+(isDone?" on-green":"")+"' onclick='event.stopPropagation();DashCore.toggleTask("+n+","+JSON.stringify(t.text)+")' title='"+(isDone?"Undo":"Done")+"'>"+IC.check+"</button>"
-          + "<span class='sub-title"+(isDone?" struck":"")+"'>"+esc(t.text)+"</span>"
+        return !isDone;
+      }).forEach(function(t){
+        h2 += "<div class='sub-item'>"
+          + "<button class='act' onclick='event.stopPropagation();DashCore.toggleTask("+n+","+JSON.stringify(t.text)+")' title='Done'>"+IC.check+"</button>"
+          + "<span class='sub-title'>"+esc(t.text)+"</span>"
           + "</div>";
       });
-      pendingSubs.forEach(function(t){
+      pendingSubs.filter(function(t){ return !t.done; }).forEach(function(t){
         h2 += "<div class='sub-item isnew'>"
+          + "<button class='act' onclick='event.stopPropagation();DashCore.toggleNtDone(\""+esc(t.cid)+"\")' title='Done'>" + IC.check + "</button>"
           + "<span class='sub-title'>" + esc(t.title) + "</span>"
           + "<span class='chip new'>new</span>"
           + "<button class='act rm' onclick='event.stopPropagation();DashCore.rmTask(\"" + esc(t.cid) + "\")'  title='Remove'>" + IC.x + "</button>"
@@ -897,22 +900,25 @@ function render(){
     if(!sCol) h += list.map(card).join("");
     if(!sCol && sec.allowNew){
       h += created.map(function(t){
-        const c=tc(t.topic), p=panels["nt-"+t.cid]||{}, dcs=dc(t.due);
+        const p=panels["nt-"+t.cid]||{}, dcs=dc(t.due);
         const done=!!t.done, star=!!STAR[t.cid];
+        // Same card structure/button order as card() for existing items:
+        // star, done, log, date, then a final-slot button (remove, standing
+        // in for the github-link slot a real item doesn't have yet). Snooze
+        // is the only button intentionally dropped \u2014 nothing to hide for
+        // the rest of today on something that isn't saved anywhere yet.
         return "<div class='card isnew"+(dcs?" "+dcs:"")+(done?" done":"")+(star?" starred":"")+"'>"
-          + "<div class='card-row'><span class='card-title"+(done?" struck":"")+"'>"+esc(t.title)+"</span>"
-          + "<div class='acts'>"
-          + "<button class='act"+(star?" on-star":"")+"' onclick='DashCore.toggleStarNt(\""+esc(t.cid)+"\")' title='"+(star?"Unstar":"Star")+"'>"+(star?IC.starOn:IC.star)+"</button>"
+          + "<div class='card-row'><span class='card-title"+(done?" struck":"")+"'>"+esc(t.title)+"</span><div class='acts'>"
+          + "<button class='act"+(star?" on-star":"")+"' onclick='DashCore.toggleStarNt(\""+esc(t.cid)+"\")' title='"+(star?"Unstar":"Star \u2014 mark as important or active")+"'>"+(star?IC.starOn:IC.star)+"</button>"
           + "<button class='act"+(done?" on-green":"")+"' onclick='DashCore.toggleNtDone(\""+esc(t.cid)+"\")' title='"+(done?"Undo":"Done")+"'>"+IC.check+"</button>"
-          + "<button class='act"+(p.log?" on":"")+(t.log&&!p.log?" on-green":"")+"' onclick='DashCore.toggleNtP(\""+esc(t.cid)+"\",\"log\")' title='Log'>"+IC.msg+"</button>"
-          + "<button class='act"+(p.date?" on":"")+"' onclick='DashCore.toggleNtP(\""+esc(t.cid)+"\",\"date\")' title='Reminder'>"+IC.cal+"</button>"
+          + "<button class='act"+(p.log?" on":"")+(t.log&&!p.log?" on-green":"")+"' onclick='DashCore.toggleNtP(\""+esc(t.cid)+"\",\"log\")' title='Log a note'>"+IC.msg+"</button>"
+          + "<button class='act"+(p.date?" on":"")+"' onclick='DashCore.toggleNtP(\""+esc(t.cid)+"\",\"date\")' title='Reminder / deadline'>"+IC.cal+"</button>"
           + "<button class='act rm' onclick='DashCore.rmTask(\""+esc(t.cid)+"\")' title='Remove'>"+IC.x+"</button>"
-          + "</div></div>"
-          + "<div class='card-meta'><span class='tag' style='background:"+c.bg+";color:"+c.tx+"'>"+esc(t.topic)+"</span>"
+          + "</div></div><div class='card-meta'>"+ttag(t.topic)
           + (t.due?"<span class='chip "+dcs+"'>"+fd(t.due)+"</span>":"")
           + (t.deadline?"<span class='chip dl "+dc(t.deadline)+"'>deadline "+fd(t.deadline)+"</span>":"")
           + (t.log?"<span class='chip logged'>"+IC.msg+" note</span>":"")
-          + (done?"<span class='chip logged'>done \u2014 will create+close</span>":"")
+          + (done?"<span class='chip logged'>will create+close</span>":"")
           + (t.queued?"<span class='chip queued'>queued</span>":"<span class='chip unsaved'>unsaved</span>")
           + "</div>"
           + (t.note?"<div class='cnote'>"+esc(t.note)+"</div>":"")
