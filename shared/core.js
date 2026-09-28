@@ -42,7 +42,7 @@ window.DashCore = (function(){
 
 
 const API = "https://api.github.com";
-const BUILD = "20260927-0826";
+const BUILD = "20260928-1414";
 
 let M       = null;
 let REPO    = "";
@@ -1021,6 +1021,18 @@ function render(){
 
   if(M.inbox && inboxItems().length){
     const all      = inboxItems();
+    // Backstop: build_brief.py's validate_brief() should refuse to write a
+    // brief with a missing/duplicate inbox id, but if one ever gets through
+    // anyway, don't let dismiss/convert silently no-op on it — that's exactly
+    // how the 2026-09-28 bug went undetected. Say so loudly instead.
+    (function(){
+      const seen = {};
+      all.forEach(function(x){
+        if(!x.id){ console.error("[rfl-ops] inbox item has no id — dismiss/convert will silently do nothing for it:", x); return; }
+        if(seen[x.id]) console.error("[rfl-ops] duplicate inbox id, actions will collide:", x.id, x);
+        seen[x.id] = true;
+      });
+    })();
     const dismissed= all.filter(x => { const s=effIb(x.id); return s && s.status==="dismissed"; });
     const tasked   = all.filter(x => { const s=effIb(x.id); return s && s.status==="task"; });
     // dismissed always hidden; tasked follows hideSettled
