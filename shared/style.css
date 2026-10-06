@@ -262,7 +262,7 @@
     .wrap{max-width:1400px;padding:24px 30px 80px}
     .dhdr-in{max-width:1400px;padding:0 30px}
     .cols{grid-template-columns:repeat(3,minmax(0,1fr));gap:0 24px}
-    .summary,.warn,.queue{max-width:1000px}
+    .summary,.queue{max-width:1000px}
   }
   @media(min-width:1700px){
     .wrap{max-width:1780px}
