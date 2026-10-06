@@ -42,7 +42,7 @@ window.DashCore = (function(){
 
 
 const API = "https://api.github.com";
-const BUILD = "20261006-2100";
+const BUILD = "20261006-2130";
 
 let M       = null;
 let REPO    = "";
@@ -947,6 +947,20 @@ function render(){
     h += "<div class='warn'>"+IC.warn+" This data is from "+fd(BRIEF.date)+". Ask Claude to refresh it.</div>";
   meta.warnings.forEach(function(w,i){ if(WDISM[i]) return; h += "<div class='warn'>"+IC.warn+"<span style='flex:1'>"+esc(w)+"</span><button class='warn-x' onclick='DashCore.dismissWarn("+i+")' title='Dismiss'>"+IC.x+"</button></div>"; });
   const kb = keyBanner();
+  // Top of the page, right under the warnings: KEY TASKS beside Today (two
+  // columns when there is room, stacked otherwise). Either may be absent.
+  let calH = "";
+  if(cal.length){
+    var cCol = isCollapsed("calendar");
+    calH += "<div class='sec'><div class='sec-hdr'><span class='sec-label'>Today</span>" + secChev("calendar") + "</div>";
+    if(!cCol){
+      calH += "<div class='cal-list'>"
+        + cal.map(function(e){var ad=e.allDay===true||e.start==="all-day";var t=e.time||(e.start&&e.end&&!ad?e.start+"–"+e.end:e.start&&!ad?e.start:"");return "<div class='cal-row'><span class='cal-time'>"+(ad?"":esc(t))+"</span><span class='cal-ev'>"+esc(e.title)+"</span>"+(ad?"<span class='cal-ad'>all day</span>":"")+"</div>";}).join("")
+        + "</div>";
+    }
+    calH += "</div>";
+  }
+  h += (kb && calH) ? "<div class='kt-row'>"+kb+calH+"</div>" : (kb + calH);
   if(meta.summary){
     var bCol = isCollapsed("brief");
     h += "<div class='sec'><div class='sec-hdr'><span class='sec-label'>Brief</span>" + secChev("brief") + "</div>";
@@ -954,19 +968,6 @@ function render(){
     h += "</div>";
   }
 
-  if(cal.length){
-    var cCol = isCollapsed("calendar");
-    h += "<div class='sec'><div class='sec-hdr'><span class='sec-label'>Today</span>" + secChev("calendar") + "</div>";
-    if(!cCol){
-      h += "<div class='cal-list'>"
-        + cal.map(function(e){var ad=e.allDay===true||e.start==="all-day";var t=e.time||(e.start&&e.end&&!ad?e.start+"–"+e.end:e.start&&!ad?e.start:"");return "<div class='cal-row'><span class='cal-time'>"+(ad?"":esc(t))+"</span><span class='cal-ev'>"+esc(e.title)+"</span>"+(ad?"<span class='cal-ad'>all day</span>":"")+"</div>";}).join("")
-        + "</div>";
-    }
-    h += "</div>";
-  }
-
-  const ktAt = h.length;   // key-tasks / Tasks pair is spliced in here, after the Today block
-  let keyedHtml = "";
   if(M.braindump){
     var hasSR = !!(window.SpeechRecognition || window.webkitSpeechRecognition);
     var micBtns = hasSR
@@ -998,9 +999,6 @@ function render(){
     // starred first, original order preserved within each group
     list = list.filter(i=>isStarred(i.number)).concat(list.filter(i=>!isStarred(i.number)));
     if(!all.length && !sec.allowNew) return;
-    const stash = !!(kb && sec.withKey);
-    let hPrev = "";
-    if(stash){ hPrev = h; h = ""; }
     var sId = "sec-"+sec.label.toLowerCase().replace(/[^a-z0-9]+/g,"-");
     var sCol = isCollapsed(sId);
     h += "<div class='sec'><div class='sec-hdr'><span class='sec-label'>"+esc(sec.label)+"</span>"
@@ -1068,15 +1066,7 @@ function render(){
          + "</div>";
     }
     h += "</div>";
-    if(stash){ keyedHtml = h; h = hPrev; }
   });
-  // Key tasks beside Tasks: two columns if space allows (CSS), stacked otherwise.
-  if(kb){
-    const pair = keyedHtml
-      ? "<div class='kt-row'>"+kb+keyedHtml+"</div>"
-      : kb;
-    h = h.slice(0, ktAt) + pair + h.slice(ktAt);
-  }
 
   if(M.inbox && inboxItems().length){
     const all      = inboxItems();

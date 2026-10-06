@@ -254,9 +254,9 @@
   .keyb-chip{font-size:11px;padding:1px 7px;border-radius:9px;background:var(--surface);border:1px solid var(--border);color:var(--text-2);white-space:nowrap}
   .keyb-chip.soon{border-color:var(--warning);color:var(--warning)}
   .keyb-chip.over{background:var(--danger-bg);border-color:var(--danger-border);color:var(--danger)}
-  /* Key tasks beside the Tasks section: two columns when there is room */
+  /* KEY TASKS beside Today: two columns when there is room */
   .kt-row{display:block}
-  @media(min-width:840px){.kt-row{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.5fr);gap:0 22px;align-items:start}.kt-row .keyb{position:sticky;top:60px}}
+  @media(min-width:840px){.kt-row{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:0 22px;align-items:start}}
   @media(max-width:560px){.keyb-row{flex-direction:column;gap:3px}.keyb-chips{justify-content:flex-start}.keyb-note{display:none}}
   @media(min-width:1320px){
     .wrap{max-width:1400px;padding:24px 30px 80px}
