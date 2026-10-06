@@ -42,7 +42,7 @@ window.DashCore = (function(){
 
 
 const API = "https://api.github.com";
-const BUILD = "20260928-1414";
+const BUILD = "20261006-1930";
 
 let M       = null;
 let REPO    = "";
@@ -135,6 +135,7 @@ function loadCache(){
     if(!c || !c.brief) return false;
     BRIEF = c.brief;
     BRIEF.items    = BRIEF.items    || [];
+    BRIEF.key_tasks = Array.isArray(BRIEF.key_tasks) ? BRIEF.key_tasks : [];
     BRIEF.calendar = BRIEF.calendar || [];
     BRIEF.meta     = BRIEF.meta     || {};
     BRIEF.meta.warnings = BRIEF.meta.warnings || [];
@@ -359,6 +360,7 @@ async function loadBrief(){
     const f = await api("/repos/"+REPO+"/contents/"+M.briefPath+"?ref=HEAD&t="+Date.now());
     BRIEF = JSON.parse(b64utf8(f.content));
     BRIEF.items    = BRIEF.items    || [];
+    BRIEF.key_tasks = Array.isArray(BRIEF.key_tasks) ? BRIEF.key_tasks : [];
     BRIEF.calendar = BRIEF.calendar || [];
     BRIEF.meta     = BRIEF.meta     || {};
     BRIEF.meta.warnings = BRIEF.meta.warnings || [];
@@ -834,6 +836,40 @@ function card(item){
     + "</div>";
 }
 
+// ── KEY TASKS banner ─────────────────────────────────────────────────────────
+// Self-contained entries from BRIEF.key_tasks[] (see docs/brief-schema.md).
+// Every field is optional except number/title — guard at the point of use.
+function daysBetween(a, b){
+  try{
+    const p = String(a).split("-").map(Number), q = String(b).split("-").map(Number);
+    if(p.length<3 || q.length<3 || p.some(isNaN) || q.some(isNaN)) return null;
+    return Math.round((Date.UTC(q[0],q[1]-1,q[2]) - Date.UTC(p[0],p[1]-1,p[2])) / 86400000);
+  }catch(e){ return null; }
+}
+function keyChip(label, d, cls){
+  if(d===null) return "";
+  const txt = d<0 ? label+" "+(-d)+"d ago" : d===0 ? label+" today" : label+" in "+d+"d";
+  return "<span class='keyb-chip "+(cls||"")+(d<0?" over":d<=3?" soon":"")+"'>"+txt+"</span>";
+}
+function keyBanner(){
+  const kt = (BRIEF && Array.isArray(BRIEF.key_tasks)) ? BRIEF.key_tasks : [];
+  if(!kt.length) return "";
+  let h = "<div class='keyb'><div class='keyb-hdr'>\u2605 KEY TASKS</div>";
+  kt.forEach(function(k){
+    if(!k) return;
+    const done = !!(eff(k.number) || {}).done;
+    h += "<div class='keyb-row"+(done?" done":"")+"'>"
+      + "<div class='keyb-main'><span class='keyb-title'>"+esc(k.title)+"</span>"
+      + (k.focus ? "<span class='keyb-focus'>"+esc(k.focus)+"</span>" : "")
+      + (k.note ? "<span class='keyb-note'>"+esc(k.note)+"</span>" : "")
+      + "</div><div class='keyb-chips'>"
+      + keyChip("focus ends", k.until ? daysBetween(TODAY, k.until) : null)
+      + keyChip("due", k.deadline ? daysBetween(TODAY, k.deadline) : null, "dl")
+      + "</div></div>";
+  });
+  return h + "</div>";
+}
+
 function render(){
   const app = document.getElementById("app");
 
@@ -901,6 +937,7 @@ function render(){
   if(BRIEF.date !== TODAY)
     h += "<div class='warn'>"+IC.warn+" This data is from "+fd(BRIEF.date)+". Ask Claude to refresh it.</div>";
   meta.warnings.forEach(function(w,i){ if(WDISM[i]) return; h += "<div class='warn'>"+IC.warn+"<span style='flex:1'>"+esc(w)+"</span><button class='warn-x' onclick='DashCore.dismissWarn("+i+")' title='Dismiss'>"+IC.x+"</button></div>"; });
+  h += keyBanner();
   if(meta.summary){
     var bCol = isCollapsed("brief");
     h += "<div class='sec'><div class='sec-hdr'><span class='sec-label'>Brief</span>" + secChev("brief") + "</div>";
