@@ -42,7 +42,7 @@ window.DashCore = (function(){
 
 
 const API = "https://api.github.com";
-const BUILD = "20261006-2130";
+const BUILD = "20261006-2200";
 
 let M       = null;
 let REPO    = "";
@@ -853,13 +853,15 @@ function keyChip(label, d, cls){
 }
 function keyBanner(){
   const kt = (BRIEF && Array.isArray(BRIEF.key_tasks)) ? BRIEF.key_tasks : [];
-  // Only tasks whose focus range contains TODAY are shown. Recomputed here
-  // against TODAY (not trusted from the brief) so a banner cached overnight
+  // Reference day = the brief's date when it is later than today (e.g. tomorrow's\n  // brief opened the evening before), else today. Never earlier than today, so a\n  // stale brief can't resurrect yesterday's ranges.
+  const REF = (BRIEF && BRIEF.date && BRIEF.date > TODAY) ? BRIEF.date : TODAY;
+  // Only tasks whose focus range contains REF are shown. Recomputed here
+  // against REF (not trusted from the brief) so a banner cached overnight
   // never shows yesterday's range. Blank from/until = open-ended on that side.
   const rows = kt.filter(function(k){
     if(!k || !k.title) return false;
-    if(k.from  && daysBetween(TODAY, k.from)  > 0) return false;   // not started
-    if(k.until && daysBetween(TODAY, k.until) < 0) return false;   // ended
+    if(k.from  && daysBetween(REF, k.from)  > 0) return false;   // not started
+    if(k.until && daysBetween(REF, k.until) < 0) return false;   // ended
     return true;
   });
   if(!rows.length) return "";
@@ -872,8 +874,8 @@ function keyBanner(){
       + (k.focus ? "<span class='keyb-focus'>"+esc(k.focus)+"</span>" : "")
       + (k.note ? "<span class='keyb-note'>"+esc(k.note)+"</span>" : "")
       + "</div><div class='keyb-chips'>"
-      + keyChip("focus ends", k.until ? daysBetween(TODAY, k.until) : null)
-      + keyChip("due", k.deadline ? daysBetween(TODAY, k.deadline) : null, "dl")
+      + keyChip("focus ends", k.until ? daysBetween(REF, k.until) : null)
+      + keyChip("due", k.deadline ? daysBetween(REF, k.deadline) : null, "dl")
       + "</div></div>";
   });
   return h + "</div>";
