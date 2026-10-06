@@ -42,7 +42,7 @@ window.DashCore = (function(){
 
 
 const API = "https://api.github.com";
-const BUILD = "20261006-2010";
+const BUILD = "20261006-2100";
 
 let M       = null;
 let REPO    = "";
@@ -853,29 +853,26 @@ function keyChip(label, d, cls){
 }
 function keyBanner(){
   const kt = (BRIEF && Array.isArray(BRIEF.key_tasks)) ? BRIEF.key_tasks : [];
-  // Status is recomputed against TODAY here, so a banner cached overnight
-  // never shows yesterday's "active". Starts more than 7 days out stay hidden.
-  const rows = kt.filter(function(k){ return k && k.title; }).map(function(k){
-    const dFrom = k.from ? daysBetween(TODAY, k.from) : null;
-    const dUntil = k.until ? daysBetween(TODAY, k.until) : null;
-    const st = (dFrom !== null && dFrom > 0) ? "upcoming" : (dUntil !== null && dUntil < 0) ? "ended" : "active";
-    return {k:k, st:st, dFrom:dFrom, dUntil:dUntil};
-  }).filter(function(r){ return !(r.st==="upcoming" && r.dFrom > 7); });
+  // Only tasks whose focus range contains TODAY are shown. Recomputed here
+  // against TODAY (not trusted from the brief) so a banner cached overnight
+  // never shows yesterday's range. Blank from/until = open-ended on that side.
+  const rows = kt.filter(function(k){
+    if(!k || !k.title) return false;
+    if(k.from  && daysBetween(TODAY, k.from)  > 0) return false;   // not started
+    if(k.until && daysBetween(TODAY, k.until) < 0) return false;   // ended
+    return true;
+  });
   if(!rows.length) return "";
-  const ord = {active:0, ended:1, upcoming:2};
-  rows.sort(function(a,b){ return ord[a.st]-ord[b.st] || String(a.k.from||"").localeCompare(String(b.k.from||"")); });
+  rows.sort(function(a,b){ return String(a.until||"9999").localeCompare(String(b.until||"9999")); });
   let h = "<div class='keyb'><div class='keyb-hdr'>\u2605 KEY TASKS</div>";
-  rows.forEach(function(r){
-    const k = r.k;
+  rows.forEach(function(k){
     const done = !!(eff(k.number) || {}).done;
-    h += "<div class='keyb-row"+(done?" done":"")+(r.st==="upcoming"?" up":"")+"'>"
+    h += "<div class='keyb-row"+(done?" done":"")+"'>"
       + "<div class='keyb-main'><span class='keyb-title'>"+esc(k.title)+"</span>"
       + (k.focus ? "<span class='keyb-focus'>"+esc(k.focus)+"</span>" : "")
       + (k.note ? "<span class='keyb-note'>"+esc(k.note)+"</span>" : "")
       + "</div><div class='keyb-chips'>"
-      + (r.st==="upcoming" ? keyChip("starts", r.dFrom) : "")
-      + (r.st==="ended" ? "<span class='keyb-chip over'>focus ended \u2014 still key?</span>" : "")
-      + (r.st==="active" ? keyChip("focus ends", r.dUntil) : "")
+      + keyChip("focus ends", k.until ? daysBetween(TODAY, k.until) : null)
       + keyChip("due", k.deadline ? daysBetween(TODAY, k.deadline) : null, "dl")
       + "</div></div>";
   });
@@ -949,7 +946,7 @@ function render(){
   if(BRIEF.date !== TODAY)
     h += "<div class='warn'>"+IC.warn+" This data is from "+fd(BRIEF.date)+". Ask Claude to refresh it.</div>";
   meta.warnings.forEach(function(w,i){ if(WDISM[i]) return; h += "<div class='warn'>"+IC.warn+"<span style='flex:1'>"+esc(w)+"</span><button class='warn-x' onclick='DashCore.dismissWarn("+i+")' title='Dismiss'>"+IC.x+"</button></div>"; });
-  h += keyBanner();
+  const kb = keyBanner();
   if(meta.summary){
     var bCol = isCollapsed("brief");
     h += "<div class='sec'><div class='sec-hdr'><span class='sec-label'>Brief</span>" + secChev("brief") + "</div>";
@@ -968,6 +965,8 @@ function render(){
     h += "</div>";
   }
 
+  const ktAt = h.length;   // key-tasks / Tasks pair is spliced in here, after the Today block
+  let keyedHtml = "";
   if(M.braindump){
     var hasSR = !!(window.SpeechRecognition || window.webkitSpeechRecognition);
     var micBtns = hasSR
@@ -999,6 +998,9 @@ function render(){
     // starred first, original order preserved within each group
     list = list.filter(i=>isStarred(i.number)).concat(list.filter(i=>!isStarred(i.number)));
     if(!all.length && !sec.allowNew) return;
+    const stash = !!(kb && sec.withKey);
+    let hPrev = "";
+    if(stash){ hPrev = h; h = ""; }
     var sId = "sec-"+sec.label.toLowerCase().replace(/[^a-z0-9]+/g,"-");
     var sCol = isCollapsed(sId);
     h += "<div class='sec'><div class='sec-hdr'><span class='sec-label'>"+esc(sec.label)+"</span>"
@@ -1066,7 +1068,15 @@ function render(){
          + "</div>";
     }
     h += "</div>";
+    if(stash){ keyedHtml = h; h = hPrev; }
   });
+  // Key tasks beside Tasks: two columns if space allows (CSS), stacked otherwise.
+  if(kb){
+    const pair = keyedHtml
+      ? "<div class='kt-row'>"+kb+keyedHtml+"</div>"
+      : kb;
+    h = h.slice(0, ktAt) + pair + h.slice(ktAt);
+  }
 
   if(M.inbox && inboxItems().length){
     const all      = inboxItems();
