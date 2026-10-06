@@ -42,7 +42,7 @@ window.DashCore = (function(){
 
 
 const API = "https://api.github.com";
-const BUILD = "20261006-1930";
+const BUILD = "20261006-2010";
 
 let M       = null;
 let REPO    = "";
@@ -853,17 +853,29 @@ function keyChip(label, d, cls){
 }
 function keyBanner(){
   const kt = (BRIEF && Array.isArray(BRIEF.key_tasks)) ? BRIEF.key_tasks : [];
-  if(!kt.length) return "";
+  // Status is recomputed against TODAY here, so a banner cached overnight
+  // never shows yesterday's "active". Starts more than 7 days out stay hidden.
+  const rows = kt.filter(function(k){ return k && k.title; }).map(function(k){
+    const dFrom = k.from ? daysBetween(TODAY, k.from) : null;
+    const dUntil = k.until ? daysBetween(TODAY, k.until) : null;
+    const st = (dFrom !== null && dFrom > 0) ? "upcoming" : (dUntil !== null && dUntil < 0) ? "ended" : "active";
+    return {k:k, st:st, dFrom:dFrom, dUntil:dUntil};
+  }).filter(function(r){ return !(r.st==="upcoming" && r.dFrom > 7); });
+  if(!rows.length) return "";
+  const ord = {active:0, ended:1, upcoming:2};
+  rows.sort(function(a,b){ return ord[a.st]-ord[b.st] || String(a.k.from||"").localeCompare(String(b.k.from||"")); });
   let h = "<div class='keyb'><div class='keyb-hdr'>\u2605 KEY TASKS</div>";
-  kt.forEach(function(k){
-    if(!k) return;
+  rows.forEach(function(r){
+    const k = r.k;
     const done = !!(eff(k.number) || {}).done;
-    h += "<div class='keyb-row"+(done?" done":"")+"'>"
+    h += "<div class='keyb-row"+(done?" done":"")+(r.st==="upcoming"?" up":"")+"'>"
       + "<div class='keyb-main'><span class='keyb-title'>"+esc(k.title)+"</span>"
       + (k.focus ? "<span class='keyb-focus'>"+esc(k.focus)+"</span>" : "")
       + (k.note ? "<span class='keyb-note'>"+esc(k.note)+"</span>" : "")
       + "</div><div class='keyb-chips'>"
-      + keyChip("focus ends", k.until ? daysBetween(TODAY, k.until) : null)
+      + (r.st==="upcoming" ? keyChip("starts", r.dFrom) : "")
+      + (r.st==="ended" ? "<span class='keyb-chip over'>focus ended \u2014 still key?</span>" : "")
+      + (r.st==="active" ? keyChip("focus ends", r.dUntil) : "")
       + keyChip("due", k.deadline ? daysBetween(TODAY, k.deadline) : null, "dl")
       + "</div></div>";
   });

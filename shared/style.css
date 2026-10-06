@@ -246,6 +246,7 @@
   .keyb-row{display:flex;justify-content:space-between;gap:10px;align-items:flex-start;padding:5px 0;border-top:1px solid var(--warning-border)}
   .keyb-row:first-of-type{border-top:none}
   .keyb-row.done .keyb-title{text-decoration:line-through;opacity:.55}
+  .keyb-row.up{opacity:.62}
   .keyb-main{display:flex;flex-direction:column;gap:1px;min-width:0}
   .keyb-title{font-weight:600;font-size:13.5px;color:var(--text)}
   .keyb-focus{font-size:12px;color:var(--text-2)}
