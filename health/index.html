@@ -281,8 +281,9 @@ button{font-family:inherit}
 <body>
 <div id="setup" style="display:none">
   <h2>Conectar repositorio</h2>
-  <p>Token de GitHub para leer los datos del repo privado. Se guarda solo en este navegador.</p>
-  <input type="password" id="tki" placeholder="github_pat_…" autocomplete="off">
+  <p>Repositorio de datos y token de GitHub. Se guardan solo en este navegador.</p>
+  <input type="text" id="repoi" placeholder="owner/repo" autocomplete="off" spellcheck="false" style="margin-bottom:8px">
+  <input type="password" id="tki" placeholder="github_pat_… (vacío = mantener)" autocomplete="off">
   <button onclick="saveToken()">Conectar</button>
 </div>
 <div id="app" style="display:none">
@@ -311,7 +312,7 @@ button{font-family:inherit}
   </div>
 </div>
 <script>
-const REPO="rfleiro/FamilyOps",DPATH="health/data.json",KCAL_KG=7700;
+let REPO=localStorage.getItem("rh_repo")||"";const DPATH="health/data.json",KCAL_KG=7700;
 let view="day",cursor=t0(),data=null,token=null,IDX={},APPLE={},WEIGHTS={};
 const RM=window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
@@ -322,9 +323,9 @@ function toggleTheme(){const n=isDark()?"light":"dark";document.documentElement.
 function initTheme(){const s=localStorage.getItem("rh_theme");if(s)document.documentElement.dataset.theme=s;applyTheme();}
 
 /* ---------- boot / data ---------- */
-async function init(){initTheme();token=localStorage.getItem("rh_token");if(!token){show("setup");return;}show("app");await load();render();}
+async function init(){initTheme();token=localStorage.getItem("rh_token");if(!token||!REPO){show("setup");const r=document.getElementById("repoi");if(r)r.value=REPO;return;}show("app");await load();render();}
 function show(id){document.getElementById("setup").style.display=id==="setup"?"block":"none";document.getElementById("app").style.display=id==="app"?"block":"none";}
-async function saveToken(){const t=document.getElementById("tki").value.trim();if(!t)return;localStorage.setItem("rh_token",t);token=t;show("app");await load();render();}
+async function saveToken(){const r=document.getElementById("repoi").value.trim(),t=document.getElementById("tki").value.trim()||localStorage.getItem("rh_token")||"";if(!r||!t)return;localStorage.setItem("rh_repo",r);localStorage.setItem("rh_token",t);REPO=r;token=t;show("app");await load();render();}
 function b64utf8(b64){const bin=atob(b64.replace(/\n/g,""));const b=new Uint8Array(bin.length);for(let i=0;i<bin.length;i++)b[i]=bin.charCodeAt(i);return new TextDecoder("utf-8").decode(b);}
 async function load(){
   try{
