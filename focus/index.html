@@ -64,12 +64,13 @@ table.grid{border-collapse:separate;border-spacing:0 2px;width:100%;min-width:56
 .grid td.d small{font-weight:400;color:var(--text-3);margin-left:3px;font-size:10px}
 .grid td.d i{display:inline-block;width:7px;height:7px;border-radius:50%;margin-right:5px}
 .grid td.ev{text-align:left;color:var(--text-2);font-size:11px;min-width:84px;max-width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.grid td.ev input{width:100%;font-family:inherit;font-size:11px;padding:3px 5px;border:1px solid var(--border);border-radius:var(--rs);background:var(--surface);color:var(--text)}
+.grid td.ev input{width:100%;min-width:90px;font-family:inherit;font-size:11px;padding:3px 5px;border:1px solid var(--border);border-radius:var(--rs);background:var(--surface);color:var(--text)}
 .grid td.tot{font-weight:600;color:var(--text-2);border-radius:0 var(--rs) var(--rs) 0;width:62px}
 .grid tr.today td{background:var(--accent-bg)}
 .grid tr.today td.d{color:var(--accent)}
 .grid tr.past td.d,.grid tr.past td.ev{opacity:.65}
-.grid td.c{position:relative}
+.grid td.c{position:relative;cursor:pointer}
+.grid td.ev{cursor:text}
 .grid td.c .cell{display:flex;align-items:center;justify-content:center;height:26px;border-radius:7px;font-size:12px;font-weight:600;color:var(--text)}
 .grid td.c.band .cell{background:var(--surface2)}
 .grid td.c .cell[data-state="plan"]{background:color-mix(in srgb,var(--c) calc(var(--i,.2)*100%),transparent)}
@@ -111,7 +112,7 @@ const REPO_KEY='dash:focus:repo', REPO_FALL='dash:ops:repo';
 const LS_STATE='dash:focus:state', LS_CACHE='dash:focus:cache', LS_STALE='dash:focus:stale:';
 const FOCUS_PATH='data/focus.json';
 const JOURNAL_PATH='brief/ops/today_changes.json';
-const BUILD='20261018-1500';
+const BUILD='20261018-1640';
 const IDLE_MS=3*3600e3;           // a timer running longer than this gets a prompt
 const PALETTE=['#2563EB','#16A34A','#D97706','#7C3AED','#E11D48','#0D9488','#DB2777','#65A30D'];
 
@@ -398,6 +399,58 @@ function addTrack(){
   W.plan.newTracks.push({id,name,start:document.getElementById('nt-s').value||'',end:document.getElementById('nt-e').value||'',color:PALETTE[T.length%PALETTE.length]});
   commit({});
 }
+function cellHtml(d,id){return '<div class="cell" data-s="cell:'+d+':'+esc(id)+'"></div>';}
+let cellEd=null;
+function editCell(date,id){
+  if(cellEd&&cellEd.date===date&&cellEd.id===id)return;
+  const td=document.querySelector('td[data-k="'+date+':'+id+'"]');if(!td)return;
+  cellEd={date:date,id:id};
+  const p=planFor(date,id);
+  td.innerHTML='<input type="number" min="0" step="0.25" inputmode="decimal" value="'+(p||'')+'" onblur="endCell(this)" onkeydown="cellKey(event,this)">';
+  const inp=td.firstChild;inp.focus();inp.select();
+}
+function endCell(inp,cancel){
+  if(!cellEd)return;
+  const date=cellEd.date,id=cellEd.id;cellEd=null;
+  const td=inp.parentNode;
+  const raw=inp.value;
+  td.innerHTML=cellHtml(date,id);
+  if(!cancel){const v=Math.max(0,Math.round((parseFloat(raw)||0)*4)/4);if(v!==planFor(date,id))setPlan(date,id,raw);else refreshAll();}
+  else refreshAll();
+}
+function cellKey(e,inp){
+  const k=e.key;
+  if(k!=='Enter'&&k!=='Tab'&&k!=='Escape'&&k!=='ArrowDown'&&k!=='ArrowUp')return;
+  e.preventDefault();
+  const cur=cellEd;if(!cur)return;
+  const D=dayList(),T=tracks().map(t=>t.id);
+  let di=D.indexOf(cur.date),ti=T.indexOf(cur.id),next=null;
+  if(k==='Tab'){
+    ti+=e.shiftKey?-1:1;
+    if(ti>=T.length){ti=0;di++;}else if(ti<0){ti=T.length-1;di--;}
+    next=[D[di],T[ti]];
+  }else if(k==='Enter'||k==='ArrowDown'){next=[D[di+1],T[ti]];}
+  else if(k==='ArrowUp'){next=[D[di-1],T[ti]];}
+  inp.onblur=null;endCell(inp,k==='Escape');
+  if(next&&next[0]&&next[1])editCell(next[0],next[1]);
+}
+function editEv(date){
+  const td=document.querySelector('td[data-ev="'+date+'"]');
+  if(!td||td.querySelector('input'))return;
+  td.removeAttribute('onclick');
+  td.innerHTML='<input value="'+esc(eventFor(date))+'">';
+  const inp=td.firstChild;let done=false;
+  const fin=function(cancel){
+    if(done)return;done=true;
+    const v=inp.value;
+    td.textContent=cancel?eventFor(date):v;
+    td.setAttribute('onclick','editEv(\''+date+'\')');
+    if(!cancel&&v!==eventFor(date))setEvent(date,v);
+  };
+  inp.onblur=function(){fin(false);};
+  inp.onkeydown=function(e){if(e.key==='Enter'){e.preventDefault();inp.blur();}else if(e.key==='Escape'){e.preventDefault();inp.onblur=null;fin(true);}};
+  inp.focus();inp.select();
+}
 function extendWindow(days){const w=win();W.plan.window={start:w.start,end:addDays(w.end,days)};commit({});}
 function toggleEdit(){editMode=!editMode;render();}
 
@@ -412,7 +465,7 @@ function hdr(){
   const d=new Date().toLocaleDateString('en-GB',{weekday:'long',day:'numeric',month:'long'});
   return '<div class="fh"><a class="btn btn-icon" href="../" title="Hub">←</a><h1>focus</h1><span class="sub">'+esc(d)+'</span>'
     +'<button class="sync '+sync+'" id="sync" onclick="push()"></button>'
-    +'<button class="btn'+(editMode?' btn-p':'')+'" onclick="toggleEdit()">'+(editMode?'Done editing':'Edit plan')+'</button>'+themeBtn()+'</div>'
+    +'<button class="btn'+(editMode?' btn-p':'')+'" onclick="toggleEdit()">'+(editMode?'Done':'Edit tracks')+'</button>'+themeBtn()+'</div>'
     +'<div class="ban bad" id="sync-msg" style="display:none"></div>';
 }
 function staleKeys(){const k=[];for(let i=0;i<localStorage.length;i++){const n=localStorage.key(i);if(n&&n.indexOf(LS_STALE)===0)k.push(n);}return k;}
@@ -477,7 +530,7 @@ function sessionsPanel(){
 function gridPanel(){
   const T=tracks(),D=dayList();
   let h='<div class="panel"><div class="sec-hd">Plan vs actual<span class="sp"></span>'
-    +(editMode?'<button class="btn mini" onclick="extendWindow(7)">+ 1 week</button>':'')+'</div><div class="gwrap"><table class="grid"><thead><tr><th></th><th></th>';
+    +'<button class="btn mini" onclick="extendWindow(7)">+ 1 week</button></div><div class="gwrap"><table class="grid"><thead><tr><th></th><th></th>';
   T.forEach(t=>{h+='<th class="tv" style="--c:'+esc(t.color)+'"><span>'+esc(t.name)+'</span></th>';});
   h+='<th></th></tr></thead><tbody>';
   D.forEach(d=>{
@@ -486,23 +539,17 @@ function gridPanel(){
     const dd=parseDate(d);
     h+='<tr class="'+cls+'"><td class="d">'+(dty?'<i style="background:'+esc(dty.color)+'" title="'+esc(dty.label||dt)+'"></i>':'')
       +dd.getDate()+'<small>'+dd.toLocaleDateString('en-GB',{weekday:'short'})+'</small></td>';
-    h+='<td class="ev">'+(editMode?'<input value="'+esc(eventFor(d))+'" onchange="setEvent(\''+d+'\',this.value)">':esc(eventFor(d)))+'</td>';
+    h+='<td class="ev" data-ev="'+d+'" onclick="editEv(\''+d+'\')" title="Tap to edit">'+esc(eventFor(d))+'</td>';
     T.forEach(t=>{
       const band=inBand(t,d)?' band':'';
-      if(editMode){
-        const p=planFor(d,t.id);
-        h+='<td class="c'+band+'" style="--c:'+esc(t.color)+'"><input type="number" min="0" step="0.25" inputmode="decimal" value="'+(p||'')+'" onchange="setPlan(\''+d+'\',\''+esc(t.id)+'\',this.value)"></td>';
-      }else{
-        const p=planFor(d,t.id);
-        h+='<td class="c'+band+'" style="--c:'+esc(t.color)+'"><div class="cell" data-s="cell:'+d+':'+esc(t.id)+'" style="--i:'+Math.min(.8,.15+.2*p)+'"></div></td>';
-      }
+      h+='<td class="c'+band+'" style="--c:'+esc(t.color)+'" data-k="'+d+':'+esc(t.id)+'" onclick="editCell(\''+d+'\',\''+esc(t.id)+'\')">'+cellHtml(d,t.id)+'</td>';
     });
     h+='<td class="tot" data-s="d:'+d+'"></td></tr>';
   });
   h+='</tbody><tfoot><tr><td class="d">Total</td><td></td>';
   T.forEach(t=>{h+='<td data-s="t:'+esc(t.id)+'"></td>';});
   h+='<td data-s="all"></td></tr></tfoot></table></div>'
-    +'<div class="legend"><span><i style="background:var(--surface2)"></i>track window</span><span><i style="background:var(--c,#2563EB);opacity:.3"></i>planned</span><span><i style="background:#2563EB"></i>plan met</span><span><i style="border:1.5px dashed var(--warning)"></i>below plan</span><span>cells show done/planned hours, rounded to 15 min</span></div></div>';
+    +'<div class="legend"><span><i style="background:var(--surface2)"></i>track window</span><span><i style="background:var(--c,#2563EB);opacity:.3"></i>planned</span><span><i style="background:#2563EB"></i>plan met</span><span><i style="border:1.5px dashed var(--warning)"></i>below plan</span><span>tap a cell to change planned hours: Enter = next day, Tab = next track, Esc = cancel</span></div></div>';
   return h;
 }
 function tracksPanel(){
@@ -522,7 +569,7 @@ function tracksPanel(){
   });
   if(editMode){
     h+='<div class="ted" style="margin-top:10px"><input id="nt-n" placeholder="New track name"><input type="date" id="nt-s"><input type="date" id="nt-e"><button class="btn mini btn-p" onclick="addTrack()">+ Add track</button></div>'
-      +'<div class="meta" style="font-size:10px;color:var(--text-3);margin-top:6px">Edits are saved to the journal and applied to the data file at end of day, after we have discussed them.</div>';
+      +'<div class="meta" style="font-size:10px;color:var(--text-3);margin-top:6px">Track edits are saved to the journal and applied to the data file at end of day, after we have discussed them.</div>';
   }
   return h+'</div>';
 }
@@ -541,6 +588,7 @@ function render(){
   if(view==='setup'){app.innerHTML=renderSetup();return;}
   if(view==='loading'){app.innerHTML='<div class="spin">Loading…</div>';return;}
   if(view==='error'){app.innerHTML='<div class="spin">Failed to load: '+esc(errMsg)+'<br><br><button class="btn" onclick="load()">Retry</button> <button class="btn" onclick="localStorage.removeItem(\''+PAT_KEY+'\');localStorage.removeItem(\''+REPO_KEY+'\');PAT=\'\';REPO=\'\';view=\'setup\';render()">Change token / repo</button></div>';return;}
+  cellEd=null;
   app.innerHTML=hdr()+banners()+timerPanel()+sessionsPanel()+gridPanel()+tracksPanel()+'<div class="footer">build '+esc(BUILD)+'</div>';
   paintSync();refreshAll();
 }
@@ -548,7 +596,7 @@ function render(){
 function refreshAll(){
   document.querySelectorAll('[data-s]').forEach(el=>{
     const key=el.getAttribute('data-s'),k=key.split(':')[0];
-    if(k==='cell'){const p=key.split(':'),date=p[1],id=p.slice(2).join(':');el.textContent=cellText(date,id);el.setAttribute('data-state',cellState(date,id));}
+    if(k==='cell'){const p=key.split(':'),date=p[1],id=p.slice(2).join(':');el.textContent=cellText(date,id);el.setAttribute('data-state',cellState(date,id));el.style.setProperty('--i',Math.min(.8,.15+.2*planFor(date,id)));}
     else if(k==='trk'){const h=todayJournalHours(key.slice(4));el.textContent=h?fmtH(h)||'<¼h':'';}
     else el.textContent=sumText(key);
   });
