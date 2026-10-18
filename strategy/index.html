@@ -140,9 +140,11 @@ function toggleTheme(){
 // ── Constants ─────────────────────────────────────────────────────────────────
 const PAT_KEY  = 'dash:strategy:pat';
 const PAT_FALL = 'dash:ops:pat';
-const REPO     = 'rfleiro/rfl_ops';
+const REPO_KEY  = 'dash:strategy:repo';
+const REPO_FALL = 'dash:ops:repo';
+let   REPO      = localStorage.getItem(REPO_KEY)||localStorage.getItem(REPO_FALL)||'';
 const DATAPATH = 'data/strategy.json';
-const BUILD    = '20260924-1215';
+const BUILD    = '20261018-2130';
 
 // ── Grant colours ─────────────────────────────────────────────────────────────
 const GC = {
@@ -191,7 +193,7 @@ function render(){
   const app=document.getElementById('app');
   if(!app)return;
   const pat=getPat();
-  if(!pat){app.innerHTML=renderSetup();return;}
+  if(!pat||!REPO){app.innerHTML=renderSetup();return;}
   if(!DATA){app.innerHTML='<div class="spin">Loading\u2026</div>';fetchData(pat);return;}
   app.innerHTML=renderPage();
   setTimeout(()=>applyTheme(localStorage.getItem('dash:theme')||'auto'),20);
@@ -205,14 +207,17 @@ function toggleDetail(){SHOW_DETAIL=!SHOW_DETAIL;render();}
 function renderSetup(){
   return`<div class="setup">
     <h2>strategy</h2>
-    <p>Enter your GitHub token to load grant data from the private repo.</p>
-    <input id="pat-in" type="password" placeholder="github_pat_\u2026" autocomplete="off">
+    <p>Enter the data repo and your GitHub token.</p>
+    <input id="repo-in" type="text" placeholder="owner/repo" value="${esc(REPO)}" autocomplete="off" spellcheck="false">
+    <input id="pat-in" type="password" placeholder="github_pat_\u2026${getPat()?' (blank = keep)':''}" autocomplete="off">
     <button class="btn btn-p" style="width:100%;justify-content:center" onclick="doSetup()">Connect</button>
   </div>`;
 }
 function doSetup(){
-  const v=(document.getElementById('pat-in')?.value||'').trim();
-  if(!v)return;
+  const r=(document.getElementById('repo-in')?.value||'').trim();
+  const v=(document.getElementById('pat-in')?.value||'').trim()||getPat();
+  if(!r||!v)return;
+  localStorage.setItem(REPO_KEY,r);REPO=r;
   localStorage.setItem(PAT_KEY,v);
   render();
 }
@@ -375,7 +380,7 @@ function grantCard(g){
     <div class="gc-hdr" onclick="toggleGrant('${esc(g.id)}')">
       <div class="gc-dot"></div>
       <div class="gc-meta">
-        <div class="gc-short">${esc(g.shortname||g.id)}${chip(g.status||'',stMap[g.status]||'ch-past')}${g.role?chip(g.role,'ch-role'):''}${g.funded===false?chip('no funding','ch-unfunded'):''}${g.issue?`<a href="https://github.com/rfleiro/rfl_ops/issues/${g.issue}" target="_blank" rel="noopener" onclick="event.stopPropagation()" style="font-size:10px;color:var(--accent);text-decoration:none;font-weight:500;margin-left:2px">#${g.issue} ↗</a>`:''}</div>
+        <div class="gc-short">${esc(g.shortname||g.id)}${chip(g.status||'',stMap[g.status]||'ch-past')}${g.role?chip(g.role,'ch-role'):''}${g.funded===false?chip('no funding','ch-unfunded'):''}${g.issue?`<a href="https://github.com/${esc(REPO)}/issues/${g.issue}" target="_blank" rel="noopener" onclick="event.stopPropagation()" style="font-size:10px;color:var(--accent);text-decoration:none;font-weight:500;margin-left:2px">#${g.issue} ↗</a>`:''}</div>
         <div class="gc-full">${esc(g.title||'')}</div>
       </div>
       <span class="gc-chev">\u25b6</span>
@@ -386,7 +391,7 @@ function grantCard(g){
         <span><b>${fmtEur(g.amount_direct||0)}</b> direct</span>
         <span><b>${esc(g.agency||'')}</b></span>
         ${g.ref?`<span>${esc(g.ref)}</span>`:''}
-        ${g.issue?`<span><a href="https://github.com/rfleiro/rfl_ops/issues/${g.issue}" target="_blank" rel="noopener">#${g.issue}</a></span>`:''}
+        ${g.issue?`<span><a href="https://github.com/${esc(REPO)}/issues/${g.issue}" target="_blank" rel="noopener">#${g.issue}</a></span>`:''}
       </div>
       ${g.note?`<div class="gnote">${esc(g.note)}</div>`:''}
       ${(g.partners||[]).length?`<div class="gpart"><b>WITH</b> ${esc((g.partners||[]).join(' \u00b7 '))}</div>`:''}
