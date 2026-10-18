@@ -12,7 +12,11 @@
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%232563EB'/><rect x='22' y='22' width='24' height='24' rx='4' fill='white'/><rect x='54' y='22' width='24' height='24' rx='4' fill='white' opacity='.6'/><rect x='22' y='54' width='24' height='24' rx='4' fill='white' opacity='.6'/><rect x='54' y='54' width='24' height='24' rx='4' fill='white' opacity='.3'/></svg>">
 <link rel="stylesheet" href="shared/style.css?v=20261006-2230">
 <script>(function(){var t=localStorage.getItem('dash:theme');if(t&&t!=='auto')document.documentElement.setAttribute('data-theme',t);})()</script>
-<style>.hub-theme-btn{position:fixed;top:16px;right:16px;z-index:10;}</style>
+<style>.hub-theme-btn{position:fixed;top:16px;right:16px;z-index:10;}
+.hub{max-width:720px}
+#hub .hub-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+#hub .hub-grid .hub-item{margin-bottom:0}
+@media(max-width:420px){#hub .hub-grid{grid-template-columns:1fr}}</style>
 </head>
 <body>
 <div class="hub" id="hub"></div>
@@ -43,18 +47,19 @@ function toggleTheme(){
 // To add a dashboard: copy ops/ to <id>/, edit its manifest, add a row here.
 const DASHBOARDS = [
   { id:"ops",    name:"ops",    desc:"Lab operations \u00b7 tasks, people, projects", path:"ops/",    icon:"\u25E7", color:"#2563EB", live:true  },
+  { id:"focus", name:"focus", desc:"Key tasks \u00b7 planned vs actual hours \u00b7 timer", path:"focus/", icon:"\u25D4", color:"#D97706", live:true  },
+  { id:"strategy", name:"strategy", desc:"Grant portfolio \u00b7 objectives \u00b7 theme convergence", path:"strategy/", icon:"\u25C6", color:"#0D9488", live:true  },
+  { id:"issues", name:"issues", desc:"Kanban \u00b7 calendar view of all open issues \u2014 on demand", path:"issues/", icon:"\u25A4", color:"#0F766E", live:true  },
   { id:"people", name:"people", desc:"Lab members, alumni and timeline", path:"people/", icon:"\u25CF", color:"#7C3AED", live:true  },
   { id:"grants",  name:"grants",  desc:"Funding history, active grants and pipeline",  path:"grants/",  icon:"\u25B2", color:"#16A34A", live:true  },
-  { id:"strategy", name:"strategy", desc:"Grant portfolio \u00b7 objectives \u00b7 theme convergence", path:"strategy/", icon:"\u25C6", color:"#0D9488", live:true  },
   { id:"health", name:"health", desc:"Actividad \u00b7 comida \u00b7 peso y balance diario", path:"health/", icon:"\u2665", color:"#E11D48", live:true  },
-  { id:"issues", name:"issues", desc:"Kanban \u00b7 calendar view of all open issues \u2014 on demand", path:"issues/", icon:"\u25A4", color:"#0F766E", live:true  },
-  { id:"focus", name:"focus", desc:"Key tasks \u00b7 planned vs actual hours \u00b7 timer", path:"focus/", icon:"\u25D4", color:"#D97706", live:true  }];
+  { id:"sports", name:"sports", desc:"Training \u00b7 swim \u00b7 runs", path:"sports/", icon:"\u25CE", color:"#EA580C", live:false }];
 
 document.getElementById("hub").innerHTML =
   "<h1>dashboards</h1><div class='sub'>"
   + new Date().toLocaleDateString("en-GB",{weekday:"long",day:"numeric",month:"long"})
   + "</div>"
-  + DASHBOARDS.map(function(d){
+  + "<div class='hub-grid'>" + DASHBOARDS.map(function(d){
       const inner =
           "<div class='hub-ic' style=\"background:" + d.color + "1a;color:" + d.color + "\">" + d.icon + "</div>"
         + "<div class='hub-t'><div class='hub-n'>" + d.name + "</div>"
@@ -63,7 +68,7 @@ document.getElementById("hub").innerHTML =
       return d.live
         ? "<a class='hub-item' href='" + d.path + "'>" + inner + "</a>"
         : "<div class='hub-item soon'>" + inner + "</div>";
-    }).join("");
+    }).join("") + "</div>";
 
 // init theme button label
 (function(){var t=localStorage.getItem('dash:theme')||'auto';setTimeout(function(){applyTheme(t);},50);})();
