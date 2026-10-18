@@ -110,8 +110,9 @@ td.nm{white-space:normal;min-width:9rem}
 <body>
 <div id="setup" style="display:none">
   <h2>Conectar repositorio</h2>
-  <p>Token de GitHub para leer los datos del repo privado. Se guarda solo en este navegador (el mismo que usa health).</p>
-  <input type="password" id="tki" placeholder="github_pat_…" autocomplete="off">
+  <p>Repositorio de datos y token de GitHub. Se guardan solo en este navegador (los mismos que usa health).</p>
+  <input type="text" id="repoi" placeholder="owner/repo" autocomplete="off" spellcheck="false" style="margin-bottom:8px">
+  <input type="password" id="tki" placeholder="github_pat_… (vacío = mantener)" autocomplete="off">
   <button onclick="saveToken()">Conectar</button>
 </div>
 <div id="app" style="display:none">
@@ -124,7 +125,7 @@ td.nm{white-space:normal;min-width:9rem}
   <div class="wrap"><div id="content"><div class="empty">Cargando…</div></div></div>
 </div>
 <script>
-const REPO="rfleiro/FamilyOps",SPATH="sports/strava.json",HPATH="health/data.json";
+let REPO=localStorage.getItem("rh_repo")||"";const SPATH="sports/strava.json",HPATH="health/data.json";
 const APRIL=["2026-04-01","2026-04-30"];
 const SMAP={Swim:"swim",Run:"run",TrailRun:"run",VirtualRun:"run",WeightTraining:"strength",Workout:"strength",Crossfit:"strength",Yoga:"strength",Ride:"ride",VirtualRide:"ride",GravelRide:"ride",MountainBikeRide:"ride",EBikeRide:"ride",Walk:"walk",Hike:"walk"};
 const TNAME={swim:"natación",run:"carrera",strength:"fuerza",ride:"bici",walk:"caminar"};
@@ -154,8 +155,8 @@ function initTheme(){const s=localStorage.getItem("rh_theme");if(s)document.docu
 
 /* boot / data */
 function show(id){document.getElementById("setup").style.display=id==="setup"?"block":"none";document.getElementById("app").style.display=id==="app"?"block":"none";}
-async function init(){initTheme();token=localStorage.getItem("rh_token");if(!token){show("setup");return;}show("app");buildTabs();await load();render();}
-async function saveToken(){const t=document.getElementById("tki").value.trim();if(!t)return;localStorage.setItem("rh_token",t);token=t;show("app");buildTabs();await load();render();}
+async function init(){initTheme();token=localStorage.getItem("rh_token");if(!token||!REPO){show("setup");const r=document.getElementById("repoi");if(r)r.value=REPO;return;}show("app");buildTabs();await load();render();}
+async function saveToken(){const r=document.getElementById("repoi").value.trim(),t=document.getElementById("tki").value.trim()||localStorage.getItem("rh_token")||"";if(!r||!t)return;localStorage.setItem("rh_repo",r);localStorage.setItem("rh_token",t);REPO=r;token=t;show("app");buildTabs();await load();render();}
 function b64utf8(b64){const bin=atob(b64.replace(/\n/g,""));const b=new Uint8Array(bin.length);for(let i=0;i<bin.length;i++)b[i]=bin.charCodeAt(i);return new TextDecoder("utf-8").decode(b);}
 async function getJSON(path){
   const res=await fetch("https://api.github.com/repos/"+REPO+"/contents/"+path,{headers:{Authorization:"Bearer "+token,"X-GitHub-Api-Version":"2022-11-28"},cache:"no-store"});
