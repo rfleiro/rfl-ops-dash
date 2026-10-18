@@ -83,9 +83,10 @@ function toggleTheme(){
 }
 
 const PAT_KEY = "dash:grants:pat";
-const REPO    = "rfleiro/rfl_ops";
+const REPO_KEY  = "dash:grants:repo", REPO_FALL = "dash:ops:repo";
+let REPO = localStorage.getItem(REPO_KEY) || localStorage.getItem(REPO_FALL) || "";
 const CSVPATH = "data/grants.csv";
-const BUILD   = "20260924-1130";
+const BUILD   = "20261018-2130";
 
 let grants = [], selected = null, showPast = false;
 
@@ -304,14 +305,17 @@ function showSetup(err){
   document.getElementById("app").innerHTML=`
 <div class="setup">
   <h1>grants</h1>
-  <p>Enter a GitHub PAT with <strong>Contents: Read</strong> access to rfl_ops.</p>
+  <p>Enter the data repo and a GitHub PAT with <strong>Contents: Read</strong> access to it.</p>
   ${err?`<p style="color:var(--danger);font-size:12px;margin-bottom:12px">${err}</p>`:""}
+  <input type="text" id="ri" placeholder="owner/repo" value="${(REPO||"").replace(/"/g,"&quot;")}" autocomplete="off" spellcheck="false" style="margin-bottom:8px">
   <input type="password" id="pi" placeholder="github_pat_&hellip;" autocomplete="off">
   <button class="btn btn-p" style="width:100%;justify-content:center" id="conn-btn">Connect</button>
 </div>`;
   const go=()=>{
-    const pat=document.getElementById("pi")?.value.trim();
-    if(!pat) return;
+    const repo=document.getElementById("ri")?.value.trim();
+    const pat=document.getElementById("pi")?.value.trim()||localStorage.getItem(PAT_KEY)||"";
+    if(!repo||!pat) return;
+    localStorage.setItem(REPO_KEY,repo); REPO=repo;
     localStorage.setItem(PAT_KEY,pat);
     loadData(pat);
   };
@@ -374,7 +378,7 @@ document.addEventListener("mousemove",e=>{
 
 (async()=>{
   const pat=localStorage.getItem(PAT_KEY);
-  if(pat) await loadData(pat); else showSetup();
+  if(pat&&REPO) await loadData(pat); else showSetup();
 })();
 
 // init theme button label
