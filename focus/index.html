@@ -88,11 +88,11 @@ table.grid{border-collapse:separate;border-spacing:0;width:100%;min-width:520px;
 .grid td.col .bd{margin:0 5px}
 .grid td.col{cursor:pointer}
 .bd .cell{display:flex;align-items:center;justify-content:center;height:24px;margin:0 2px;position:relative;top:3px;border-radius:7px;font-size:12px;font-weight:600;color:var(--text)}
-.bd .cell[data-state="plan"]{background:color-mix(in srgb,var(--c) calc(var(--i,.2)*100%),transparent)}
-.bd .cell[data-state="done"]{background:var(--c);color:#fff}
-.bd .cell[data-state="part"]{background:color-mix(in srgb,var(--c) 28%,transparent);border:1.5px solid var(--c)}
-.bd .cell[data-state="short"]{border:1.5px dashed var(--warning);color:var(--warning);background:var(--warning-bg)}
-.bd .cell[data-state="extra"]{background:var(--surface2);border:1.5px solid var(--c)}
+.bd .cell[data-state="plan"],.yb .cell[data-state="plan"]{background:color-mix(in srgb,var(--c) calc(var(--i,.2)*100%),transparent)}
+.bd .cell[data-state="done"],.yb .cell[data-state="done"]{background:var(--c);color:#fff}
+.bd .cell[data-state="part"],.yb .cell[data-state="part"]{background:color-mix(in srgb,var(--c) 28%,transparent);border:1.5px solid var(--c)}
+.bd .cell[data-state="short"],.yb .cell[data-state="short"]{border:1.5px dashed var(--warning);color:var(--warning);background:var(--warning-bg)}
+.bd .cell[data-state="extra"],.yb .cell[data-state="extra"]{background:var(--surface2);border:1.5px solid var(--c)}
 .bd input{display:block;width:calc(100% - 4px);height:24px;margin:3px 2px 0;text-align:center;font-family:inherit;font-size:12px;border:1px solid var(--accent);border-radius:7px;background:var(--surface);color:var(--text);padding:0;position:relative;z-index:3}
 .hd{position:absolute;left:50%;transform:translateX(-50%);width:30px;height:14px;display:flex;align-items:center;justify-content:center;cursor:ns-resize;touch-action:none;z-index:2}
 .hd::after{content:'';width:16px;height:3px;border-radius:2px;background:var(--c);opacity:.45}
@@ -101,6 +101,28 @@ table.grid{border-collapse:separate;border-spacing:0;width:100%;min-width:520px;
 .grid tfoot td{position:sticky;bottom:0;z-index:4;background:var(--surface);font-weight:600;color:var(--text-2);border-top:1px solid var(--border-strong);height:34px}
 .grid tfoot td.d{z-index:5}
 .vlbl{font-size:11px;color:var(--text-2);font-weight:500;text-transform:none;letter-spacing:0}
+.tabs.ftabs{width:max-content;margin-bottom:12px}
+.yscroll{overflow:auto;max-height:calc(76px + 12*36px + 40px);position:relative;border-radius:var(--rs)}
+table.year{border-collapse:separate;border-spacing:0;table-layout:fixed}
+.year th,.year td{padding:0;text-align:center;font-size:11px}
+.year thead th{position:sticky;background:var(--surface);z-index:4;color:var(--text-2);font-weight:600}
+.year thead tr.r1 th{top:0;height:24px;text-align:left;padding-left:4px;font-size:10px;text-transform:uppercase;letter-spacing:.04em;color:var(--text-3);border-left:1px solid var(--border)}
+.year thead tr.r2 th{top:24px;height:26px;font-variant-numeric:tabular-nums;cursor:pointer;font-weight:500}
+.year thead th.yn,.year tbody td.yn,.year tfoot td.yn{position:sticky;left:0;z-index:5;background:var(--surface);text-align:left;padding-left:8px;border-left:none}
+.year thead th.now{color:var(--accent);background:var(--accent-bg)}
+.year td.yn{font-size:12px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;border-right:1px solid var(--border)}
+.year td.yn small{display:block;font-weight:400;font-size:9px;color:var(--text-3)}
+.year td.yn.fin{opacity:.6}
+.year td.yw{height:36px;cursor:pointer}
+.year td.yw.now{background:var(--accent-bg)}
+.yb{height:28px;margin:4px 0;position:relative}
+.yb.band{background:color-mix(in srgb,var(--c) 13%,var(--surface2))}
+.yb.band.bs{border-radius:14px 0 0 14px;margin-left:3px}
+.yb.band.be{border-radius:0 14px 14px 0;margin-right:3px}
+.yb.band.bs.be{border-radius:14px}
+.yb .cell{display:flex;align-items:center;justify-content:center;height:22px;margin:3px 2px;border-radius:6px;font-size:10px;font-weight:600;color:var(--text)}
+.year tfoot td{position:sticky;bottom:0;z-index:4;background:var(--surface);border-top:1px solid var(--border-strong);height:34px;font-weight:600;color:var(--text-2)}
+.year tfoot td.yn{z-index:6}
 .legend{display:flex;flex-wrap:wrap;gap:10px;font-size:10px;color:var(--text-3);margin-top:8px}
 .legend span i{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:4px;vertical-align:-1px}
 
@@ -132,7 +154,7 @@ const REPO_KEY='dash:focus:repo', REPO_FALL='dash:ops:repo';
 const LS_STATE='dash:focus:state', LS_CACHE='dash:focus:cache', LS_STALE='dash:focus:stale:';
 const FOCUS_PATH='data/focus.json';
 const JOURNAL_PATH='brief/ops/today_changes.json';
-const BUILD='20261018-1815';
+const BUILD='20261018-2005';
 const IDLE_MS=3*3600e3;           // a timer running longer than this gets a prompt
 const PALETTE=['#2563EB','#16A34A','#D97706','#7C3AED','#E11D48','#0D9488','#DB2777','#65A30D'];
 
@@ -163,7 +185,9 @@ let view='loading', errMsg='', editMode=false, sync='saved', syncMsg='';
 let saving=false, queued=false, pushTimer=null, idleDismissed=false;
 const ROW=30, HH=110, FH=34, VIEW_DAYS=14, PIN_KEY='dash:focus:pins';
 let PINS={};try{PINS=JSON.parse(localStorage.getItem(PIN_KEY)||'{}')||{};}catch(e){PINS={};}
-let gridScrollTop=null, VIEW=[null,null];
+let gridScrollTop=null, VIEW=[null,null], yearScrollLeft=null;
+let tab=localStorage.getItem('dash:focus:tab')==='year'?'year':'days';
+const YW=40;
 
 function emptyFocus(){return {segments:[],running:null,plan:{days:{},tracks:{},newTracks:[],removedTracks:[],events:{},window:null},updated:null};}
 function normFocus(f){
@@ -280,7 +304,7 @@ function commit(opts){
 }
 
 // ─── derived data ────────────────────────────────────────────────────────────
-function win(){return Object.assign({start:FOCUS.window.start,end:FOCUS.window.end},W.plan.window||{});}
+function win(){return {start:FOCUS.window.start,end:FOCUS.window.end};}   // range lives in focus.json only; legacy plan.window overrides are ignored
 function tracks(){
   const out=(FOCUS.tracks||[]).filter(t=>W.plan.removedTracks.indexOf(t.id)<0).map((t,i)=>Object.assign({color:PALETTE[i%PALETTE.length]},t,W.plan.tracks[t.id]||{}));
   W.plan.newTracks.forEach(t=>{if(!out.some(o=>o.id===t.id))out.push(Object.assign({},t));});
@@ -496,7 +520,6 @@ function setWindow(id,start,end){
   if(n){n.start=start;n.end=end;}else{W.plan.tracks[id]=Object.assign({},W.plan.tracks[id],{start:start,end:end});}
   commit({});
 }
-function extendWindow(days){const w=win();W.plan.window={start:w.start,end:addDays(w.end,days)};commit({});}
 let drag=null,dragTimer=null,dragPtr=null;
 function rowAt(x,y){const el=document.elementFromPoint?document.elementFromPoint(x,y):null;const tr=el&&el.closest?el.closest('tr[data-d]'):null;return tr?tr.getAttribute('data-d'):null;}
 function paintBand(id,start,end){
@@ -552,6 +575,32 @@ function updateView(){
   const l=document.getElementById('view-lbl');
   if(l){const f=x=>parseDate(x).toLocaleDateString('en-GB',{day:'numeric',month:'short'});l.textContent=f(VIEW[0])+' – '+f(VIEW[1]);}
   document.querySelectorAll('[data-s^="v:"]').forEach(function(el){el.textContent=sumText(el.getAttribute('data-s'));});
+}
+function mondayOf(s){const d=parseDate(s);d.setDate(d.getDate()-((d.getDay()+6)%7));return localDate(d);}
+function weekList(){const w=win(),out=[];let m=mondayOf(w.start);for(let i=0;i<300&&m<=w.end;i++){out.push(m);m=addDays(m,7);}return out;}
+function weekSum(id,mon){let p=0,a=0;for(let i=0;i<7;i++){const d=addDays(mon,i);p+=planFor(d,id);a+=actualFor(d,id);}return {p:p,a:a};}
+function weekPhase(mon){const end=addDays(mon,6);return end<TODAY?'past':(mon<=TODAY?'now':'future');}
+function ycState(p,a,mon){
+  const ph=weekPhase(mon);
+  if(ph==='future')return p?'plan':'';
+  if(ph==='now'){if(!a)return p?'plan':'';if(p&&a>=p-0.125)return 'done';return p?'part':'extra';}
+  if(!p&&!a)return '';if(!p)return 'extra';return a>=p-0.125?'done':'short';
+}
+function ycText(id,mon){
+  const x=weekSum(id,mon),p=x.p,a=x.a,ph=weekPhase(mon);
+  if(ph==='future')return p?fmtN(p):'';
+  if(!p&&!a)return '';
+  if(!p)return fmtN(a)||'·';
+  if(!a)return ph==='now'?fmtN(p):'0/'+fmtN(p);
+  return fmtN(a)+'/'+fmtN(p);
+}
+function ylText(mon){let p=0,a=0;tracks().forEach(t=>{const x=weekSum(t.id,mon);p+=x.p;a+=x.a;});
+  const ph=weekPhase(mon);if(ph==='future')return p?fmtN(p):'';if(!p&&!a)return '';return a?fmtN(a)+'/'+fmtN(p):(ph==='now'?fmtN(p):'0/'+fmtN(p));}
+function setTab(x){tab=x;try{localStorage.setItem('dash:focus:tab',x);}catch(e){}render();}
+function gotoWeek(mon){
+  const i=dayList().indexOf(mon);
+  gridScrollTop=Math.max(0,i)*ROW;
+  setTab('days');
 }
 function toggleEdit(){editMode=!editMode;render();}
 
@@ -668,6 +717,40 @@ function gridPanel(){
     +'<div class="legend"><span><i style="background:color-mix(in srgb,#2563EB 13%,var(--surface2))"></i>track window (drag its grip to resize)</span><span><i style="background:#2563EB"></i>plan met</span><span><i style="border:1.5px dashed var(--warning)"></i>below plan</span><span>tap a cell to edit: Enter = next day, Tab = next track, Esc = cancel · » collapses a track to the right</span></div></div>';
   return h;
 }
+function yearPanel(){
+  const Wk=weekList(),T=tracks().slice().sort((a,b)=>(a.start||'9999').localeCompare(b.start||'9999')||String(a.name).localeCompare(String(b.name)));
+  const w=win();
+  let h='<div class="panel"><div class="sec-hd">Year<span class="sp"></span><span class="vlbl">tap a week to open it in Days</span></div>'
+    +'<div class="yscroll" id="yscroll"><table class="year" style="width:'+(120+YW*Wk.length)+'px"><colgroup><col style="width:120px">'+Wk.map(()=>'<col style="width:'+YW+'px">').join('')+'</colgroup><thead><tr class="r1"><th class="yn"></th>';
+  let i=0;
+  while(i<Wk.length){
+    const mo=parseDate(Wk[i]).getMonth(),yr=parseDate(Wk[i]).getFullYear();let j=i;
+    while(j<Wk.length&&parseDate(Wk[j]).getMonth()===mo)j++;
+    h+='<th colspan="'+(j-i)+'">'+parseDate(Wk[i]).toLocaleDateString('en-GB',{month:'short'})+(mo===0||i===0?' '+yr:'')+'</th>';
+    i=j;
+  }
+  h+='</tr><tr class="r2"><th class="yn"></th>';
+  Wk.forEach(m=>{h+='<th class="'+(weekPhase(m)==='now'?'now':'')+'" onclick="gotoWeek(\''+m+'\')" title="Week of '+m+'">'+parseDate(m).getDate()+'</th>';});
+  h+='</tr></thead><tbody>';
+  T.forEach(function(t){
+    const fin=t.end&&t.end<TODAY;
+    h+='<tr><td class="yn'+(fin?' fin':'')+'" style="--c:'+esc(t.color)+'"><span style="color:var(--c)">'+esc(t.name)+'</span><small>'+(t.start&&t.end?esc(t.start.slice(5))+' → '+esc(t.end.slice(5)):'no window')+'</small></td>';
+    Wk.forEach(function(m){
+      const me=addDays(m,6),inb=!!(t.start&&t.end&&t.start<=me&&t.end>=m);
+      const bs=inb&&t.start>=m,be=inb&&t.end<=me,ph=weekPhase(m);
+      h+='<td class="yw'+(ph==='now'?' now':'')+'" style="--c:'+esc(t.color)+'" onclick="gotoWeek(\''+m+'\')"><div class="yb'+(inb?' band':'')+(bs?' bs':'')+(be?' be':'')+'">'
+        +'<div class="cell" data-s="yc:'+esc(t.id)+':'+m+'"'+(ph==='now'?' data-live="1"':'')+'></div></div></td>';
+    });
+    h+='</tr>';
+  });
+  h+='</tbody><tfoot><tr><td class="yn">Load h/week</td>';
+  let mx=1;Wk.forEach(m=>{let p=0;tracks().forEach(t=>{p+=weekSum(t.id,m).p;});if(p>mx)mx=p;});
+  Wk.forEach(function(m){
+    let p=0;tracks().forEach(t=>{p+=weekSum(t.id,m).p;});
+    h+='<td data-s="yl:'+m+'"'+(weekPhase(m)==='now'?' data-live="1"':'')+' style="background:color-mix(in srgb,var(--accent) '+Math.round(40*p/mx)+'%,var(--surface))"></td>';
+  });
+  return h+'</tr></tfoot></table></div><div class="legend"><span>pills = key-task windows (resize them in Days)</span><span>cells: planned hours per week, <b>done/planned</b> once the week has started</span><span>bottom row: total planned load per week</span></div></div>';
+}
 function tracksPanel(){
   const T=orderedTracks();
   let h='<div class="panel"><div class="sec-hd">Tracks</div>';
@@ -706,7 +789,14 @@ function render(){
   if(view==='error'){app.innerHTML='<div class="spin">Failed to load: '+esc(errMsg)+'<br><br><button class="btn" onclick="load()">Retry</button> <button class="btn" onclick="localStorage.removeItem(\''+PAT_KEY+'\');localStorage.removeItem(\''+REPO_KEY+'\');PAT=\'\';REPO=\'\';view=\'setup\';render()">Change token / repo</button></div>';return;}
   cellEd=null;
   const old=document.getElementById('gscroll');if(old)gridScrollTop=old.scrollTop;
-  app.innerHTML=hdr()+banners()+timerPanel()+sessionsPanel()+gridPanel()+tracksPanel()+'<div class="footer">build '+esc(BUILD)+'</div>';
+  const oy=document.getElementById('yscroll');if(oy)yearScrollLeft=oy.scrollLeft;
+  const tabs='<div class="tabs ftabs"><button class="tab'+(tab==='days'?' on':'')+'" onclick="setTab(\'days\')">Days</button><button class="tab'+(tab==='year'?' on':'')+'" onclick="setTab(\'year\')">Year</button></div>';
+  app.innerHTML=hdr()+banners()+timerPanel()+tabs+(tab==='year'?yearPanel():sessionsPanel()+gridPanel())+tracksPanel()+'<div class="footer">build '+esc(BUILD)+'</div>';
+  const ys=document.getElementById('yscroll');
+  if(ys){
+    ys.addEventListener('scroll',function(){yearScrollLeft=ys.scrollLeft;});
+    if(yearScrollLeft==null){const wk=weekList(),i=wk.indexOf(mondayOf(TODAY));ys.scrollLeft=Math.max(0,(i-1)*YW);yearScrollLeft=ys.scrollLeft;}else ys.scrollLeft=yearScrollLeft;
+  }
   const sc=document.getElementById('gscroll');
   if(sc){
     sc.addEventListener('scroll',function(){if(!sc._raf)sc._raf=requestAnimationFrame(function(){sc._raf=0;updateView();});});
@@ -720,6 +810,8 @@ function refreshAll(liveOnly){
     const key=el.getAttribute('data-s');if(!key)return;
     const k=key.split(':')[0];
     if(k==='cell'){const p=key.split(':'),date=p[1],id=p.slice(2).join(':');el.textContent=cellText(date,id);el.setAttribute('data-state',cellState(date,id));el.style.setProperty('--i',Math.min(.8,.15+.2*planFor(date,id)));}
+    else if(k==='yc'){const p=key.split(':'),id=p[1],mon=p[2],x=weekSum(id,mon);el.textContent=ycText(id,mon);el.setAttribute('data-state',ycState(x.p,x.a,mon));}
+    else if(k==='yl'){el.textContent=ylText(key.slice(3));}
     else if(k==='trk'){const h=todayJournalHours(key.slice(4));el.textContent=h?fmtH(h)||'<¼h':'';}
     else el.textContent=sumText(key);
   });
