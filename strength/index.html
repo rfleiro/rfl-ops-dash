@@ -133,7 +133,7 @@ button{cursor:pointer}
 <script>
 "use strict";
 /* ===================== datos y lógica ===================== */
-const AREAS=[["lumbar","Lumbar","l"],["hombro","Hombro","s"],["rodilla","Rodilla","k"],["cadera","Cadera","h"],["cuello","Cuello","n"],["codo","Codo o muñeca","e"]];
+const AREAS=[["lumbar","Lumbar","l"],["hombro","Hombro","s"],["rodilla","Rodilla","k"],["cadera","Cadera","h"],["aquiles","Aquiles","a"],["cuello","Cuello","n"],["codo","Codo o muñeca","e"]];
 const EQ=[["mat","Esterilla"],["band","Gomas largas"],["mini","Gomas cortas"],["open","Gomas abiertas"],["db","Mancuernas"],["kb","Kettlebell"],["bench","Banco"],["roman","Banco romano"],["step","Escalón"],["box","Cajón pliométrico"],["pullup","Barra de dominadas"],["trx","TRX"],["rope","Cuerda de saltar"],["outdoor","Calle o exterior"],["cable","Poleas"]];
 const KW={
   mat:/esterilla|colchoneta|\bmat\b/i,
@@ -170,7 +170,7 @@ const SITES=Object.assign({},DEFSITES,LS.get("st_sites",{}));
 /* Biblioteca de FamilyOps/fitness/rafa/strength/library.md (fase 1) + extras marcados con x:1.
    Estrés por zona: 0 no carga, 1 carga suave, 2 carga notable.
    Con molestia solo se admite estrés 0-1 en esa zona; con dolor, solo 0.
-   Claves: l lumbar, s hombro, k rodilla, h cadera, n cuello, e codo o muñeca. */
+   Claves: l lumbar, s hombro, k rodilla, h cadera, a aquiles, n cuello, e codo o muñeca. */
 function parseSt(s){const o={};(s||"").split(" ").forEach(p=>{if(p)o[p[0]]=+p.slice(1);});return o;}
 function parseEq(s){return s?s.split("|").map(a=>a.split("+")):[[]];}
 const LIB=[],WARM=[],COOL=[];
@@ -184,9 +184,9 @@ function T(list,pil,id,name,secs,eq,st,cue,uni,f){
 X("deadbug","Dead bug","core","","r",3,8,40,"l0","Lumbar pegada al suelo todo el rato y exhala al extender. Lento, 3 s por repetición. Si se despega, acorta el rango.",{alt:1,w:2});
 X("birddog","Bird-dog","core","","r",3,6,40,"l1 s1","Cadera cuadrada al suelo, sin arquear. Alarga, no subas. Pausa de 3 s arriba.",{alt:1});
 X("pallof","Press Pallof con goma","core","band|cable","r",3,10,40,"l0","Goma anclada a la columna o a la barra. Costillas abajo y glúteos activos: el tronco no gira. Pausa de 2 s con los brazos estirados.",{uni:1,w:1.5});
-X("hollow","Hollow body","core","","t",3,22,40,"l1","Lumbar pegada al suelo. Si se despega, sube las piernas o flexiona las rodillas.");
+X("hollow","Hollow body","core","","t",3,22,40,"l1 h1","Lumbar pegada al suelo. Si se despega, sube las piernas o flexiona las rodillas.");
 X("plank","Plancha frontal","core","","t",3,35,40,"l1 s1 e1","Glúteos apretados, pelvis en retroversión suave y sin hundir la cadera.");
-X("sideplank","Plancha lateral","core","","t",3,25,40,"l1 s1","Línea recta hombro-cadera-tobillo. Con las rodillas apoyadas si hace falta.",{uni:1});
+X("sideplank","Plancha lateral","core","","t",3,25,40,"l1 s1 h1","Línea recta hombro-cadera-tobillo. Con las rodillas apoyadas si hace falta.",{uni:1});
 X("suitcase","Suitcase carry (isométrico)","core","kb|db","t",3,30,45,"l1","No te inclines hacia ningún lado y mantén los hombros nivelados.",{uni:1});
 X("fallout","TRX fallout","core","trx","r",3,8,60,"l2 s1","Solo hasta donde mantienes la lumbar neutra. Rango corto: es exigente, empieza conservador.",{w:.35});
 X("romanext","Extensión en banco romano","core","roman","r",2,10,60,"l2","Sin peso y controlado. Mueve la cadera con la columna neutra, sube solo hasta la línea del cuerpo y nunca hiperextiendas. Si notas molestia, reduce el rango o sáltatelo hoy.",{w:.45});
@@ -200,24 +200,24 @@ X("pullover","Pullover con mancuerna en el suelo","pullh","db","r",3,10,50,"s1",
 X("kbrow","Remo con kettlebell inclinado","pullh","kb","r",3,10,60,"l2 e1","Bisagra de cadera con espalda neutra. Si la lumbar se carga, vuelve al remo con apoyo.",{uni:1});
 X("facepull","Face pull con goma","prehab","band|cable","r",3,15,40,"","Codos altos. Complementa la brazada y protege el hombro.");
 /* bisagra y glúteo */
-X("swing","Kettlebell swing","hinge","kb","r",5,10,60,"l2 h1","Es bisagra, no sentadilla: la potencia sale de la cadera y arriba haces plancha de pie. Calidad, no fatiga.");
+X("swing","Kettlebell swing","hinge","kb","r",5,10,60,"l2 h1 a1","Es bisagra, no sentadilla: la potencia sale de la cadera y arriba haces plancha de pie. Calidad, no fatiga.");
 X("rdl","Peso muerto rumano","hinge","db|kb","r",3,10,60,"l2 h1","Rodillas algo flexionadas y peso pegado a las piernas. Baja en 3 s y solo hasta donde mantienes la columna recta.");
 X("trxcurl","Curl femoral en TRX","hinge","trx","r",3,8,60,"l1 h1","Cadera alta todo el rato. Protege los isquios del corredor. Si cuesta, puente isométrico con los pies en el TRX.");
 X("hipthrust","Hip thrust (puente de glúteo)","glute","","r",3,12,45,"l1","Espalda en banco romano o sofá. Barbilla metida y costillas abajo; empuja con el talón y pausa 2 s arriba sin hiperextender.");
 X("hipthrust1","Hip thrust a una pierna","glute","","r",3,8,50,"l1","Pelvis nivelada, sin rotar.",{uni:1});
 /* una pierna */
-X("splitsq","Split squat","single","","r",3,8,60,"k1","Tronco erguido y rodilla delantera siguiendo la línea del pie. Con mancuernas o kettlebell si quieres carga.",{uni:1});
-X("bulg","Sentadilla búlgara","single","roman|step|bench","r",3,7,75,"k2 l1","Pie trasero en el banco romano o en un escalón. Pie delantero bien adelantado y tronco algo inclinado con la columna neutra.",{uni:1});
-X("stepup","Step-up","single","step","r",3,8,60,"k1","Empuja con la pierna de arriba; no te impulses con la de abajo.",{uni:1});
-X("revlunge","Zancada reversa","single","","r",3,8,60,"k1 l1","Más amable con la rodilla que la frontal. Tronco estable.",{uni:1});
+X("splitsq","Split squat","single","","r",3,8,60,"k1 h1 a1","Tronco erguido y rodilla delantera siguiendo la línea del pie. Con mancuernas o kettlebell si quieres carga.",{uni:1});
+X("bulg","Sentadilla búlgara","single","roman|step|bench","r",3,7,75,"k2 l1 h2 a1","Pie trasero en el banco romano o en un escalón. Pie delantero bien adelantado y tronco algo inclinado con la columna neutra.",{uni:1});
+X("stepup","Step-up","single","step","r",3,8,60,"k1 h1 a1","Empuja con la pierna de arriba; no te impulses con la de abajo.",{uni:1});
+X("revlunge","Zancada reversa","single","","r",3,8,60,"k1 l1 h1 a1","Más amable con la rodilla que la frontal. Tronco estable.",{uni:1});
 X("sldl","RDL a una pierna","single","kb|db","r",3,6,60,"l1 h1","Cadera cuadrada, sin abrirla, y espalda neutra. Ligero: control antes que peso.",{uni:1});
-X("calf","Elevación de gemelos a una pierna","calf","","r",3,12,40,"","Rango completo, pausa arriba y bajada lenta. En el borde de un escalón si puedes.",{uni:1});
+X("calf","Elevación de gemelos a una pierna","calf","","r",3,12,40,"a2","Rango completo, pausa arriba y bajada lenta. En el borde de un escalón si puedes.",{uni:1});
 /* explosividad (fase 2) */
-X("sqjump","Salto vertical","power","","r",3,5,60,"l1 k2","Aterrizaje suave y silencioso, con las rodillas alineadas.");
-X("broad","Salto horizontal (broad jump)","power","outdoor","r",3,4,75,"l1 k2","Aterriza estable y pegado al suelo. Potencia de salida en natación.");
-X("boxjump","Salto al cajón","power","box","r",3,5,75,"l1 k2","Sube saltando y baja andando para ahorrar impacto.");
-X("sprint","Sprint corto en cuesta","power","outdoor","t",6,12,75,"l1 k1 h2","Al 90 %, tras un calentamiento completo y nunca con fatiga previa. Vuelve andando.");
-X("kbpower","Swing potente","power","kb","r",3,6,60,"l2 h1","Series cortas con máxima intención.");
+X("sqjump","Salto vertical","power","","r",3,5,60,"l1 k2 a2","Aterrizaje suave y silencioso, con las rodillas alineadas.");
+X("broad","Salto horizontal (broad jump)","power","outdoor","r",3,4,75,"l1 k2 a2","Aterriza estable y pegado al suelo. Potencia de salida en natación.");
+X("boxjump","Salto al cajón","power","box","r",3,5,75,"l1 k2 a2","Sube saltando y baja andando para ahorrar impacto.");
+X("sprint","Sprint corto en cuesta","power","outdoor","t",6,12,75,"l1 k1 h2 a2","Al 90 %, tras un calentamiento completo y nunca con fatiga previa. Vuelve andando.");
+X("kbpower","Swing potente","power","kb","r",3,6,60,"l2 h1 a1","Series cortas con máxima intención.");
 /* extras que no están en library.md (por el material que tienes) */
 X("swimband","Gesto de nadador con goma abierta","prehab","open","r",3,12,40,"s1","Reproduce la entrada y el agarre de la brazada con control. Codo alto y sin encoger el hombro.",{x:1});
 X("exrot","Rotación externa con goma","prehab","open|band","r",3,12,40,"","Codo pegado al costado y gira solo el antebrazo hacia fuera, lento.",{uni:1,x:1});
@@ -235,7 +235,7 @@ T(WARM,"warm","deadbugw","Dead bug suave",40,"","l0","6 por lado, lento y con la
 T(WARM,"warm","glutact","Puente de glúteo lento",40,"","l0","12 puentes lentos con pausa de 2 s arriba.",0,"BF");
 T(WARM,"warm","birdw","Bird-dog suave",40,"","l1 s1","6 por lado con pausa de 3 s.",0,"BF");
 T(WARM,"warm","hingedrill","Bisagra de cadera sin carga",40,"","l1","Manos en la cadera y empuja el culo atrás con la espalda larga.",0,"BF");
-T(WARM,"warm","rope","Comba suave",40,"rope","l1 k1","Rebotes bajos y ligeros sobre la punta del pie, sin impacto fuerte.",0,"*");
+T(WARM,"warm","rope","Comba suave",40,"rope","l1 k1 a2","Rebotes bajos y ligeros sobre la punta del pie, sin impacto fuerte.",0,"*");
 /* vuelta a la calma */
 T(COOL,"cool","hangc","Colgarse de la barra para descomprimir",30,"pullup","s1 e1","Cuélgate relajado y respira: descomprime la espalda tras la sesión.",0,"AF");
 T(COOL,"cool","child","Postura del niño",40,"","","Siéntate sobre los talones con los brazos al frente y respira hondo hacia la espalda.",0,"*");
@@ -387,7 +387,7 @@ const esc=s=>String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",
 const S={
   site:SITES[LS.get("st_site","home")]?LS.get("st_site","home"):"home",
   mins:LS.get("st_mins",30),
-  pain:{lumbar:0,hombro:0,rodilla:0,cadera:0,cuello:0,codo:0},
+  pain:{lumbar:0,hombro:0,rodilla:0,cadera:0,aquiles:0,cuello:0,codo:0},
   edit:false,draft:null,view:"setup",sess:null,
   focus:"auto",power:LS.get("st_power",false),ign:false,recent:null
 };
