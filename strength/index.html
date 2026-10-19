@@ -332,7 +332,7 @@ function generate(o){
   if(o.power){
     if(m<20)s.noPower="con menos de 20 min";
     else if(o.fatigue)s.noPower="por la carga reciente";
-    else if(pain.lumbar>0||soft)s.noPower="por la molestia lumbar";
+    else if(["lumbar","rodilla","cadera","aquiles"].some(k=>(pain[k]||0)>0))s.noPower="por las molestias";
     else{
       const pl=LIB.filter(e=>e.pil==="power"&&avail(e,have)&&painOk(e,pain));
       if(pl.length)s.power=pick(pl,recent);else s.noPower="sin material o por las molestias";
