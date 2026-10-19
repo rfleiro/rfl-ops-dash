@@ -109,7 +109,7 @@ details.how li,.howbox li{margin-bottom:3px}
 .run{display:flex;flex-direction:column;gap:12px;min-height:calc(100dvh - 120px)}
 .ph{align-self:center;font-size:13px;font-weight:600;padding:3px 12px;border-radius:99px}
 .ph.main{background:var(--st-bg);color:var(--st-c)}
-.ph.rest{background:var(--sw-bg);color:var(--sw-c)}
+.ph.rest,.ph.change{background:var(--sw-bg);color:var(--sw-c)}
 .ph.warm,.ph.cool,.ph.prep,.ph.switch{background:var(--ru-bg);color:var(--ru-c)}
 .pbar{height:4px;border-radius:2px;background:var(--track);overflow:hidden}
 .pbar i{display:block;height:100%;background:var(--st-c);width:0}
@@ -182,6 +182,9 @@ const LIB=[],WARM=[],COOL=[];
 function X(id,name,pil,eq,mode,sets,val,rest,st,cue,o){
   LIB.push(Object.assign({id,name,pil,eq:parseEq(eq),mode,sets,val,rest,st:parseSt(st),cue},o||{}));
 }
+function Wr(list,pil,id,name,reps,eq,st,cue,o,f){
+  list.push(Object.assign({id,name,pil,eq:parseEq(eq),mode:"r",sets:1,val:reps,rest:0,st:parseSt(st),cue,f:f||"*"},o||{}));
+}
 function T(list,pil,id,name,secs,eq,st,cue,uni,f){
   list.push({id,name,pil,eq:parseEq(eq),mode:"t",sets:1,val:secs,rest:0,st:parseSt(st),cue,uni:!!uni,f:f||"*"});
 }
@@ -232,14 +235,14 @@ X("latpull","Jalón al pecho","pullv","cable","r",3,10,60,"s1 e1","Pecho alto y 
 X("cablerow","Remo en polea sentado","pullh","cable","r",3,12,60,"l1 e1","Torso quieto y escápulas juntas.",{x:1});
 /* calentamiento (f: para qué enfoque: * siempre, A tirón, B piernas, F completa) */
 T(WARM,"warm","catcow","Gato-vaca",40,"","l0","A cuatro apoyos, alterna redondear y arquear la espalda al ritmo de la respiración.",0,"*");
-T(WARM,"warm","openbook","Rotación torácica en libro abierto",40,"","","De lado con las rodillas dobladas, abre el brazo de arriba siguiendo la mano con la mirada.",0,"AF");
-T(WARM,"warm","hip9090","Cambio de cadera 90/90",40,"","h1","Sentado, deja caer las rodillas de un lado a otro con el torso erguido.",0,"BF");
-T(WARM,"warm","hangw","Colgarse de la barra",30,"pullup","s1 e1","Cuélgate activando los hombros, sin encoger. Dos veces 15 s.",0,"AF");
-T(WARM,"warm","fpwarm","Face pull ligero con goma",40,"band","","15 repeticiones ligeras con los codos altos.",0,"AF");
-T(WARM,"warm","deadbugw","Dead bug suave",40,"","l0","6 por lado, lento y con la lumbar pegada al suelo.",0,"AF");
-T(WARM,"warm","glutact","Puente de glúteo lento",40,"","l0","12 puentes lentos con pausa de 2 s arriba.",0,"BF");
-T(WARM,"warm","birdw","Bird-dog suave",40,"","l1 s1","6 por lado con pausa de 3 s.",0,"BF");
-T(WARM,"warm","hingedrill","Bisagra de cadera sin carga",40,"","l1","Manos en la cadera y empuja el culo atrás con la espalda larga.",0,"BF");
+Wr(WARM,"warm","openbook","Rotación torácica en libro abierto",8,"","","De lado con las rodillas dobladas, abre el brazo de arriba siguiendo la mano con la mirada. 8 por lado.",{uni:1},"AF");
+Wr(WARM,"warm","hip9090","Cambio de cadera 90/90",8,"","h1","Sentado, deja caer las rodillas de un lado a otro con el torso erguido. 8 por lado.",{alt:1},"BF");
+T(WARM,"warm","hangw","Colgarse de la barra",30,"pullup","s1 e1","Cuélgate activando los hombros, sin encoger. Aguanta los 30 s.",0,"AF");
+Wr(WARM,"warm","fpwarm","Face pull ligero con goma",15,"band","","15 repeticiones ligeras con los codos altos.",null,"AF");
+Wr(WARM,"warm","deadbugw","Dead bug suave",6,"","l0","6 por lado, lento y con la lumbar pegada al suelo.",{alt:1},"AF");
+Wr(WARM,"warm","glutact","Puente de glúteo lento",12,"","l0","12 puentes lentos con pausa de 2 s arriba.",null,"BF");
+Wr(WARM,"warm","birdw","Bird-dog suave",6,"","l1 s1","6 por lado con pausa de 3 s.",{alt:1},"BF");
+Wr(WARM,"warm","hingedrill","Bisagra de cadera sin carga",10,"","l1","Manos en la cadera y empuja el culo atrás con la espalda larga. 10 repeticiones.",null,"BF");
 T(WARM,"warm","rope","Comba suave",40,"rope","l1 k1 a2","Rebotes bajos y ligeros sobre la punta del pie, sin impacto fuerte.",0,"*");
 /* vuelta a la calma */
 T(COOL,"cool","hangc","Colgarse de la barra para descomprimir",30,"pullup","s1 e1","Cuélgate relajado y respira: descomprime la espalda tras la sesión.",0,"AF");
@@ -290,14 +293,14 @@ latwalk:"Goma corta sobre las rodillas o los tobillos y rodillas algo flexionada
 latpull:"Siéntate en la máquina con los muslos sujetos y el agarre algo más ancho que los hombros.|Pecho alto.|Tira de la barra hacia la parte alta del pecho llevando los codos a las costillas.|Vuelve controlado, sin balancear.",
 cablerow:"Siéntate con los pies apoyados y la espalda erguida.|Tira del agarre hacia el abdomen.|Junta las escápulas sin mover el torso.|Vuelve controlado.",
 catcow:"A cuatro apoyos.|Al inhalar, arquea suavemente la espalda.|Al exhalar, redondéala.|Sigue el ritmo de la respiración, sin forzar.",
-openbook:"Tumbado de lado, con las rodillas dobladas y los brazos juntos al frente.|Abre el brazo de arriba hacia atrás siguiendo la mano con la mirada.|Vuelve y repite.|Cambia de lado a mitad de tiempo.",
-hip9090:"Sentado con las dos rodillas dobladas a 90°, una delante y otra al lado.|Torso erguido.|Gira las rodillas de un lado a otro.|Sin forzar la cadera.",
-hangw:"Cuélgate de la barra.|Activa los hombros sin encogerlos.|Haz dos veces 15 s o un aguante de 30 s.|Respira con calma.",
+openbook:"Tumbado de lado, con las rodillas dobladas y los brazos juntos al frente.|Abre el brazo de arriba hacia atrás siguiendo la mano con la mirada.|Vuelve y repite 8 veces.|Cambia de lado y haz otras 8.",
+hip9090:"Sentado con las dos rodillas dobladas a 90°, una delante y otra al lado.|Torso erguido.|Gira las rodillas de un lado a otro, 8 veces a cada lado.|Sin forzar la cadera.",
+hangw:"Cuélgate de la barra.|Activa los hombros sin encogerlos.|Aguanta los 30 s sin soltarte.|Respira con calma.",
 fpwarm:"Goma a la altura de la cara.|Tira hacia la cara con los codos altos.|15 repeticiones ligeras.|Con control.",
 deadbugw:"Igual que el dead bug, pero más suave.|6 por lado.|Lumbar pegada al suelo.|Lento.",
 glutact:"Tumbado con las rodillas dobladas.|Sube la cadera apretando los glúteos.|Pausa de 2 s arriba.|12 repeticiones lentas.",
 birdw:"A cuatro apoyos.|Estira brazo y pierna contrarios.|Pausa de 3 s.|6 por lado.",
-hingedrill:"De pie con las manos en la cadera.|Empuja el culo hacia atrás con la espalda larga y las rodillas algo flexionadas.|Baja hasta donde mantengas la espalda neutra.|Vuelve apretando glúteos.",
+hingedrill:"De pie con las manos en la cadera.|Empuja el culo hacia atrás con la espalda larga y las rodillas algo flexionadas.|Baja hasta donde mantengas la espalda neutra.|Vuelve apretando glúteos. Haz 10 repeticiones.",
 rope:"Cuerda a tu medida.|Saltos pequeños sobre la punta del pie.|Ritmo cómodo.|Aterrizaje suave.",
 hangc:"Cuélgate relajado de la barra.|Suelta los hombros.|Respira profundo.|Aguanta 30 s.",
 child:"De rodillas, siéntate sobre los talones.|Estira los brazos al frente en el suelo.|Baja el pecho.|Respira hondo hacia la espalda.",
@@ -344,21 +347,29 @@ function stepWork(ph,ex,set,side){
   if(ex.mode==="t")o.secs=ex.val;else{o.reps=ex.val;o.unit=ex.alt?"reps por lado":"reps";}
   return o;
 }
+const WORKPH=["warm","main","cool"];
+const CHANGE_MAIN=20,CHANGE_OTHER=15,SWITCH=10;
+function addStep(St,x){
+  const p=St[St.length-1];
+  if(p&&WORKPH.includes(p.ph)&&WORKPH.includes(x.ph))
+    St.push({ph:"change",name:"Cambio de ejercicio",secs:(p.ph==="main"||x.ph==="main")?CHANGE_MAIN:CHANGE_OTHER,cue:""});
+  St.push(x);
+}
 function pushEx(St,ph,ex,set){
   if(ex.uni){
-    St.push(stepWork(ph,ex,set,"izquierda"));
-    St.push({ph:"switch",name:"Cambia de lado",secs:5,cue:"Ahora, lado derecho."});
-    St.push(stepWork(ph,ex,set,"derecha"));
-  }else St.push(stepWork(ph,ex,set));
+    addStep(St,stepWork(ph,ex,set,"izquierda"));
+    addStep(St,{ph:"switch",name:"Cambia de lado",secs:SWITCH,cue:"Ahora, lado derecho."});
+    addStep(St,stepWork(ph,ex,set,"derecha"));
+  }else addStep(St,stepWork(ph,ex,set));
 }
 function buildSteps(s){
   const St=[];
-  St.push({ph:"prep",name:"Prepárate",secs:5,cue:""});
+  St.push({ph:"prep",name:"Prepárate",secs:10,cue:""});
   s.warm.forEach(w=>pushEx(St,"warm",w));
   s.blocks.forEach((b,bi)=>{
     for(let k=1;k<=b.sets;k++){
       b.items.forEach(ex=>pushEx(St,"main",ex,k+"/"+b.sets));
-      if(!(bi===s.blocks.length-1&&k===b.sets))St.push({ph:"rest",name:"Descanso",secs:b.rest,cue:""});
+      if(!(bi===s.blocks.length-1&&k===b.sets))addStep(St,{ph:"rest",name:"Descanso",secs:b.rest,cue:""});
     }
   });
   s.cool.forEach(c=>pushEx(St,"cool",c));
@@ -554,7 +565,7 @@ function renderPreview(){
     return;
   }
   const n=s.blocks.reduce((a,b)=>a+b.items.length,0);
-  let h=w+'<div class="sum"><b>'+esc(FOCUS_NAME[o.focus])+"</b><br>"+esc(o.siteName)+", "+o.mins+" min. Duración estimada: "+Math.round(s.est/60)+" min, "+n+" ejercicios.</div>";
+  let h=w+'<div class="sum"><b>'+esc(FOCUS_NAME[o.focus])+"</b><br>"+esc(o.siteName)+", "+o.mins+" min. Duración estimada: "+Math.round(s.est/60)+" min, "+n+" ejercicios. Entre ejercicios hay un cambio de 15 a 20 s y entre series, descanso.</div>";
   h+='<div class="card"><div class="ct">Calentamiento</div><p class="note" style="margin-top:4px">'+esc(s.warm.map(e=>e.name).join(", "))+"</p></div>";
   s.blocks.forEach((b,bi)=>{
     h+='<div class="card blk"><div class="bh">'+(b.power?"Explosividad: descanso completo entre series":"Bloque "+(bi+1-(s.power?1:0))+(b.items.length>1?": alterna los dos ejercicios":""))+" · descanso "+b.rest+" s</div>"+
@@ -580,14 +591,14 @@ function beep(f,d){
 function vib(p){try{if(navigator.vibrate&&!mute)navigator.vibrate(p);}catch(e){}}
 async function lock(){try{if("wakeLock" in navigator)wl=await navigator.wakeLock.request("screen");}catch(e){}}
 function unlock(){try{if(wl)wl.release();}catch(e){}wl=null;}
-function nextUp(){for(let j=R.i+1;j<R.steps.length;j++){const x=R.steps[j];if(x.ph!=="rest"&&x.ph!=="switch")return x;}return null;}
+function nextUp(){for(let j=R.i+1;j<R.steps.length;j++){const x=R.steps[j];if(x.ph!=="rest"&&x.ph!=="switch"&&x.ph!=="change")return x;}return null;}
 function stepTitle(x){return x.name+(x.side?" ("+x.side+")":"");}
 function setBar(){const b=$("#pb");if(b)b.style.width=(R.i/R.steps.length*100)+"%";}
 function pauseLabel(){return R.paused?"Seguir":"Pausa";}
 function renderRun(){
   const s=R.steps[R.i],nx=nextUp(),timed=!!s.secs;
-  const PH={prep:"Prepárate",warm:"Calentamiento",main:"Fuerza",rest:"Descanso",switch:"Cambio de lado",cool:"Vuelta a la calma"};
-  const gap=s.ph==="rest"||s.ph==="switch";
+  const PH={prep:"Prepárate",warm:"Calentamiento",main:"Fuerza",rest:"Descanso",change:"Cambio de ejercicio",switch:"Cambio de lado",cool:"Vuelta a la calma"};
+  const gap=s.ph==="rest"||s.ph==="switch"||s.ph==="change";
   let title=s.name,cue=s.cue,sub="";
   if(s.ph==="prep"){const f=R.steps[1];title="Prepárate";cue="";sub=f?"Empiezas con "+stepTitle(f):"";}
   else if(gap){title=nx?"Siguiente: "+stepTitle(nx):"Casi terminas";cue=nx?nx.cue:"";sub=nx&&nx.set?"Serie "+nx.set:"";}
@@ -597,7 +608,7 @@ function renderRun(){
   const hbtn=hid?'<button class="lnk" data-a="how">'+(R.how?"Ocultar cómo se hace":"Cómo se hace")+'</button>':"<span></span>";
   let mainBtn;
   if(!timed)mainBtn='<button class="cb pri" data-a="next">Hecho</button>';
-  else if(s.ph==="rest")mainBtn='<button class="cb pri" data-a="add">+15 s</button>';
+  else if(gap)mainBtn='<button class="cb pri" data-a="add">+15 s</button>';
   else mainBtn='<button class="cb pri" id="pbtn" data-a="pause">'+pauseLabel()+'</button>';
   $("#app").innerHTML=
     '<div class="run"><div class="ph '+s.ph+'">'+PH[s.ph]+'</div><div class="pbar"><i id="pb"></i></div>'+
@@ -613,7 +624,7 @@ function enter(i){
   if(R.paused)R.pausedMs+=Date.now()-R.pauseAt;
   R.i=i;R.lastSec=null;R.paused=false;R.how=false;
   const s=R.steps[i];
-  if(s.secs){R.endAt=Date.now()+s.secs*1000;if(s.ph!=="rest")beep(880,.12);}
+  if(s.secs){R.endAt=Date.now()+s.secs*1000;if(s.ph!=="rest"&&s.ph!=="change")beep(880,.12);}
   vib(30);
   renderRun();
 }
