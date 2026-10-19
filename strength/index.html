@@ -100,6 +100,11 @@ button{cursor:pointer}
 .ex-c{font-size:13px;color:var(--t2)}
 .sw{flex-shrink:0;padding:6px 10px;border:1px solid var(--border);border-radius:var(--rs);background:var(--bg);font-size:13px;color:var(--t2)}
 .sum{font-size:14px;color:var(--t2);margin-bottom:10px}
+details.how{margin-top:6px;font-size:13px;color:var(--t2)}
+details.how summary{color:var(--bl);cursor:pointer;padding:2px 0}
+details.how ol,.howbox ol{padding-left:18px;margin-top:4px}
+details.how li,.howbox li{margin-bottom:3px}
+.howbox{text-align:left;background:var(--s2);border:1px solid var(--border);border-radius:var(--r);padding:10px 14px;font-size:14px;color:var(--t2);max-width:32em;width:100%;margin-top:6px}
 
 .run{display:flex;flex-direction:column;gap:12px;min-height:calc(100dvh - 120px)}
 .ph{align-self:center;font-size:13px;font-weight:600;padding:3px 12px;border-radius:99px}
@@ -242,6 +247,67 @@ T(COOL,"cool","child","Postura del niño",40,"","","Siéntate sobre los talones 
 T(COOL,"cool","hipflex","Estiramiento de flexor de cadera",30,"","h1 k1","De rodillas, pelvis hacia atrás y glúteo apretado. Notarás el frente de la cadera.",1,"*");
 T(COOL,"cool","breath","Respiración 90/90",45,"","","Tumbado con las piernas sobre una silla o la pared. Inhala 4 s por la nariz y exhala 6 s.",0,"*");
 T(COOL,"cool","fig4","Estiramiento de glúteo en figura 4",30,"","h1","Tumbado, tobillo sobre la rodilla contraria y tira del muslo hacia ti.",1,"*");
+
+/* cómo se hace: pasos separados por | */
+const HOW={
+deadbug:"Tumbado boca arriba, brazos al techo y caderas y rodillas a 90°.|Pega la lumbar al suelo y no la despegues en toda la serie.|Baja a la vez un brazo y la pierna contraria, despacio y exhalando.|Vuelve y cambia de lado. Si la lumbar se despega, acorta el recorrido.",
+birddog:"A cuatro apoyos, manos bajo los hombros y rodillas bajo las caderas.|Estira a la vez un brazo y la pierna contraria, alargando, sin pasar de la línea del cuerpo.|Pausa de 3 s sin girar la cadera ni arquear la lumbar.|Vuelve despacio y cambia de lado.",
+pallof:"De lado al anclaje de la goma, a la altura del pecho, con las manos juntas en el pecho y la goma tensa.|Costillas abajo, glúteos activos y pies firmes.|Estira los brazos al frente y pausa 2 s resistiendo para que el tronco no gire.|Vuelve al pecho despacio. Haz todas las repeticiones y cambia de lado.",
+hollow:"Tumbado boca arriba con los brazos estirados sobre la cabeza.|Pega la lumbar al suelo y levanta hombros y piernas estiradas unos centímetros.|Mantén sin que la lumbar se despegue. Si se despega, sube las piernas o flexiona las rodillas.|Respira corto y controlado.",
+plank:"Antebrazos bajo los hombros y cuerpo en línea de la cabeza a los talones.|Aprieta glúteos y abdomen y lleva la pelvis ligeramente hacia atrás.|No dejes hundir la cadera ni subir el culo.|Respira y para si pierdes la forma.",
+sideplank:"De lado, apoyado en el antebrazo con el codo bajo el hombro.|Sube la cadera hasta formar una línea recta de hombro a tobillo, con las rodillas apoyadas si hace falta.|Mantén sin girar el tronco.|Baja y cambia de lado.",
+suitcase:"Sujeta la kettlebell o la mancuerna con una mano, a un lado, como una maleta.|Ponte erguido, con los hombros nivelados y las costillas abajo.|Aguanta quieto sin inclinarte hacia la pesa. Si prefieres, camina con pasos cortos.|Cambia de mano.",
+fallout:"De espaldas al anclaje del TRX, con las manos en los agarres delante del pecho y el cuerpo inclinado hacia delante.|Aprieta glúteos y abdomen y mantén la lumbar neutra.|Desliza los brazos hacia delante y arriba, solo hasta donde la lumbar no se hunda.|Vuelve tirando con el core. Más cerca del anclaje es más fácil.",
+romanext:"Colócate en el banco romano con la cadera justo en el borde, los pies firmes y el cuerpo en línea. Manos cruzadas en el pecho.|Baja el tronco moviendo la cadera, con la columna neutra, hasta una inclinación cómoda.|Sube solo hasta que el cuerpo quede en línea. Nunca hiperextiendas.|Sin peso y controlado. Si notas molestia, reduce el rango o sáltatelo hoy.",
+assistpu:"Pasa la goma larga por la barra y apoya en ella el pie o la rodilla, según tu montaje.|Agarre algo más ancho que los hombros. Antes de tirar, baja las escápulas atrás y abajo.|Tira hasta pasar la barbilla de la barra, sin balancear.|Baja controlado hasta casi estirar los brazos.",
+hang:"Cuélgate de la barra con las manos algo más anchas que los hombros.|Activa los hombros, sin encogerlos hacia las orejas, y aprieta ligeramente el core.|Aguanta el tiempo marcado respirando.|Alternativa: 8 retracciones escapulares, subiendo y bajando solo las escápulas.",
+trxrow:"Sujeta los agarres del TRX e inclínate hacia atrás con los brazos estirados y el cuerpo en tabla.|Aprieta glúteos y core.|Tira con los codos pegados hasta que las manos lleguen al pecho.|Baja controlado. Con los pies más adelantados cuesta más.",
+dbrow:"Apoya una mano y la rodilla del mismo lado en un banco, silla o cama, con la espalda neutra.|Deja la pesa colgando bajo el hombro.|Lleva el codo hacia la cadera juntando la escápula, sin girar el tronco.|Baja controlado y cambia de lado.",
+bandrow:"Siéntate con las piernas estiradas y la goma en los pies, o anclada delante.|Espalda erguida y hombros relajados.|Tira llevando los codos pegados hacia atrás y junta las escápulas.|Vuelve despacio sin perder tensión.",
+pullover:"Tumbado en el suelo con las rodillas dobladas, sujeta la mancuerna con las dos manos sobre el pecho y los codos algo flexionados.|Costillas abajo y lumbar pegada al suelo.|Baja la mancuerna en arco por detrás de la cabeza hasta notar el estiramiento del dorsal.|Vuelve al punto de partida. Peso ligero.",
+kbrow:"De pie, haz una bisagra de cadera con la espalda neutra y la kettlebell colgando de una mano.|La mano libre puede apoyarse en el muslo.|Lleva el codo hacia la cadera sin girar el tronco.|Baja controlado. Si la lumbar se carga, usa el remo con apoyo.",
+facepull:"Ancla la goma a la altura de la cara y agárrala con las dos manos.|Da un paso atrás hasta tener tensión.|Tira hacia la cara abriendo los codos altos y rotando los antebrazos hacia fuera.|Vuelve despacio. Peso ligero.",
+swing:"Pies a la anchura de la cadera con la kettlebell delante.|Haz una bisagra de cadera, no una sentadilla, y lanza la pesa hacia atrás entre las piernas.|Extiende la cadera con fuerza: la pesa sube hasta el pecho y los brazos solo la guían.|Arriba, plancha de pie con glúteos apretados y sin arquear la lumbar.",
+rdl:"De pie con la pesa delante de los muslos y las rodillas algo flexionadas.|Empuja la cadera hacia atrás y baja con la espalda neutra y el peso pegado a las piernas, en unos 3 s.|Baja solo hasta donde mantienes la columna recta.|Sube apretando los glúteos.",
+trxcurl:"Tumbado boca arriba con los talones en los agarres del TRX y los brazos en el suelo.|Sube la cadera formando una línea recta.|Flexiona las rodillas llevando los talones hacia el culo sin bajar la cadera.|Vuelve despacio. Si cuesta, haz solo el puente isométrico.",
+hipthrust:"Siéntate en el suelo con la espalda alta apoyada en el banco romano o en un sofá.|Pies firmes y barbilla metida.|Empuja con los talones y sube la cadera hasta una línea de hombros a rodillas, con las costillas abajo.|Pausa de 2 s arriba sin hiperextender y baja controlado.",
+hipthrust1:"Igual que el hip thrust, con una pierna levantada.|Empuja con el talón de la otra pierna.|Mantén la pelvis nivelada, sin rotar.|Sube y baja controlado y cambia de lado.",
+splitsq:"Un pie delante y el otro atrás, a un paso largo.|Con el tronco erguido, baja la rodilla de atrás hacia el suelo.|La rodilla delantera sigue la línea del pie.|Sube empujando con la pierna delantera. Con mancuernas o kettlebell si quieres carga.",
+bulg:"Apoya el empeine o la punta del pie de atrás en el banco romano o en un escalón.|Pie delantero bien adelantado, tronco algo inclinado y columna neutra.|Baja doblando la rodilla delantera.|Sube empujando con la pierna delantera.",
+stepup:"Pon un pie entero sobre el escalón o cajón estable.|Empuja con la pierna de arriba hasta subir, sin impulsarte con la de abajo.|Sube erguido y baja lento.|Haz todas las repeticiones y cambia de lado.",
+revlunge:"De pie con los pies juntos.|Da un paso largo hacia atrás y baja la rodilla trasera hacia el suelo con el tronco estable.|Empuja con la pierna delantera para volver.|Haz todas las repeticiones de un lado y cambia.",
+sldl:"De pie sobre una pierna con la pesa en la mano contraria.|Cadera cuadrada, sin abrirla.|Baja el tronco y estira la otra pierna hacia atrás con la espalda neutra.|Sube apretando el glúteo. Ligero y con control; puedes apoyar la mano libre.",
+calf:"De pie sobre una pierna, con la punta del pie en el borde de un escalón y apoyo en una pared.|Sube de puntillas hasta el máximo.|Pausa arriba.|Baja lento hasta notar el estiramiento.",
+sqjump:"Pies a la anchura de la cadera.|Baja a un cuarto de sentadilla y salta hacia arriba con fuerza.|Aterriza suave y silencioso, con las rodillas alineadas.|Descansa lo necesario entre series.",
+broad:"Pies a la anchura de la cadera.|Baja a un cuarto de sentadilla y salta hacia delante lo más lejos posible, ayudándote con los brazos.|Aterriza estable, con la cadera atrás y las rodillas alineadas.|Vuelve andando.",
+boxjump:"Colócate frente al cajón, a medio paso.|Baja a un cuarto de sentadilla y salta subiendo con los dos pies.|Aterriza suave y estable arriba.|Baja andando, no saltando.",
+sprint:"Calienta bien antes.|Ponte al pie de la cuesta suave.|Acelera al 90 % durante 12 s.|Vuelve andando y descansa hasta la siguiente serie.",
+kbpower:"Mismo gesto que el swing.|La pesa sale lanzada por la cadera, en series cortas de 6.|Máxima intención en cada repetición.|Para si pierdes la técnica.",
+swimband:"Ancla la goma abierta delante, a la altura del hombro, y agárrala con una mano.|Reproduce la entrada de la brazada: alcanza al frente con el codo alto.|Tira en el agarre llevando la mano hacia la cadera, con el codo alto.|Vuelve con control, sin encoger el hombro.",
+exrot:"De pie con la goma abierta anclada a un lado, el codo pegado al costado y doblado a 90°.|Gira solo el antebrazo hacia fuera.|Vuelve despacio.|Haz todas las repeticiones y cambia de lado.",
+minibridge:"Tumbado con las rodillas dobladas y la goma corta sobre las rodillas.|Empuja las rodillas hacia fuera.|Sube la cadera y pausa 2 s arriba.|Baja controlado.",
+latwalk:"Goma corta sobre las rodillas o los tobillos y rodillas algo flexionadas.|Da pasos laterales cortos manteniendo la tensión.|10 pasos hacia un lado y 10 de vuelta.|No dejes que las rodillas se junten.",
+latpull:"Siéntate en la máquina con los muslos sujetos y el agarre algo más ancho que los hombros.|Pecho alto.|Tira de la barra hacia la parte alta del pecho llevando los codos a las costillas.|Vuelve controlado, sin balancear.",
+cablerow:"Siéntate con los pies apoyados y la espalda erguida.|Tira del agarre hacia el abdomen.|Junta las escápulas sin mover el torso.|Vuelve controlado.",
+catcow:"A cuatro apoyos.|Al inhalar, arquea suavemente la espalda.|Al exhalar, redondéala.|Sigue el ritmo de la respiración, sin forzar.",
+openbook:"Tumbado de lado, con las rodillas dobladas y los brazos juntos al frente.|Abre el brazo de arriba hacia atrás siguiendo la mano con la mirada.|Vuelve y repite.|Cambia de lado a mitad de tiempo.",
+hip9090:"Sentado con las dos rodillas dobladas a 90°, una delante y otra al lado.|Torso erguido.|Gira las rodillas de un lado a otro.|Sin forzar la cadera.",
+hangw:"Cuélgate de la barra.|Activa los hombros sin encogerlos.|Haz dos veces 15 s o un aguante de 30 s.|Respira con calma.",
+fpwarm:"Goma a la altura de la cara.|Tira hacia la cara con los codos altos.|15 repeticiones ligeras.|Con control.",
+deadbugw:"Igual que el dead bug, pero más suave.|6 por lado.|Lumbar pegada al suelo.|Lento.",
+glutact:"Tumbado con las rodillas dobladas.|Sube la cadera apretando los glúteos.|Pausa de 2 s arriba.|12 repeticiones lentas.",
+birdw:"A cuatro apoyos.|Estira brazo y pierna contrarios.|Pausa de 3 s.|6 por lado.",
+hingedrill:"De pie con las manos en la cadera.|Empuja el culo hacia atrás con la espalda larga y las rodillas algo flexionadas.|Baja hasta donde mantengas la espalda neutra.|Vuelve apretando glúteos.",
+rope:"Cuerda a tu medida.|Saltos pequeños sobre la punta del pie.|Ritmo cómodo.|Aterrizaje suave.",
+hangc:"Cuélgate relajado de la barra.|Suelta los hombros.|Respira profundo.|Aguanta 30 s.",
+child:"De rodillas, siéntate sobre los talones.|Estira los brazos al frente en el suelo.|Baja el pecho.|Respira hondo hacia la espalda.",
+hipflex:"De rodillas con una pierna adelantada, en posición de zancada.|Lleva la pelvis hacia atrás y aprieta el glúteo de la pierna de atrás.|Notarás el frente de la cadera.|30 s por lado.",
+breath:"Tumbado boca arriba con las piernas sobre una silla o la pared.|Inhala por la nariz 4 s.|Exhala 6 s.|Suelta las costillas.",
+fig4:"Tumbado con las rodillas dobladas.|Cruza el tobillo sobre la rodilla contraria.|Tira del muslo hacia ti.|30 s por lado."
+};
+const EXBYID={};[...LIB,...WARM,...COOL].forEach(e=>{EXBYID[e.id]=e;});
+function howOf(id){return HOW[id]?HOW[id].split("|"):[];}
+function howHtml(id){const s=howOf(id);return s.length?"<ol>"+s.map(x=>"<li>"+esc(x)+"</li>").join("")+"</ol>":"";}
 
 /* plantillas por enfoque (parejas consecutivas): A tirón y core, B cadena posterior y pierna, F completa */
 const PLAN={
@@ -492,7 +558,7 @@ function renderPreview(){
   h+='<div class="card"><div class="ct">Calentamiento</div><p class="note" style="margin-top:4px">'+esc(s.warm.map(e=>e.name).join(", "))+"</p></div>";
   s.blocks.forEach((b,bi)=>{
     h+='<div class="card blk"><div class="bh">'+(b.power?"Explosividad: descanso completo entre series":"Bloque "+(bi+1-(s.power?1:0))+(b.items.length>1?": alterna los dos ejercicios":""))+" · descanso "+b.rest+" s</div>"+
-    b.items.map((ex,ii)=>'<div class="ex"><div class="ex-b"><div class="ex-t">'+esc(ex.name)+'</div><div class="ex-s">'+specText(ex,b.sets)+'</div><div class="ex-c">'+esc(ex.cue)+'</div></div><button class="sw" data-a="swap" data-v="'+bi+","+ii+'">Cambiar</button></div>').join("")+"</div>";
+    b.items.map((ex,ii)=>'<div class="ex"><div class="ex-b"><div class="ex-t">'+esc(ex.name)+'</div><div class="ex-s">'+specText(ex,b.sets)+'</div><div class="ex-c">'+esc(ex.cue)+'</div><details class="how"><summary>Cómo se hace</summary>'+howHtml(ex.id)+'</details></div><button class="sw" data-a="swap" data-v="'+bi+","+ii+'">Cambiar</button></div>').join("")+"</div>";
   });
   h+='<div class="card"><div class="ct">Vuelta a la calma</div><p class="note" style="margin-top:4px">'+esc(s.cool.map(e=>e.name).join(", "))+"</p></div>";
   h+='<button class="go" data-a="start">Empezar</button><button class="go alt" data-a="gen">Otra sesión</button><button class="go alt" data-a="back">Cambiar ajustes</button>';
@@ -526,6 +592,9 @@ function renderRun(){
   if(s.ph==="prep"){const f=R.steps[1];title="Prepárate";cue="";sub=f?"Empiezas con "+stepTitle(f):"";}
   else if(gap){title=nx?"Siguiente: "+stepTitle(nx):"Casi terminas";cue=nx?nx.cue:"";sub=nx&&nx.set?"Serie "+nx.set:"";}
   else{title=stepTitle(s);sub=s.set?"Serie "+s.set:"";}
+  const hs=s.ph==="prep"?R.steps[1]:(gap?nx:s),hid=hs&&hs.id;
+  const hbox=R.how&&hid?'<div class="howbox"><b>'+esc(stepTitle(hs))+'</b>'+howHtml(hid)+'</div>':"";
+  const hbtn=hid?'<button class="lnk" data-a="how">'+(R.how?"Ocultar cómo se hace":"Cómo se hace")+'</button>':"<span></span>";
   let mainBtn;
   if(!timed)mainBtn='<button class="cb pri" data-a="next">Hecho</button>';
   else if(s.ph==="rest")mainBtn='<button class="cb pri" data-a="add">+15 s</button>';
@@ -534,15 +603,15 @@ function renderRun(){
     '<div class="run"><div class="ph '+s.ph+'">'+PH[s.ph]+'</div><div class="pbar"><i id="pb"></i></div>'+
     '<div class="mid"><div class="rn">'+esc(title)+'</div>'+(sub?'<div class="sub">'+esc(sub)+'</div>':"")+
     '<div class="big" id="num">'+(timed?fmt(secLeft()):s.reps)+'</div>'+(timed?"":'<div class="sub">'+esc(s.unit)+"</div>")+
-    (cue?'<div class="cue">'+esc(cue)+"</div>":"")+'</div>'+
+    (cue?'<div class="cue">'+esc(cue)+"</div>":"")+hbox+'</div>'+
     (!gap&&nx&&s.ph!=="prep"?'<div class="up">Después: '+esc(stepTitle(nx))+"</div>":"")+
     '<div class="ctl"><button class="cb" data-a="prev">Atrás</button>'+mainBtn+'<button class="cb" data-a="next">Saltar</button></div>'+
-    '<div class="ctl2"><button class="lnk" data-a="mute">Sonido: '+(mute?"no":"sí")+'</button><button class="lnk" data-a="end">Terminar</button></div></div>';
+    '<div class="ctl2"><button class="lnk" data-a="mute">Sonido: '+(mute?"no":"sí")+'</button>'+hbtn+'<button class="lnk" data-a="end">Terminar</button></div></div>';
   setBar();
 }
 function enter(i){
   if(R.paused)R.pausedMs+=Date.now()-R.pauseAt;
-  R.i=i;R.lastSec=null;R.paused=false;
+  R.i=i;R.lastSec=null;R.paused=false;R.how=false;
   const s=R.steps[i];
   if(s.secs){R.endAt=Date.now()+s.secs*1000;if(s.ph!=="rest")beep(880,.12);}
   vib(30);
@@ -636,6 +705,7 @@ function act(t,v){
     case "add":{if(R.paused)R.remMs+=15000;else R.endAt+=15000;R.lastSec=null;const n=$("#num");if(n)n.textContent=fmt(secLeft());break;}
     case "next":next();break;
     case "prev":prev();break;
+    case "how":R.how=!R.how;renderRun();break;
     case "mute":mute=!mute;LS.set("st_mute",mute);renderRun();break;
     case "end":if(confirm("¿Terminar la sesión ahora?"))finish();break;
     case "copy":copyTxt();break;
