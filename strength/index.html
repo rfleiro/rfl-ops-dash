@@ -86,6 +86,9 @@ button{cursor:pointer}
 .go.alt{background:var(--s1);color:var(--text);border:1px solid var(--border-s);font-weight:500;margin-top:8px}
 .warn{padding:12px 14px;border-radius:var(--r);margin-bottom:10px;font-size:14px}
 .warn.a{background:var(--wa-bg);color:var(--text);border:1px solid var(--am)}
+.warn.n{background:var(--s2);border:1px solid var(--border);color:var(--t2)}
+.warn .lnk{display:inline;padding:0 0 0 6px}
+.seg2{display:grid;grid-template-columns:1fr 1fr;gap:6px}
 .warn.r{background:var(--ro-bg);color:var(--text);border:1px solid var(--ro)}
 .blk{margin-bottom:10px}
 .blk .bh{font-size:13px;color:var(--t3);margin:0 2px 6px}
@@ -131,19 +134,23 @@ button{cursor:pointer}
 "use strict";
 /* ===================== datos y lógica ===================== */
 const AREAS=[["lumbar","Lumbar","l"],["hombro","Hombro","s"],["rodilla","Rodilla","k"],["cadera","Cadera","h"],["cuello","Cuello","n"],["codo","Codo o muñeca","e"]];
-const EQ=[["mat","Esterilla"],["band","Banda elástica"],["db","Mancuernas"],["kb","Kettlebell"],["bar","Barra y rack"],["bench","Banco"],["step","Escalón o cajón"],["cable","Poleas"],["machine","Máquinas"],["pullup","Barra de dominadas"],["trx","TRX o anillas"]];
+const EQ=[["mat","Esterilla"],["band","Gomas largas"],["mini","Gomas cortas"],["open","Gomas abiertas"],["db","Mancuernas"],["kb","Kettlebell"],["bench","Banco"],["roman","Banco romano"],["step","Escalón"],["box","Cajón pliométrico"],["pullup","Barra de dominadas"],["trx","TRX"],["rope","Cuerda de saltar"],["outdoor","Calle o exterior"],["cable","Poleas"]];
 const KW={
   mat:/esterilla|colchoneta|\bmat\b/i,
-  band:/\bbandas?\b|goma|el[aá]stic|theraband|miniband/i,
+  mini:/(goma|banda)s? cortas?|mini ?bandas?/i,
+  open:/(goma|banda)s? abiertas?|tubing/i,
+  band:/(goma|banda)s? largas?|(goma|banda)s? (de )?resistencia|\b(goma|banda)s?\b(?! (corta|abierta))/i,
   db:/mancuerna|dumbbell|\bpesas\b/i,
-  kb:/kettlebell|pesa rusa|\bkb\b/i,
-  bar:/\bbarras?(?! de dominada| fija)|barbell|\brack\b|multipower|jaula/i,
-  bench:/\bbanco|\bbench/i,
-  step:/esc[aá]l[oó]n|\bstep\b|caj[oó]n|\bbox\b|silla|\bbanco|\bbench/i,
-  cable:/polea|\bcable|jal[oó]n|crossover/i,
-  machine:/m[aá]quina|prensa|machine/i,
+  kb:/kettle ?ball|pesa rusa|\bkb\b/i,
+  bench:/\bbanco\b(?! romano)|\bbench/i,
+  roman:/banco romano|hiperextens/i,
+  step:/esc[aá]l[oó]n|\bstep\b|caj[oó]n|silla|\bbanco\b(?! romano)|\bbench/i,
+  box:/caj[oó]n|\bbox\b|pliom[eé]tric/i,
   pullup:/dominada|pull-?up|chin-?up|barra fija/i,
-  trx:/\btrx\b|suspensi[oó]n|anillas|rings/i
+  trx:/\btrx\b|\btls\b|suspensi[oó]n|anillas|rings|cintas/i,
+  rope:/cuerda|comba|skipping|saltar/i,
+  outdoor:/calle|cuesta|cemento|exterior|pista/i,
+  cable:/polea|\bcable|jal[oó]n|crossover/i
 };
 const ALLEQ=EQ.map(e=>e[0]);
 function detect(t){return ALLEQ.filter(k=>KW[k].test(t||""));}
@@ -152,13 +159,16 @@ const LS={
   set(k,v){try{localStorage.setItem(k,JSON.stringify(v));}catch(e){}}
 };
 const DEFSITES={
-  home:{n:"Casa",d:"",t:["mat"]},
-  madrid:{n:"Madrid",d:"Esterilla, una mancuerna y una kettlebell.",t:["mat","db","kb"]},
-  gym:{n:"Gimnasio",d:"Gimnasio completo: barra y rack, mancuernas, kettlebells, poleas, máquinas, banco, escalón, TRX y barra de dominadas.",t:ALLEQ.slice()}
+  home:{n:"Casa (Coruña)",d:"Calle de 15 m para correr con cuesta suave (cemento), cajón pliométrico, barra de dominadas, TRX, gomas cortas (rodillas, tobillos), gomas largas (columna o barra alta), gomas abiertas (gestos de nadador), cuerda de saltar, kettlebell de 10 kg, mancuernas de 2 y 5 kg, banco romano y esterilla.",t:["mat","band","mini","open","db","kb","roman","step","box","pullup","trx","rope","outdoor"]},
+  madrid:{n:"Madrid",d:"Una mancuerna, kettlebell y esterilla.",t:["mat","db","kb"]},
+  gym:{n:"Gimnasio",d:"Gimnasio: mancuernas, kettlebells, banco, escalón, poleas, TRX, barra de dominadas y gomas.",t:["mat","band","mini","db","kb","bench","step","pullup","trx","cable"]}
 };
+const SV=2;
+if(LS.get("st_sv",0)<SV){LS.set("st_sites",{});LS.set("st_sv",SV);}
 const SITES=Object.assign({},DEFSITES,LS.get("st_sites",{}));
 
-/* Biblioteca. Estrés por zona: 0 no carga, 1 carga suave, 2 carga notable.
+/* Biblioteca de FamilyOps/fitness/rafa/strength/library.md (fase 1) + extras marcados con x:1.
+   Estrés por zona: 0 no carga, 1 carga suave, 2 carga notable.
    Con molestia solo se admite estrés 0-1 en esa zona; con dolor, solo 0.
    Claves: l lumbar, s hombro, k rodilla, h cadera, n cuello, e codo o muñeca. */
 function parseSt(s){const o={};(s||"").split(" ").forEach(p=>{if(p)o[p[0]]=+p.slice(1);});return o;}
@@ -167,81 +177,86 @@ const LIB=[],WARM=[],COOL=[];
 function X(id,name,pil,eq,mode,sets,val,rest,st,cue,o){
   LIB.push(Object.assign({id,name,pil,eq:parseEq(eq),mode,sets,val,rest,st:parseSt(st),cue},o||{}));
 }
-function T(list,pil,id,name,secs,eq,st,cue,uni){
-  list.push({id,name,pil,eq:parseEq(eq),mode:"t",sets:1,val:secs,rest:0,st:parseSt(st),cue,uni:!!uni});
+function T(list,pil,id,name,secs,eq,st,cue,uni,f){
+  list.push({id,name,pil,eq:parseEq(eq),mode:"t",sets:1,val:secs,rest:0,st:parseSt(st),cue,uni:!!uni,f:f||"*"});
 }
-/* bisagra */
-X("kbdl","Peso muerto con kettlebell","hinge","kb","r",3,10,60,"l2 h1","Caderas atrás, espalda larga y empuja el suelo con los pies. Sin redondear la lumbar.");
-X("dbrdl","Peso muerto rumano con mancuernas","hinge","db","r",3,10,60,"l2 h1","Mancuernas pegadas a las piernas. Baja hasta notar los isquios y sube apretando glúteos.");
-X("barrdl","Peso muerto rumano con barra","hinge","bar","r",3,8,75,"l2 h1","Barra pegada al cuerpo, pecho alto y caderas atrás. Carga moderada: primero técnica.");
-X("sldl","Peso muerto a una pierna","hinge","","r",3,8,60,"l1 h1","Cadera cuadrada al suelo y pierna de atrás larga. Apóyate en una pared si pierdes el equilibrio.",{uni:1});
-X("pullthru","Pull-through en polea","hinge","cable","r",3,12,45,"l1 h1","De espaldas a la polea, bisagra de cadera y cierra con los glúteos. Brazos relajados.");
-/* glúteo */
-X("bridge","Puente de glúteo","glute","","r",3,12,45,"l0","Costillas abajo, empuja con los talones y pausa 1 s arriba.");
-X("sbridge","Puente a una pierna","glute","","r",3,8,45,"l1","Pelvis nivelada, sin girar. Empuja con el talón y aprieta el glúteo arriba.",{uni:1});
-X("hipthrust","Hip thrust en banco","glute","bench","r",3,10,60,"l1","Escápulas apoyadas en el banco y barbilla al pecho. Termina con la pelvis neutra, sin arquear.");
-X("sidelift","Elevación lateral de pierna","glute","","r",3,15,40,"l0 h1","Tumbado de lado con la pelvis apilada. Sube la pierna sin rotar la cadera.",{uni:1});
-/* sentadilla */
-X("goblet","Sentadilla goblet","squat","db|kb","r",3,10,60,"k1 l1","Pesa pegada al pecho, codos por dentro de las rodillas y pecho alto. Baja controlado.");
-X("bwsq","Sentadilla con peso corporal","squat","","r",3,15,45,"k1","Pausa de 2 s abajo. Las rodillas siguen la línea de los pies.");
-X("boxsq","Sentadilla a banco","squat","bench|step","r",3,10,60,"k1 l1","Siéntate hacia atrás rozando el banco sin dejarte caer y sube empujando el suelo.");
-X("legpress","Prensa de piernas","squat","machine","r",3,12,75,"k2 l1 h1","Lumbar pegada al respaldo y sin bloquear las rodillas arriba.");
-X("backsq","Sentadilla con barra","squat","bar","r",3,8,90,"k2 l2","Core firme, pecho alto y profundidad que controles. Carga moderada.");
-X("wallsit","Sentadilla isométrica en pared","squat","","t",3,40,45,"k2","Espalda pegada y muslos paralelos al suelo. Respira sin bloquear.");
-/* zancadas y unilateral */
-X("revlunge","Zancada inversa","lunge","","r",3,8,60,"k1 l1 h1","Paso largo atrás, torso erguido y rodilla delantera estable. Añade mancuernas si quieres más carga.",{uni:1});
-X("stepup","Step-up","lunge","step|bench","r",3,8,60,"k1","Empuja con la pierna de arriba y baja lento. No te impulses con la de abajo.",{uni:1});
-X("bulg","Sentadilla búlgara","lunge","bench|step","r",3,8,75,"k2 l1","Torso algo inclinado y rodilla delantera sobre el pie. Con mancuernas cuando la domines.",{uni:1});
-X("latlunge","Zancada lateral","lunge","","r",3,8,60,"k1 h2 l1","Cadera atrás hacia un lado, pierna contraria estirada y pie plano.",{uni:1});
-/* empuje */
-X("pushup","Flexiones","push","","r",3,10,60,"s1 e1 l1","Cuerpo en tabla, costillas abajo y codos a unos 45°.");
-X("incpushup","Flexiones inclinadas","push","bench|step","r",3,12,60,"s1 e1","Manos elevadas en el banco y cuerpo recto. Baja el pecho hasta el borde.");
-X("dbpress","Press de pecho con mancuernas","push","db","r",3,10,60,"s1 e1","En banco o en el suelo. Escápulas atrás y abajo, y baja controlado.");
-X("ohpress","Press de hombro con una mancuerna","push","db|kb","r",3,8,60,"s2 l1 e1","Costillas abajo y glúteos apretados. No arquees la lumbar al subir.",{uni:1});
-X("trxpush","Flexiones en TRX","push","trx","r",3,8,60,"s2 e1 l1","Cuerpo en bloque y codos cerca del cuerpo. Más vertical es más fácil.");
-X("benchbar","Press banca con barra","push","bar+bench","r",3,8,90,"s2 e1","Escápulas atrás, pies firmes y baja al pecho sin rebotar. Carga moderada.");
-/* tirón */
-X("dbrow","Remo a una mano con mancuerna","pull","db","r",3,10,60,"l1 e1","Mano libre en banco o silla y espalda neutra. Lleva el codo hacia la cadera.",{uni:1});
-X("chestrow","Remo con pecho apoyado","pull","db+bench","r",3,10,60,"e1","Pecho sobre el banco inclinado, codos atrás y escápulas juntas. Sin carga en la lumbar.");
-X("pullup","Dominadas","pull","pullup","r",3,5,90,"s2 e1","Escápulas abajo antes de tirar y barbilla sobre la barra. Baja lento.");
-X("invrow","Remo invertido","pull","trx|bar","r",3,10,60,"s1 e1","Cuerpo recto, junta escápulas y lleva el pecho a las manos.");
-X("bandrow","Remo con banda","pull","band","r",3,15,45,"l1","Banda anclada o bajo los pies, codos pegados y escápulas juntas al final.");
-X("latpull","Jalón al pecho","pull","cable","r",3,10,60,"s1 e1","Pecho alto y tira con los codos hacia las costillas. Sin balanceo.");
-X("cablerow","Remo en polea sentado","pull","cable","r",3,12,60,"l1 e1","Torso quieto, junta escápulas y vuelve controlado.");
-/* hombro de nadador */
-X("facepull","Face pull","shoulder","cable|band","r",3,15,40,"","Codos altos y rotación hacia fuera al final. Peso ligero.");
-X("pullapart","Apertura con banda","shoulder","band","r",3,15,40,"","Brazos al frente y abre llevando la banda al pecho. Hombros lejos de las orejas.");
-X("extrot","Rotación externa con banda","shoulder","band","r",3,12,40,"","Codo pegado al costado y gira solo el antebrazo hacia fuera, lento.",{uni:1});
-X("ytw","Y-T-W boca abajo","shoulder","","r",2,6,40,"l1 n1","Pulgares arriba y movimientos cortos. 6 de cada letra, sin arquear la lumbar.");
-X("scappush","Flexión escapular","shoulder","","r",3,10,40,"s1 e1","Brazos rectos en plancha: hunde y separa las escápulas sin doblar los codos.");
 /* core */
-X("deadbug","Dead bug","core","","r",3,8,40,"l0","Lumbar pegada al suelo y baja brazo y pierna contrarios despacio. Si se despega, acorta el recorrido.",{alt:1});
-X("birddog","Bird-dog","core","","r",3,6,40,"l1 s1","Pelvis quieta, estira brazo y pierna contrarios y pausa 3 s. Como si llevaras un vaso en la espalda.",{alt:1});
-X("sideplank","Plancha lateral","core","","t",3,30,40,"l1 s1","Cadera alta y cuerpo en línea. Apoya las rodillas si hace falta.",{uni:1});
-X("plank","Plancha frontal","core","","t",3,30,40,"l1 s1 e1","Glúteos y abdomen apretados, sin hundir la lumbar. Para si pierdes la forma.");
-X("curlup","Curl-up de McGill","core","","r",3,8,40,"l1 n1","Una pierna flexionada y manos bajo la lumbar. Sube cabeza y hombros sin mover la espalda baja.");
-X("pallof","Press Pallof","core","band|cable","r",3,10,40,"l0","De lado al anclaje, empuja al frente y resiste la rotación. Vuelve lento.",{uni:1});
-X("bridgemarch","Puente con marcha","core","","r",3,8,40,"l1","Pelvis alta y nivelada mientras levantas una rodilla y luego la otra.",{alt:1});
-/* transporte */
-X("suitcase","Paseo de maleta","carry","db|kb","t",3,30,45,"l1","Torso recto, sin inclinarte hacia la pesa. Pasos cortos y respirando.",{uni:1});
-/* calentamiento */
-T(WARM,"warm","catcow","Gato-vaca",40,"","l0","A cuatro apoyos, alterna redondear y arquear la espalda al ritmo de la respiración.");
-T(WARM,"warm","openbook","Rotación torácica en libro abierto",40,"","","De lado con las rodillas dobladas, abre el brazo de arriba siguiendo la mano con la mirada.");
-T(WARM,"warm","hip9090","Cambio de cadera 90/90",40,"","h1","Sentado, deja caer las rodillas de un lado a otro con el torso erguido.");
-T(WARM,"warm","armband","Apertura de hombros con banda",40,"band","","Con las manos separadas, pasa la banda por encima de la cabeza y por detrás, despacio.");
-T(WARM,"warm","armcirc","Círculos de brazos",30,"","s1","Círculos amplios hacia delante y hacia atrás, aumentando poco a poco.");
-T(WARM,"warm","glutact","Puente de glúteo lento",40,"","l0","10 puentes lentos con pausa de 2 s arriba.");
-T(WARM,"warm","hingedrill","Bisagra de cadera sin carga",40,"","l1","Manos en la cadera, empuja el culo atrás con la espalda larga.");
+X("deadbug","Dead bug","core","","r",3,8,40,"l0","Lumbar pegada al suelo todo el rato y exhala al extender. Lento, 3 s por repetición. Si se despega, acorta el rango.",{alt:1,w:2});
+X("birddog","Bird-dog","core","","r",3,6,40,"l1 s1","Cadera cuadrada al suelo, sin arquear. Alarga, no subas. Pausa de 3 s arriba.",{alt:1});
+X("pallof","Press Pallof con goma","core","band|cable","r",3,10,40,"l0","Goma anclada a la columna o a la barra. Costillas abajo y glúteos activos: el tronco no gira. Pausa de 2 s con los brazos estirados.",{uni:1,w:1.5});
+X("hollow","Hollow body","core","","t",3,22,40,"l1","Lumbar pegada al suelo. Si se despega, sube las piernas o flexiona las rodillas.");
+X("plank","Plancha frontal","core","","t",3,35,40,"l1 s1 e1","Glúteos apretados, pelvis en retroversión suave y sin hundir la cadera.");
+X("sideplank","Plancha lateral","core","","t",3,25,40,"l1 s1","Línea recta hombro-cadera-tobillo. Con las rodillas apoyadas si hace falta.",{uni:1});
+X("suitcase","Suitcase carry (isométrico)","core","kb|db","t",3,30,45,"l1","No te inclines hacia ningún lado y mantén los hombros nivelados.",{uni:1});
+X("fallout","TRX fallout","core","trx","r",3,8,60,"l2 s1","Solo hasta donde mantienes la lumbar neutra. Rango corto: es exigente, empieza conservador.",{w:.35});
+X("romanext","Extensión en banco romano","core","roman","r",2,10,60,"l2","Sin peso y controlado. Mueve la cadera con la columna neutra, sube solo hasta la línea del cuerpo y nunca hiperextiendas. Si notas molestia, reduce el rango o sáltatelo hoy.",{w:.45});
+/* tirón */
+X("assistpu","Dominada asistida con goma","pullv","pullup+band","r",4,5,90,"s2 e1","Escápulas abajo y atrás al empezar. Sin balanceo y baja controlado.");
+X("hang","Colgarse de la barra","pullv","pullup","t",3,25,45,"s1 e1","Hombros activos, sin encoger. Si prefieres, 8 retracciones escapulares en vez de colgarte.");
+X("trxrow","TRX row","pullh","trx","r",3,10,60,"s1 e1","Cuerpo en tabla con glúteos y core activos, codos pegados. Tira con la espalda.");
+X("dbrow","Remo con mancuerna a una mano","pullh","db|kb","r",3,10,60,"l1 e1","Espalda neutra y apoyada (banco, silla o cama). Lleva el codo hacia la cadera.",{uni:1});
+X("bandrow","Remo con goma","pullh","band","r",3,15,40,"l1","Codos pegados y escápulas juntas al final.");
+X("pullover","Pullover con mancuerna en el suelo","pullh","db","r",3,10,50,"s1","Tumbado en el suelo, no en banco, para que la lumbar quede apoyada. Costillas abajo y peso ligero.");
+X("kbrow","Remo con kettlebell inclinado","pullh","kb","r",3,10,60,"l2 e1","Bisagra de cadera con espalda neutra. Si la lumbar se carga, vuelve al remo con apoyo.",{uni:1});
+X("facepull","Face pull con goma","prehab","band|cable","r",3,15,40,"","Codos altos. Complementa la brazada y protege el hombro.");
+/* bisagra y glúteo */
+X("swing","Kettlebell swing","hinge","kb","r",5,10,60,"l2 h1","Es bisagra, no sentadilla: la potencia sale de la cadera y arriba haces plancha de pie. Calidad, no fatiga.");
+X("rdl","Peso muerto rumano","hinge","db|kb","r",3,10,60,"l2 h1","Rodillas algo flexionadas y peso pegado a las piernas. Baja en 3 s y solo hasta donde mantienes la columna recta.");
+X("trxcurl","Curl femoral en TRX","hinge","trx","r",3,8,60,"l1 h1","Cadera alta todo el rato. Protege los isquios del corredor. Si cuesta, puente isométrico con los pies en el TRX.");
+X("hipthrust","Hip thrust (puente de glúteo)","glute","","r",3,12,45,"l1","Espalda en banco romano o sofá. Barbilla metida y costillas abajo; empuja con el talón y pausa 2 s arriba sin hiperextender.");
+X("hipthrust1","Hip thrust a una pierna","glute","","r",3,8,50,"l1","Pelvis nivelada, sin rotar.",{uni:1});
+/* una pierna */
+X("splitsq","Split squat","single","","r",3,8,60,"k1","Tronco erguido y rodilla delantera siguiendo la línea del pie. Con mancuernas o kettlebell si quieres carga.",{uni:1});
+X("bulg","Sentadilla búlgara","single","roman|step|bench","r",3,7,75,"k2 l1","Pie trasero en el banco romano o en un escalón. Pie delantero bien adelantado y tronco algo inclinado con la columna neutra.",{uni:1});
+X("stepup","Step-up","single","step","r",3,8,60,"k1","Empuja con la pierna de arriba; no te impulses con la de abajo.",{uni:1});
+X("revlunge","Zancada reversa","single","","r",3,8,60,"k1 l1","Más amable con la rodilla que la frontal. Tronco estable.",{uni:1});
+X("sldl","RDL a una pierna","single","kb|db","r",3,6,60,"l1 h1","Cadera cuadrada, sin abrirla, y espalda neutra. Ligero: control antes que peso.",{uni:1});
+X("calf","Elevación de gemelos a una pierna","calf","","r",3,12,40,"","Rango completo, pausa arriba y bajada lenta. En el borde de un escalón si puedes.",{uni:1});
+/* explosividad (fase 2) */
+X("sqjump","Salto vertical","power","","r",3,5,60,"l1 k2","Aterrizaje suave y silencioso, con las rodillas alineadas.");
+X("broad","Salto horizontal (broad jump)","power","outdoor","r",3,4,75,"l1 k2","Aterriza estable y pegado al suelo. Potencia de salida en natación.");
+X("boxjump","Salto al cajón","power","box","r",3,5,75,"l1 k2","Sube saltando y baja andando para ahorrar impacto.");
+X("sprint","Sprint corto en cuesta","power","outdoor","t",6,12,75,"l1 k1 h2","Al 90 %, tras un calentamiento completo y nunca con fatiga previa. Vuelve andando.");
+X("kbpower","Swing potente","power","kb","r",3,6,60,"l2 h1","Series cortas con máxima intención.");
+/* extras que no están en library.md (por el material que tienes) */
+X("swimband","Gesto de nadador con goma abierta","prehab","open","r",3,12,40,"s1","Reproduce la entrada y el agarre de la brazada con control. Codo alto y sin encoger el hombro.",{x:1});
+X("exrot","Rotación externa con goma","prehab","open|band","r",3,12,40,"","Codo pegado al costado y gira solo el antebrazo hacia fuera, lento.",{uni:1,x:1});
+X("minibridge","Puente de glúteo con goma corta","glute","mini","r",3,12,45,"l1","Goma sobre las rodillas: empuja las rodillas hacia fuera mientras subes. Pausa de 2 s arriba.",{x:1});
+X("latwalk","Caminata lateral con goma corta","glute","mini","r",3,10,40,"h1","Goma sobre las rodillas o los tobillos y pasos cortos con tensión constante. 10 pasos por lado.",{alt:1,x:1});
+X("latpull","Jalón al pecho","pullv","cable","r",3,10,60,"s1 e1","Pecho alto y tira con los codos hacia las costillas.",{x:1});
+X("cablerow","Remo en polea sentado","pullh","cable","r",3,12,60,"l1 e1","Torso quieto y escápulas juntas.",{x:1});
+/* calentamiento (f: para qué enfoque: * siempre, A tirón, B piernas, F completa) */
+T(WARM,"warm","catcow","Gato-vaca",40,"","l0","A cuatro apoyos, alterna redondear y arquear la espalda al ritmo de la respiración.",0,"*");
+T(WARM,"warm","openbook","Rotación torácica en libro abierto",40,"","","De lado con las rodillas dobladas, abre el brazo de arriba siguiendo la mano con la mirada.",0,"AF");
+T(WARM,"warm","hip9090","Cambio de cadera 90/90",40,"","h1","Sentado, deja caer las rodillas de un lado a otro con el torso erguido.",0,"BF");
+T(WARM,"warm","hangw","Colgarse de la barra",30,"pullup","s1 e1","Cuélgate activando los hombros, sin encoger. Dos veces 15 s.",0,"AF");
+T(WARM,"warm","fpwarm","Face pull ligero con goma",40,"band","","15 repeticiones ligeras con los codos altos.",0,"AF");
+T(WARM,"warm","deadbugw","Dead bug suave",40,"","l0","6 por lado, lento y con la lumbar pegada al suelo.",0,"AF");
+T(WARM,"warm","glutact","Puente de glúteo lento",40,"","l0","12 puentes lentos con pausa de 2 s arriba.",0,"BF");
+T(WARM,"warm","birdw","Bird-dog suave",40,"","l1 s1","6 por lado con pausa de 3 s.",0,"BF");
+T(WARM,"warm","hingedrill","Bisagra de cadera sin carga",40,"","l1","Manos en la cadera y empuja el culo atrás con la espalda larga.",0,"BF");
+T(WARM,"warm","rope","Comba suave",40,"rope","l1 k1","Rebotes bajos y ligeros sobre la punta del pie, sin impacto fuerte.",0,"*");
 /* vuelta a la calma */
-T(COOL,"cool","child","Postura del niño",40,"","","Siéntate sobre los talones con los brazos al frente y respira hondo hacia la espalda.");
-T(COOL,"cool","hipflex","Estiramiento de flexor de cadera",30,"","h1 k1","De rodillas, pelvis hacia atrás y glúteo apretado. Notarás el frente de la cadera.",true);
-T(COOL,"cool","breath","Respiración 90/90",45,"","","Tumbado con las piernas sobre una silla o la pared. Inhala 4 s por la nariz y exhala 6 s.");
-T(COOL,"cool","fig4","Estiramiento de glúteo en figura 4",30,"","h1","Tumbado, tobillo sobre la rodilla contraria y tira del muslo hacia ti.",true);
+T(COOL,"cool","hangc","Colgarse de la barra para descomprimir",30,"pullup","s1 e1","Cuélgate relajado y respira: descomprime la espalda tras la sesión.",0,"AF");
+T(COOL,"cool","child","Postura del niño",40,"","","Siéntate sobre los talones con los brazos al frente y respira hondo hacia la espalda.",0,"*");
+T(COOL,"cool","hipflex","Estiramiento de flexor de cadera",30,"","h1 k1","De rodillas, pelvis hacia atrás y glúteo apretado. Notarás el frente de la cadera.",1,"*");
+T(COOL,"cool","breath","Respiración 90/90",45,"","","Tumbado con las piernas sobre una silla o la pared. Inhala 4 s por la nariz y exhala 6 s.",0,"*");
+T(COOL,"cool","fig4","Estiramiento de glúteo en figura 4",30,"","h1","Tumbado, tobillo sobre la rodilla contraria y tira del muslo hacia ti.",1,"*");
 
-/* orden de huecos: pares antagonistas (bisagra+empuje, sentadilla+tirón...) */
-const SLOTS=[["hinge",["hinge","glute"]],["push",["push"]],["squat",["squat","lunge"]],["pull",["pull"]],["core",["core"]],["shoulder",["shoulder"]],["lunge",["lunge","glute"]],["carry",["carry","core"]],["glute",["glute","hinge"]],["core2",["core"]]];
+/* plantillas por enfoque (parejas consecutivas): A tirón y core, B cadena posterior y pierna, F completa */
+const PLAN={
+  A:[["pullv",["pullv","pullh"]],["core",["core"]],["pullh",["pullh","prehab"]],["core",["core"]],["pullh",["pullh","prehab"]],["core",["core"]],["prehab",["prehab","pullh"]]],
+  B:[["hinge",["hinge","glute"]],["core",["core"]],["single",["single"]],["single",["single"]],["glute",["glute","hinge"]],["calf",["calf","single"]],["hinge",["hinge","glute"]],["core",["core"]]],
+  F:[["hinge",["hinge","glute"]],["pullh",["pullh","pullv"]],["single",["single"]],["glute",["glute"]],["core",["core"]],["core",["core"]],["prehab",["prehab"]],["calf",["calf"]]]
+};
+const FOCUS_NAME={A:"Fuerza A: tirón y core",B:"Fuerza B: cadena posterior y pierna",F:"Sesión completa"};
+function resolveFocus(site,focus){
+  if(focus&&focus!=="auto")return focus;
+  if(site==="home"){const l=LS.get("st_last",null);return l==="A"?"B":"A";}
+  return "F";
+}
 
-function haveSet(tags){const h=new Set(tags);if(h.has("bench"))h.add("step");return h;}
+function haveSet(tags){const h=new Set(tags);if(h.has("bench")||h.has("box"))h.add("step");return h;}
 function avail(e,h){return e.eq.some(a=>a.every(t=>h.has(t)));}
 function painOk(e,pain){
   for(const [k,,c] of AREAS){
@@ -253,7 +268,7 @@ function painOk(e,pain){
   return true;
 }
 function pick(arr,recent){
-  const w=arr.map(e=>(e.eq.some(a=>a.length)?2:1)*(recent.has(e.id)?0.3:1));
+  const w=arr.map(e=>(e.w||1)*(e.eq.some(a=>a.length)?2:1)*(recent.has(e.id)?0.3:1));
   let r=Math.random()*w.reduce((a,b)=>a+b,0);
   for(let i=0;i<arr.length;i++){r-=w[i];if(r<=0)return arr[i];}
   return arr[arr.length-1];
@@ -290,28 +305,44 @@ function dur(x){
 }
 function total(St){return St.reduce((a,x)=>a+dur(x),0);}
 function makeBlocks(s,picked,soft){
-  const cap=soft?2:(s.o.mins<=20?2:4);
+  const m=s.o.mins;
   s.blocks=[];
+  if(s.power){const ex=s.power;s.blocks.push({items:[ex],sets:Math.min(ex.sets,m<=30?4:ex.sets),rest:ex.rest,max:ex.sets,power:true});}
   for(let i=0;i<picked.length;i+=2){
     const items=picked.slice(i,i+2);
-    const sets=Math.min(cap,Math.max(...items.map(e=>e.sets)));
+    const dose=Math.max(...items.map(e=>e.sets));
+    const sets=(soft||m<=20)?Math.min(2,dose):dose;
     const rest=Math.max(30,Math.max(...items.map(e=>e.rest))-(items.length>1?15:0));
-    s.blocks.push({items,sets,rest});
+    s.blocks.push({items,sets,rest,max:dose});
   }
 }
 function refresh(s){s.steps=buildSteps(s);s.est=total(s.steps);}
+function pickWarm(have,pain,focus,nW,power){
+  const ok=WARM.filter(e=>avail(e,have)&&painOk(e,pain));
+  const gen=ok.filter(e=>e.f==="*"),spec=ok.filter(e=>e.f!=="*"&&e.f.includes(focus));
+  const first=gen.filter(e=>e.id==="catcow"),rope=gen.filter(e=>e.id==="rope");
+  return [...first,...(power?rope:[]),...spec,...rope.filter(()=>!power)].slice(0,nW);
+}
 function generate(o){
-  const have=haveSet(o.tags),pain=o.pain,recent=new Set(LS.get("st_hist",[]));
-  const m=o.mins,budget=m*60;
-  const nW=m<=15?2:m<=20?3:m<=30?4:5,nC=m<=15?1:m<=30?2:3;
-  let warm=WARM.filter(e=>avail(e,have)&&painOk(e,pain));
-  if(warm.some(e=>e.id==="armband"))warm=warm.filter(e=>e.id!=="armcirc");
-  warm=warm.slice(0,nW);
-  const cool=COOL.filter(e=>avail(e,have)&&painOk(e,pain)).slice(0,nC);
+  const pain=o.eff||o.pain,have=haveSet(o.tags),recent=new Set(LS.get("st_hist",[]));
+  const m=o.mins,budget=m*60,focus=o.focus;
   const soft=pain.lumbar>=2;
-  const s={o,warm,cool,blocks:[],est:0,soft};
+  const nW=m<=15?2:m<=20?3:m<=30?4:5,nC=m<=15?1:m<=30?2:3;
+  const s={o,warm:[],cool:[],blocks:[],est:0,soft,power:null,noPower:""};
+  if(o.power){
+    if(m<20)s.noPower="con menos de 20 min";
+    else if(o.fatigue)s.noPower="por la carga reciente";
+    else if(pain.lumbar>0||soft)s.noPower="por la molestia lumbar";
+    else{
+      const pl=LIB.filter(e=>e.pil==="power"&&avail(e,have)&&painOk(e,pain));
+      if(pl.length)s.power=pick(pl,recent);else s.noPower="sin material o por las molestias";
+    }
+  }
+  s.warm=pickWarm(have,pain,focus,nW,!!s.power);
+  s.cool=COOL.filter(e=>avail(e,have)&&painOk(e,pain)&&(e.f==="*"||e.f.includes(focus))).slice(0,nC);
   const picked=[],used=new Set();
-  for(const [,pils] of SLOTS){
+  if(s.power)used.add(s.power.id);
+  for(const [,pils] of PLAN[focus]){
     let ex=null;
     for(const p of pils){
       const pl=LIB.filter(e=>e.pil===p&&!used.has(e.id)&&avail(e,have)&&painOk(e,pain));
@@ -325,10 +356,10 @@ function generate(o){
   makeBlocks(s,picked,soft);refresh(s);
   if(!soft){
     let ch=true,g=0;
-    while(ch&&g++<4){
+    while(ch&&g++<6){
       ch=false;
       for(const b of s.blocks){
-        if(b.sets>=4)continue;
+        if(b.power||b.sets>=b.max)continue;
         b.sets++;refresh(s);
         if(s.est<=budget)ch=true;else{b.sets--;refresh(s);}
       }
@@ -337,9 +368,10 @@ function generate(o){
   return s;
 }
 function swapEx(s,bi,ii){
-  const cur=s.blocks[bi].items[ii],have=haveSet(s.o.tags);
+  const cur=s.blocks[bi].items[ii],have=haveSet(s.o.tags),pain=s.o.eff||s.o.pain;
   const used=new Set(s.blocks.flatMap(b=>b.items.map(e=>e.id)));
-  const pl=LIB.filter(e=>e.pil===cur.pil&&!used.has(e.id)&&avail(e,have)&&painOk(e,s.o.pain));
+  const pils=cur.pil==="pullv"||cur.pil==="pullh"?["pullv","pullh"]:cur.pil==="hinge"||cur.pil==="glute"?["hinge","glute"]:[cur.pil];
+  const pl=LIB.filter(e=>pils.includes(e.pil)&&!used.has(e.id)&&avail(e,have)&&painOk(e,pain)&&(cur.pil==="power"?e.pil==="power":e.pil!=="power"));
   if(!pl.length)return false;
   s.blocks[bi].items[ii]=pick(pl,new Set());
   refresh(s);return true;
@@ -356,7 +388,8 @@ const S={
   site:SITES[LS.get("st_site","home")]?LS.get("st_site","home"):"home",
   mins:LS.get("st_mins",30),
   pain:{lumbar:0,hombro:0,rodilla:0,cadera:0,cuello:0,codo:0},
-  edit:false,draft:null,view:"setup",sess:null
+  edit:false,draft:null,view:"setup",sess:null,
+  focus:"auto",power:LS.get("st_power",false),ign:false,recent:null
 };
 let R=null,iv=null,AC=null,wl=null,mute=LS.get("st_mute",false),tt=null;
 
@@ -385,15 +418,56 @@ function renderSetup(){
     '<button class="opt" data-a="save">Guardar</button></div>':
     (st.d?'<p class="note">'+esc(st.d)+'</p>':'<p class="note">Sin descripción: solo peso corporal. Pulsa Editar para contarme qué tienes aquí.</p>');
   $("#app").innerHTML=
+    '<div id="recent">'+recentHtml()+'</div>'+
     '<div class="card"><div class="ch"><div class="ct">¿Dónde entrenas?</div></div>'+
     '<div class="seg">'+Object.keys(SITES).map(k=>'<button class="opt'+(k===S.site?" on":"")+'" data-a="site" data-v="'+k+'">'+esc(SITES[k].n)+'</button>').join("")+'</div>'+
     '<div class="eqrow"><div class="chips">'+eqChipsRO(st.t)+'</div><button class="lnk" data-a="edit">'+(S.edit?"Cerrar":"Editar")+'</button></div>'+ed+'</div>'+
     '<div class="card"><div class="ch"><div class="ct">¿Cuánto tiempo tienes?</div><div class="cs">minutos</div></div>'+
     '<div class="times">'+[15,20,30,45,60].map(m=>'<button class="opt" data-m="'+m+'" data-a="mins" data-v="'+m+'">'+m+'</button>').join("")+
     '<input id="cm" type="number" inputmode="numeric" min="10" max="120" placeholder="otro" aria-label="Otros minutos" oninput="act(\'cm\',this.value)"></div></div>'+
+    '<div class="card"><div class="ch"><div class="ct">Enfoque</div><div class="cs" id="autolbl"></div></div>'+
+    '<div class="seg2" id="focus">'+focusHtml()+'</div>'+
+    '<div style="margin-top:8px"><button class="opt'+(S.power?" on":"")+'" style="width:100%" data-a="power">Explosividad (fase 2): '+(S.power?"sí":"no")+'</button>'+
+    '<p class="note" style="margin-top:6px">Saltos y sprints antes de la fuerza, solo si vienes fresco. En tu biblioteca es de fase 2.</p></div></div>'+
     '<div class="card"><div class="ch"><div class="ct">¿Algún dolor?</div><div class="cs">toca para cambiar</div></div><div class="pain" id="pain">'+painHtml()+'</div></div>'+
     '<button class="go" data-a="gen">Generar sesión</button>';
-  paintTimes();
+  paintTimes();paintFocus();
+}
+function focusHtml(){
+  const L=[["auto","Auto"],["A","A: tirón y core"],["B","B: piernas y cadera"],["F","Completa"]];
+  return L.map(f=>'<button class="opt'+(S.focus===f[0]?" on":"")+'" data-a="focus" data-v="'+f[0]+'">'+f[1]+'</button>').join("");
+}
+function paintFocus(){
+  const f=$("#focus");if(f)f.innerHTML=focusHtml();
+  const l=$("#autolbl");if(l){const r=resolveFocus(S.site,S.focus);l.textContent="hoy: "+FOCUS_NAME[r].replace(":",",");}
+}
+const TN={swim:"natación",run:"carrera",strength:"fuerza",ride:"bici",walk:"caminata"};
+function recentHtml(){
+  const r=S.recent;if(!r||!r.text)return "";
+  const on=r.fatigue&&!S.ign;
+  return '<div class="warn '+(on?"a":"n")+'">'+esc(r.text)+(r.fatigue?(on?" Evito las bisagras con carga fuertes y la explosividad.":" Lo estoy ignorando.")+'<button class="lnk" data-a="ign">'+(on?"Ignorar":"Tenerlo en cuenta")+"</button>":"")+"</div>";
+}
+function ymd(d){return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");}
+async function loadRecent(){
+  const tok=localStorage.getItem("rh_token"),repo=localStorage.getItem("rh_repo");
+  if(!tok||!repo)return;
+  try{
+    const r=await fetch("https://api.github.com/repos/"+repo+"/contents/health/data.json",{headers:{Authorization:"Bearer "+tok,"X-GitHub-Api-Version":"2022-11-28"},cache:"no-store"});
+    if(!r.ok)return;
+    const j=await r.json();
+    const d=JSON.parse(new TextDecoder("utf-8").decode(Uint8Array.from(atob(j.content.replace(/\n/g,"")),c=>c.charCodeAt(0))));
+    const now=new Date(),y=new Date(now.getTime()-864e5),T=ymd(now),Y=ymd(y);
+    const parts=[];let fat=false;
+    [[Y,"Ayer"],[T,"Hoy"]].forEach(([dt,lab])=>{
+      const e=(d.entries||[]).find(x=>x.date===dt);
+      const acts=((e&&e.activities)||[]).filter(a=>TN[a.type]);
+      if(!acts.length)return;
+      parts.push(lab+": "+acts.map(a=>TN[a.type]+" "+a.duration_min+" min").join(", ")+".");
+      acts.forEach(a=>{if((a.type==="run"&&a.duration_min>=40)||(a.type==="swim"&&a.duration_min>=60)||(a.type==="ride"&&a.duration_min>=60))fat=true;});
+    });
+    S.recent={text:parts.join(" "),fatigue:fat};
+    const el=$("#recent");if(el&&S.view==="setup")el.innerHTML=recentHtml();
+  }catch(e){}
 }
 function detectDraft(){
   detect(S.draft.d).forEach(k=>{if(!S.draft.t.includes(k))S.draft.t.push(k);});
@@ -404,6 +478,8 @@ function detectDraft(){
 function renderPreview(){
   const s=S.sess,o=s.o,pain=AREAS.filter(a=>o.pain[a[0]]);
   let w="";
+  if(o.fatigue)w+='<div class="warn a">Por la carga reciente evito las bisagras con carga fuertes y la explosividad.</div>';
+  else if(o.power&&!s.power)w+='<div class="warn n">Hoy sin explosividad '+esc(s.noPower)+".</div>";
   if(s.soft)w+='<div class="warn r">Con dolor lumbar la sesión es suave: 2 series y solo ejercicios que no cargan la espalda. Si el dolor baja por la pierna, hormiguea o no cede, mejor no entrenar y comentarlo con tu fisio o médico.</div>';
   else if(pain.some(a=>o.pain[a[0]]===2))w+='<div class="warn r">Evito los ejercicios que cargan las zonas con dolor. Si el dolor aumenta durante la sesión, para.</div>';
   else if(pain.length)w+='<div class="warn a">Con molestia en '+esc(pain.map(a=>a[1].toLowerCase()).join(", "))+' he quitado los ejercicios más exigentes para esa zona. Mantén el control y para si aumenta.</div>';
@@ -412,10 +488,10 @@ function renderPreview(){
     return;
   }
   const n=s.blocks.reduce((a,b)=>a+b.items.length,0);
-  let h=w+'<div class="sum">'+esc(o.siteName)+", "+o.mins+" min. Duración estimada: "+Math.round(s.est/60)+" min, "+n+" ejercicios en bloques de dos que alternas.</div>";
+  let h=w+'<div class="sum"><b>'+esc(FOCUS_NAME[o.focus])+"</b><br>"+esc(o.siteName)+", "+o.mins+" min. Duración estimada: "+Math.round(s.est/60)+" min, "+n+" ejercicios.</div>";
   h+='<div class="card"><div class="ct">Calentamiento</div><p class="note" style="margin-top:4px">'+esc(s.warm.map(e=>e.name).join(", "))+"</p></div>";
   s.blocks.forEach((b,bi)=>{
-    h+='<div class="card blk"><div class="bh">Bloque '+(bi+1)+(b.items.length>1?": alterna los dos ejercicios":"")+" · descanso "+b.rest+" s</div>"+
+    h+='<div class="card blk"><div class="bh">'+(b.power?"Explosividad: descanso completo entre series":"Bloque "+(bi+1-(s.power?1:0))+(b.items.length>1?": alterna los dos ejercicios":""))+" · descanso "+b.rest+" s</div>"+
     b.items.map((ex,ii)=>'<div class="ex"><div class="ex-b"><div class="ex-t">'+esc(ex.name)+'</div><div class="ex-s">'+specText(ex,b.sets)+'</div><div class="ex-c">'+esc(ex.cue)+'</div></div><button class="sw" data-a="swap" data-v="'+bi+","+ii+'">Cambiar</button></div>').join("")+"</div>";
   });
   h+='<div class="card"><div class="ct">Vuelta a la calma</div><p class="note" style="margin-top:4px">'+esc(s.cool.map(e=>e.name).join(", "))+"</p></div>";
@@ -495,6 +571,7 @@ function startRun(){
   try{AC=AC||new (window.AudioContext||window.webkitAudioContext)();if(AC.resume)AC.resume();}catch(e){}
   const ids=[].concat(...S.sess.blocks.map(b=>b.items.map(e=>e.id)));
   LS.set("st_hist",ids.concat(LS.get("st_hist",[])).slice(0,24));
+  if(S.sess.o.focus!=="F")LS.set("st_last",S.sess.o.focus);
   R={steps:S.sess.steps,i:0,paused:false,t0:Date.now(),pausedMs:0,lastSec:null};
   S.view="run";lock();
   clearInterval(iv);iv=setInterval(tick,200);
@@ -509,7 +586,7 @@ function summary(el){
   const s=S.sess;
   const names=s.blocks.flatMap(b=>b.items.map(e=>e.name+" "+specText(e,b.sets))).join("; ");
   const pain=AREAS.filter(a=>s.o.pain[a[0]]).map(a=>a[1].toLowerCase()+(s.o.pain[a[0]]===2?" (dolor)":" (molestia)"));
-  return "Fuerza en "+s.o.siteName+", "+el+" min. "+names+"."+(pain.length?" Zonas con molestia: "+pain.join(", ")+".":"");
+  return (s.o.focus==="F"?"Fuerza":FOCUS_NAME[s.o.focus].split(":")[0])+" en "+s.o.siteName+", "+el+" min. "+names+"."+(pain.length?" Zonas con molestia: "+pain.join(", ")+".":"");
 }
 function renderDone(){
   const el=Math.max(1,Math.round((R.end-R.t0-R.pausedMs)/60000));
@@ -534,7 +611,9 @@ async function copyTxt(){
 /* --- acciones --- */
 function gen(){
   const st=SITES[S.site];
-  S.sess=generate({site:S.site,siteName:st.n,tags:st.t,mins:S.mins,pain:Object.assign({},S.pain)});
+  const fat=!!(S.recent&&S.recent.fatigue&&!S.ign);
+  const eff=Object.assign({},S.pain);if(fat)eff.lumbar=Math.max(eff.lumbar,1);
+  S.sess=generate({site:S.site,siteName:st.n,tags:st.t,mins:S.mins,pain:Object.assign({},S.pain),eff,fatigue:fat,focus:resolveFocus(S.site,S.focus),power:S.power});
   LS.set("st_mins",S.mins);S.view="preview";render();window.scrollTo(0,0);
 }
 function act(t,v){
@@ -546,6 +625,9 @@ function act(t,v){
     case "mins":S.mins=+v;paintTimes();break;
     case "cm":{const n=parseInt(v,10);if(n>=10&&n<=120){S.mins=n;paintTimes();}break;}
     case "pain":S.pain[v]=(S.pain[v]+1)%3;$("#pain").innerHTML=painHtml();break;
+    case "focus":S.focus=v;paintFocus();break;
+    case "power":S.power=!S.power;LS.set("st_power",S.power);renderSetup();break;
+    case "ign":S.ign=!S.ign;{const el=$("#recent");if(el)el.innerHTML=recentHtml();}break;
     case "gen":gen();break;
     case "back":S.view="setup";render();break;
     case "swap":{const [bi,ii]=v.split(",").map(Number);if(swapEx(S.sess,bi,ii))renderPreview();else toast("No hay otra opción para este ejercicio");break;}
@@ -573,6 +655,7 @@ document.addEventListener("click",e=>{
 document.addEventListener("visibilitychange",()=>{if(document.visibilityState==="visible"&&R&&S.view==="run")lock();});
 initTheme();
 render();
+loadRecent();
 </script>
 </body>
 </html>
