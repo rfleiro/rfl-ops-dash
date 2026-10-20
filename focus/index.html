@@ -50,6 +50,7 @@
 .seg:last-child{border-bottom:none}
 .seg select,.seg input,.addseg select,.addseg input{font-family:inherit;font-size:12px;padding:4px 6px;border:1px solid var(--border);border-radius:var(--rs);background:var(--surface);color:var(--text);min-width:0;width:100%}
 .seg .dur{font-variant-numeric:tabular-nums;color:var(--text-2);text-align:right}
+.seg .note{grid-column:1/-1;width:100%}
 .seg .ov{grid-column:1/-1;font-size:10px;color:var(--warning)}
 .seg.live{color:var(--text-2)}
 .addseg{display:grid;grid-template-columns:minmax(80px,1fr) 78px 78px auto;gap:6px;align-items:center;margin-top:8px}
@@ -154,7 +155,7 @@ const REPO_KEY='dash:focus:repo', REPO_FALL='dash:ops:repo';
 const LS_STATE='dash:focus:state', LS_CACHE='dash:focus:cache', LS_STALE='dash:focus:stale:';
 const FOCUS_PATH='data/focus.json';
 const JOURNAL_PATH='brief/ops/today_changes.json';
-const BUILD='20261018-2005';
+const BUILD='20261020-0930';
 const IDLE_MS=3*3600e3;           // a timer running longer than this gets a prompt
 const PALETTE=['#2563EB','#16A34A','#D97706','#7C3AED','#E11D48','#0D9488','#DB2777','#65A30D'];
 
@@ -418,6 +419,7 @@ function atTime(val){const p=val.split(':').map(Number),b=parseDate(TODAY);b.set
 function editSeg(id,field,val){
   const s=W.segments.find(x=>x.id===id);if(!s)return;
   if(field==='track'){s.track=val;}
+  else if(field==='note'){const v=(val||'').trim();if(v)s.note=v;else delete s.note;}
   else{
     if(!val)return render();
     const d=atTime(val),o=new Date(field==='start'?s.end:s.start);
@@ -672,6 +674,7 @@ function sessionsPanel(){
       +'<input type="time" value="'+hhmm(s.end)+'" onchange="editSeg(\''+s.id+'\',\'end\',this.value)">'
       +'<span class="dur">'+clockText(segHours(s)*3600e3).slice(0,5)+'</span>'
       +'<button class="act" onclick="delSeg(\''+s.id+'\')" title="Delete">×</button>'
+      +'<input type="text" class="note" maxlength="400" placeholder="What did you do? (optional)" value="'+esc(s.note||'')+'" onchange="editSeg(\''+s.id+'\',\'note\',this.value)">'
       +(overlaps(s)?'<span class="ov">overlaps another session</span>':'')+'</div>';
   });
   h+='<div class="addseg"><select id="as-t">'+opts('')+'</select><input type="time" id="as-s"><input type="time" id="as-e"><button class="btn mini" onclick="addSeg()">+ Add</button></div>';
