@@ -87,6 +87,16 @@ details.panel .body{margin-top:8px;font-size:12.5px;color:var(--text-2)}
 .kw{display:flex;flex-wrap:wrap;gap:4px;margin-top:4px}
 .kw span{font-size:11px;padding:2px 7px;border-radius:99px;background:var(--surface2);color:var(--text-2)}
 .kw span.t2{opacity:.6;font-style:italic}
+.chip.age{background:var(--surface2);color:var(--text-2)}
+.chip.bl{background:var(--surface2);color:var(--text-2);border:1px dashed var(--border-strong)}
+.chip.dig{background:var(--accent-bg);color:var(--accent)}
+.chip.dug{background:var(--green-bg);color:var(--green)}
+.lit.bl{border-style:dashed}
+.lit.m-read{opacity:.55}
+.btn.on-read{background:var(--surface2);border-color:var(--border-strong);color:var(--text)}
+.strip{display:flex;gap:12px;align-items:center;flex-wrap:wrap;font-size:12px;color:var(--text-2);margin-bottom:8px}
+.strip b{color:var(--text);font-variant-numeric:tabular-nums}
+.strip .sp{flex:1}
 .kw.comp span{background:var(--danger-bg);color:var(--danger)}
 .lbl{font-size:10px;font-weight:600;letter-spacing:.05em;text-transform:uppercase;color:var(--text-3);margin:8px 0 3px}
 .kv{display:grid;grid-template-columns:auto 1fr;gap:3px 12px;font-size:12.5px}
@@ -123,6 +133,9 @@ details.panel .body{margin-top:8px;font-size:12.5px;color:var(--text-2)}
 const PAT_KEY='dash:digest:pat',  PAT_FALL='dash:ops:pat';
 const REPO_KEY='dash:digest:repo', REPO_FALL='dash:ops:repo';
 const LS_STATE='dash:digest:state', LS_CACHE='dash:digest:cache', LS_TAB='dash:digest:tab';
+const STATE_PATH='data/digest/state.json';
+const SECS=['urgent','literature','social','beyond','tools'];
+const CHECKED=['save','read','skip'];   // these take an item out of the inbox; 'dig' keeps it there
 const BRIEF_PATH='brief/digest/today.json';
 const JOURNAL_PATH='brief/digest/today_changes.json';
 const WL_PATH='data/digest/watchlists.json';
@@ -154,8 +167,9 @@ let BRIEF=null, WL=null;
 let JR=emptyJ();              // journal as last seen on GitHub
 let W=emptyJ();               // working copy: server journal overlaid with unsynced local edits
 let view='boot', errMsg='';
-let tab=['brief','watch','decide'].includes(localStorage.getItem(LS_TAB))?localStorage.getItem(LS_TAB):'brief';
-let filter='all', showSkipped=false;
+let tab=['brief','saved','watch','decide'].includes(localStorage.getItem(LS_TAB))?localStorage.getItem(LS_TAB):'brief';
+let filter='all';
+let STATE=null;
 let sync='saved', syncMsg='', dirty=false, saving=false, pushTimer=null, editSeq=0, offline=false;
 let dismissedWarn={};
 
@@ -182,10 +196,10 @@ async function getFile(path){
 // ─── normalisers ──────────────────────────────────────────────────────────────
 function normBrief(b){
   b=O(b); b.meta=O(b.meta); b.meta.warnings=A(b.meta.warnings).map(T); b.meta.sources=A(b.meta.sources);
-  b.urgent=A(b.urgent); b.literature=A(b.literature); b.tools=A(b.tools); b.social=A(b.social); b.skipped=O(b.skipped);
+  b.urgent=A(b.urgent); b.literature=A(b.literature); b.tools=A(b.tools); b.social=A(b.social); b.beyond=A(b.beyond); b.skipped=O(b.skipped); b.skipped.near_misses=A(b.skipped.near_misses); b.meta.windows=O(b.meta.windows);
   // Backstop for the missing-id class of bug: never let an item arrive without a stable key.
   const seen={};
-  ['urgent','literature','tools','social'].forEach(k=>b[k].forEach((it,i)=>{
+  SECS.forEach(k=>b[k].forEach((it,i)=>{
     if(!it||typeof it!=='object'){b[k][i]=it={};}
     if(!T(it.id)||seen[it.id]){console.error('digest: item without a unique id in',k,i,it.title);it.id=k+'-auto-'+i;}
     seen[it.id]=1;
@@ -200,6 +214,7 @@ function normWL(w){
   w.context_rules=A(w.context_rules); w.feeds=O(w.feeds); w.social=O(w.social); w.social.items=A(w.social.items);
   w.relevance_order=A(w.relevance_order); w.meta=O(w.meta);
   w.social.topics=A(w.social.topics); w.social.traction=O(w.social.traction);
+  w.run=O(w.run); w.beyond=O(w.beyond); w.beyond.journals=A(w.beyond.journals);
   return w;
 }
 
@@ -216,15 +231,15 @@ async function load(){
   if(!PAT||!REPO){view='setup';render();return;}
   view='loading';render();
   try{
-    const r=await Promise.all([getFile(BRIEF_PATH),getFile(WL_PATH),getFile(JOURNAL_PATH)]);
+    const r=await Promise.all([getFile(BRIEF_PATH),getFile(WL_PATH),getFile(JOURNAL_PATH),getFile(STATE_PATH)]);
     if(!r[0]) throw new Error('404: '+BRIEF_PATH+' not found in '+REPO);
-    BRIEF=normBrief(r[0].data); WL=normWL(r[1]?r[1].data:{}); JR=r[2]?normJ(r[2].data):emptyJ();
-    try{localStorage.setItem(LS_CACHE,JSON.stringify({brief:r[0].data,wl:r[1]?r[1].data:{},journal:r[2]?r[2].data:{}}));}catch(e){}
+    BRIEF=normBrief(r[0].data); WL=normWL(r[1]?r[1].data:{}); JR=r[2]?normJ(r[2].data):emptyJ(); STATE=r[3]?O(r[3].data):null;
+    try{localStorage.setItem(LS_CACHE,JSON.stringify({brief:r[0].data,wl:r[1]?r[1].data:{},journal:r[2]?r[2].data:{},state:r[3]?r[3].data:null}));}catch(e){}
     offline=false; initWorking(); view='ready';
   }catch(e){
     const cached=e.offline?localStorage.getItem(LS_CACHE):null;
     if(cached){
-      const c=JSON.parse(cached); BRIEF=normBrief(c.brief); WL=normWL(c.wl); JR=normJ(c.journal);
+      const c=JSON.parse(cached); BRIEF=normBrief(c.brief); WL=normWL(c.wl); JR=normJ(c.journal); STATE=c.state?O(c.state):null;
       offline=true; initWorking(); sync='offline'; view='ready';
     }else{ errMsg=e.message||String(e); view='error'; }
   }
@@ -244,6 +259,7 @@ function mergeJ(a,b){
   return out;
 }
 function markOf(id){const m=W.marks[id];return m&&m.status!=='none'?m.status:'';}
+function isChecked(id){return CHECKED.indexOf(markOf(id))>=0;}
 function setMark(id,status){
   const cur=markOf(id);
   W.marks[id]={status:cur===status?'none':status,ts:new Date().toISOString()};
@@ -293,68 +309,73 @@ function prjChips(list){
   const pm=projectMap();
   return A(list).map(id=>{const p=pm[T(id)];return '<span class="chip prj" title="'+esc(p?p.name:'')+'">'+esc(id)+(p&&p.short?' · '+esc(p.short):'')+'</span>';}).join('');
 }
-function litCard(it,urgent){
+const ACTS=[['save','Save'],['dig','Dig deeper'],['read','Read'],['skip','Skip']];
+function actsRow(id,defs,extra){
+  const m=markOf(id);
+  return '<div class="acts">'+(defs||ACTS).map(a=>'<button class="btn mini'+(m===a[0]?' on-'+a[0]:'')+'" data-act="mark" data-id="'+esc(id)+'" data-v="'+a[0]+'">'+a[1]+'</button>').join('')+(extra||'')+'</div>';
+}
+// new / age / borderline / dig chips shared by every card
+function stampChips(it){
+  let h='';
+  const fs=T(it.first_seen),age=/^\d{4}-\d{2}-\d{2}$/.test(fs)?dayDiff(fs,TODAY):null;
+  if(age!=null)h+=age<=0?'<span class="chip new">new</span>':'<span class="chip age" title="first seen '+esc(fmtShort(fs))+'">'+age+'d</span>';
+  if(it.borderline===true)h+='<span class="chip bl" title="Included because it was a close call">borderline</span>';
+  if(it.dig===true||markOf(T(it.id))==='dig')h+='<span class="chip dig">dig requested</span>';
+  else if(T(it.updated_on))h+='<span class="chip dug">updated '+esc(fmtShort(it.updated_on))+'</span>';
+  return h;
+}
+function litCard(it){
   const id=T(it.id),m=markOf(id),tier=TIERS[it.tier]?+it.tier:4,link=linkOf(it);
   const people=A(it.people).filter(p=>p&&typeof p==='object');
-  const comp=people.filter(p=>p.role==='competitor'),oth=people.filter(p=>p.role!=='competitor');
+  const comp=people.filter(p=>T(p.role).toLowerCase()==='competitor'),oth=people.filter(p=>T(p.role).toLowerCase()!=='competitor');
   const sc=O(it.scite),contra=+sc.contrasting||0,supp=+sc.supporting||0;
-  const isPre=it.peer_reviewed===false;
-  let h='<div class="card lit t'+tier+(m?' m-'+m:'')+'" data-id="'+esc(id)+'">';
+  let h='<div class="card lit t'+tier+(m?' m-'+m:'')+(it.borderline===true?' bl':'')+'" data-id="'+esc(id)+'">';
   h+='<div class="row">';
   if(it.rank!=null)h+='<span class="rk">#'+esc(it.rank)+'</span>';
   h+='<span class="chip tier" style="color:'+TIERS[tier].c+'">'+esc(TIERS[tier].t)+'</span>';
   comp.forEach(p=>{h+='<span class="chip comp">competitor · '+esc(p.name)+'</span>';});
   oth.forEach(p=>{h+='<span class="chip ppl">'+esc(p.role||'watchlist')+' · '+esc(p.name)+'</span>';});
-  if(isPre)h+='<span class="chip pre">preprint · not peer reviewed</span>';
+  if(it.peer_reviewed===false)h+='<span class="chip pre">preprint · not peer reviewed</span>';
   if(T(it.signal))h+='<span class="chip sig">'+esc(it.signal)+'</span>';
   if(contra>0)h+='<span class="chip sci-bad">⚠ '+contra+' contrasting</span>';
   else if(sc&&(supp||sc.mentioning||sc.note))h+='<span class="chip sci-ok">Scite · '+supp+' supporting</span>';
-  h+=prjChips(it.projects)+'</div>';
+  h+=prjChips(it.projects)+stampChips(it)+'</div>';
   h+=link?'<a class="ttl" href="'+esc(link)+'" target="_blank" rel="noopener noreferrer">'+esc(it.title)+'</a>':'<div class="ttl">'+esc(it.title)+'</div>';
   h+='<div class="by">'+esc(it.authors)+(T(it.venue)?' · '+esc(it.venue):'')+(T(it.date)?' · '+esc(fmtShort(it.date)):'')+'</div>';
   if(T(it.summary))h+='<div class="sm">'+esc(it.summary)+'</div>';
   if(T(it.why))h+='<div class="wy">'+esc(it.why)+'</div>';
+  if(T(it.lens))h+='<div class="cl"><b>Lens:</b> '+esc(it.lens)+'</div>';
   if(T(it.claims))h+='<div class="cl"><b>Paper claims:</b> '+esc(it.claims)+'</div>';
   if(T(it.inference))h+='<div class="cl"><b>My inference:</b> '+esc(it.inference)+'</div>';
   if(T(it.uncertain))h+='<div class="cl"><b>Unsure:</b> '+esc(it.uncertain)+'</div>';
   if(T(sc.note))h+='<div class="cl"><b>Scite:</b> '+esc(sc.note)+'</div>';
-  h+='<div class="acts">';
-  [['save','Save'],['dig','Dig deeper'],['skip','Skip']].forEach(a=>{
-    h+='<button class="btn mini'+(m===a[0]?' on-'+a[0]:'')+'" data-act="mark" data-id="'+esc(id)+'" data-v="'+a[0]+'">'+a[1]+'</button>';
-  });
-  if(T(it.doi))h+='<span class="chip dl">DOI '+esc(T(it.doi).replace(/^https?:\/\/(dx\.)?doi\.org\//i,''))+'</span>';
-  h+='</div></div>';
-  return h;
+  h+=actsRow(id,null,T(it.doi)?'<span class="chip dl">DOI '+esc(T(it.doi).replace(/^https?:\/\/(dx\.)?doi\.org\//i,''))+'</span>':'');
+  return h+'</div>';
 }
 function urgentCard(u){
-  const id=T(u.id),link=safeUrl(u.url);
-  let h='<div class="card lit urg" data-id="'+esc(id)+'"><div class="row"><span class="chip comp">'+esc(u.kind||'urgent')+'</span>';
-  h+='</div>'+(link?'<a class="ttl" href="'+esc(link)+'" target="_blank" rel="noopener noreferrer">'+esc(u.title)+'</a>':'<div class="ttl">'+esc(u.title)+'</div>');
+  const id=T(u.id),link=safeUrl(u.url),m=markOf(id);
+  let h='<div class="card lit urg'+(m?' m-'+m:'')+'" data-id="'+esc(id)+'"><div class="row"><span class="chip comp">'+esc(u.kind||'urgent')+'</span>'+stampChips(u)+'</div>'
+    +(link?'<a class="ttl" href="'+esc(link)+'" target="_blank" rel="noopener noreferrer">'+esc(u.title)+'</a>':'<div class="ttl">'+esc(u.title)+'</div>');
   if(T(u.why))h+='<div class="sm">'+esc(u.why)+'</div>';
   if(T(u.action))h+='<div class="wy"><b>Action:</b> '+esc(u.action)+'</div>';
-  return h+'</div>';
+  return h+actsRow(id,[['read','Read'],['dig','Dig deeper']])+'</div>';
 }
 function toolCard(t){
   const id=T(t.id),m=markOf(id),link=safeUrl(t.url);
-  let h='<div class="card lit t3'+(m?' m-'+m:'')+'" data-id="'+esc(id)+'"><div class="row"><span class="chip src">'+esc(t.kind||'tool')+'</span>'+prjChips(t.projects)+'</div>';
+  let h='<div class="card lit t3'+(m?' m-'+m:'')+'" data-id="'+esc(id)+'"><div class="row"><span class="chip src">'+esc(t.kind||'tool')+'</span>'+prjChips(t.projects)+stampChips(t)+'</div>';
   h+=link?'<a class="ttl" href="'+esc(link)+'" target="_blank" rel="noopener noreferrer">'+esc(t.title)+'</a>':'<div class="ttl">'+esc(t.title)+'</div>';
   if(T(t.reason))h+='<div class="sm">'+esc(t.reason)+'</div>';
-  h+='<div class="acts">';
-  [['save','Save'],['dig','Dig deeper'],['skip','Skip']].forEach(a=>{
-    h+='<button class="btn mini'+(m===a[0]?' on-'+a[0]:'')+'" data-act="mark" data-id="'+esc(id)+'" data-v="'+a[0]+'">'+a[1]+'</button>';
-  });
-  return h+'</div></div>';
+  return h+actsRow(id)+'</div>';
 }
-
 function socialCard(x){
   const id=T(x.id),m=markOf(id),link=safeUrl(x.url),mt=O(x.metrics),lk=O(x.linked),lkLink=linkOf(lk);
   const tp=A(WL&&WL.social.topics).find(t=>T(t.id)===T(x.topic));
   const people=A(x.people).filter(p=>p&&typeof p==='object');
-  let h='<div class="card lit t4 soc'+(m?' m-'+m:'')+'" data-id="'+esc(id)+'"><div class="row">';
+  let h='<div class="card lit t4 soc'+(m?' m-'+m:'')+(x.borderline===true?' bl':'')+'" data-id="'+esc(id)+'"><div class="row">';
   h+='<span class="chip src">'+esc(T(x.platform)||'Bluesky')+'</span><span class="chip prj">'+esc(tp?tp.name:T(x.topic))+'</span>';
   people.forEach(p=>{h+='<span class="chip '+(T(p.role).toLowerCase()==='competitor'?'comp':'ppl')+'">'+esc(p.role||'watchlist')+' · '+esc(p.name)+'</span>';});
   h+=x.verified===true?'<span class="chip sci-ok">verified · '+esc(T(lk.kind)||'source found')+'</span>':'<span class="chip sig">social signal, unverified</span>';
-  h+='</div>';
+  h+=stampChips(x)+'</div>';
   h+=link?'<a class="ttl" href="'+esc(link)+'" target="_blank" rel="noopener noreferrer">'+esc(x.gist)+'</a>':'<div class="ttl">'+esc(x.gist)+'</div>';
   h+='<div class="by">'+esc(x.author)+(T(x.posted)?' · '+esc(fmtShort(x.posted)):'')+'</div>';
   const eng=[];
@@ -365,84 +386,140 @@ function socialCard(x){
   if(T(x.why))h+='<div class="wy">'+esc(x.why)+'</div>';
   if(lkLink)h+='<div class="cl"><b>Behind it'+(T(lk.kind)?' ('+esc(lk.kind)+')':'')+':</b> <a href="'+esc(lkLink)+'" target="_blank" rel="noopener noreferrer">'+esc(T(lk.title)||T(lk.doi)||lkLink)+'</a></div>';
   if(T(x.uncertain))h+='<div class="cl"><b>Unsure:</b> '+esc(x.uncertain)+'</div>';
-  h+='<div class="acts">';
-  [['save','Save'],['dig','Dig deeper'],['skip','Skip']].forEach(a=>{
-    h+='<button class="btn mini'+(m===a[0]?' on-'+a[0]:'')+'" data-act="mark" data-id="'+esc(id)+'" data-v="'+a[0]+'">'+a[1]+'</button>';
-  });
-  return h+'</div></div>';
+  return h+actsRow(id)+'</div>';
+}
+function beyondCard(b){
+  const id=T(b.id),m=markOf(id),link=linkOf(b),at=O(b.attention);
+  let h='<div class="card lit t4 bey'+(m?' m-'+m:'')+(b.borderline===true?' bl':'')+'" data-id="'+esc(id)+'"><div class="row"><span class="chip src">'+esc(b.venue)+'</span>';
+  if(b.peer_reviewed===false)h+='<span class="chip pre">preprint · not peer reviewed</span>';
+  h+='<span class="chip ppl" title="'+esc(at.detail)+'">attention · '+esc(at.kind||'?')+'</span>'+stampChips(b)+'</div>';
+  h+=link?'<a class="ttl" href="'+esc(link)+'" target="_blank" rel="noopener noreferrer">'+esc(b.title)+'</a>':'<div class="ttl">'+esc(b.title)+'</div>';
+  h+='<div class="by">'+(T(b.authors)?esc(b.authors)+' · ':'')+esc(fmtShort(b.date))+'</div>';
+  if(T(b.summary))h+='<div class="sm">'+esc(b.summary)+'</div>';
+  if(T(b.why))h+='<div class="wy">'+esc(b.why)+'</div>';
+  if(T(at.detail))h+='<div class="cl"><b>Attention:</b> '+esc(at.detail)+'</div>';
+  return h+actsRow(id)+'</div>';
 }
 
 // ─── brief tab ────────────────────────────────────────────────────────────────
+function counts(){
+  let total=0,fresh=0,all=0,checked=0;
+  SECS.forEach(sec=>A(BRIEF[sec]).forEach(it=>{
+    all++;
+    if(isChecked(T(it.id))){checked++;return;}
+    total++;
+    const fs=T(it.first_seen);if(/^\d{4}-\d{2}-\d{2}$/.test(fs)&&dayDiff(fs,TODAY)<=0)fresh++;
+  }));
+  return {total:total,fresh:fresh,all:all,checked:checked};
+}
 function banners(){
   let h='';
-  const m=BRIEF.meta;
+  const m=BRIEF.meta,cu=counts();
   if(offline)h+='<div class="ban bad">Offline: showing the last copy stored on this device.</div>';
   if(m.seed){
     h+='<div class="ban info"><b>No brief yet.</b> Say <b>“brief me”</b> in the Morning Brief project to generate the first one. Watchlists and Decisions are already live.</div>';
   }else{
     const age=dayDiff(T(BRIEF.date)||TODAY,TODAY);
-    if(age>0)h+='<div class="ban">This brief is from '+esc(fmtLong(BRIEF.date))+' ('+age+' day'+(age>1?'s':'')+' ago). Say “brief me” for a fresh one.</div>';
+    if(age>0)h+='<div class="ban">Last run: '+esc(fmtLong(BRIEF.date))+' ('+age+' day'+(age>1?'s':'')+' ago). Items you have not checked stay until you do. Say “brief me” for a fresh run.</div>';
   }
-  m.warnings.forEach((w,i)=>{if(!dismissedWarn[i+w])h+='<div class="ban" style="display:flex;gap:8px"><span style="flex:1">'+esc(w)+'</span><button class="btn mini" data-act="dw" data-k="'+esc(i+w)+'">✕</button></div>';});
+  const warnAt=+O(WL&&WL.run).backlog_warn||0;
+  if(warnAt&&cu.total>warnAt)h+='<div class="ban">Backlog: '+cu.total+' unchecked items (warning level '+warnAt+'). Nothing is dropped automatically. Use “Mark all as read” once you have skimmed.</div>';
+  m.warnings.forEach((w,i)=>{if(/^Backlog:/.test(w))return;if(!dismissedWarn[i+w])h+='<div class="ban" style="display:flex;gap:8px"><span style="flex:1">'+esc(w)+'</span><button class="btn mini" data-act="dw" data-k="'+esc(i+w)+'">✕</button></div>';});
   A(m.sources).filter(s=>s&&(s.status==='failed'||s.status==='partial')).forEach(s=>{
     h+='<div class="ban bad"><b>'+esc(s.name)+'</b> '+(s.status==='failed'?'could not be reached':'only partly reached')+(T(s.note)?': '+esc(s.note):'')+'</div>';
   });
   return h;
 }
-function passFilter(it){
-  if(filter==='proj')return A(it.projects).length>0;
-  if(filter==='people')return A(it.people).length>0;
-  if(filter==='pre')return it.peer_reviewed===false;
-  if(filter==='marked')return !!markOf(T(it.id));
+function show(sec,it){
+  const c=isChecked(T(it.id));
+  if(filter==='checked')return c;
+  if(c)return false;
+  if(sec==='literature'){
+    if(filter==='proj')return A(it.projects).length>0;
+    if(filter==='people')return A(it.people).length>0;
+    if(filter==='pre')return it.peer_reviewed===false;
+    if(filter==='bl')return it.borderline===true;
+  }
   return true;
 }
+function section(title,sec,cardFn,emptyMsg){
+  const all=BRIEF[sec],list=all.filter(it=>show(sec,it));
+  let h='<div class="sec-hd">'+title+'<span class="cnt">'+list.length+'</span></div>';
+  if(list.length)return h+list.map(cardFn).join('');
+  if(filter==='checked')return h+'<div class="empty">Nothing checked here.</div>';
+  return h+emptyMsg(all.length>0);
+}
 function viewBrief(){
-  const b=BRIEF,m=b.meta;
+  const b=BRIEF,m=b.meta,cu=counts();
   let h='';
   if(T(m.summary))h+='<div class="panel" style="font-size:13px">'+esc(m.summary)+'</div>';
-  // urgent
-  h+='<div class="sec-hd">Urgent</div>';
-  if(b.urgent.length)h+=b.urgent.map(urgentCard).join('');
-  else h+=m.seed?'<div class="empty">No brief has been run yet.</div>':'<div class="ok-line">Nothing urgent</div>';
-  // literature
-  const lit=b.literature;
-  const hidden=lit.filter(x=>markOf(T(x.id))==='skip').length;
-  let list=lit.filter(passFilter);
-  if(!showSkipped&&filter!=='marked')list=list.filter(x=>markOf(T(x.id))!=='skip');
-  h+='<div class="sec-hd">Literature<span class="cnt">'+lit.length+'</span><span class="sp"></span></div>';
-  if(lit.length){
+  if(!m.seed){
+    h+='<div class="strip"><span><b>'+cu.total+'</b> unchecked</span><span><b>'+cu.fresh+'</b> new</span><span>'+(cu.total-cu.fresh)+' carried over</span><span class="sp"></span>'
+      +(cu.total?'<button class="btn mini" data-act="readall">Mark all as read</button>':'')+'</div>';
+  }
+  if(cu.all){
     h+='<div class="filters">';
-    [['all','All'],['proj','On a project'],['people','Watchlist people'],['pre','Preprints'],['marked','Marked']].forEach(f=>{
+    [['all','Unchecked'],['proj','On a project'],['people','Watchlist people'],['pre','Preprints'],['bl','Borderline'],['checked','Checked ('+cu.checked+')']].forEach(f=>{
       h+='<button class="fbtn'+(filter===f[0]?' on':'')+'" data-act="filter" data-v="'+f[0]+'">'+f[1]+'</button>';
     });
-    const hiddenAll=hidden+b.social.filter(x=>markOf(T(x.id))==='skip').length;
-    if(hiddenAll)h+='<button class="fbtn'+(showSkipped?' on':'')+'" data-act="showskip">'+(showSkipped?'Hide':'Show')+' skipped ('+hiddenAll+')</button>';
     h+='</div>';
-    h+=list.length?list.map(it=>litCard(it)).join(''):'<div class="empty">Nothing matches this filter.</div>';
-  }else h+='<div class="empty">'+(m.seed?'Nothing yet.':'No literature items in this brief.')+'</div>';
-  // social signals
-  const soc=b.social,socHidden=soc.filter(x=>markOf(T(x.id))==='skip').length;
-  const socShown=showSkipped?soc:soc.filter(x=>markOf(T(x.id))!=='skip');
-  const bsky=A(m.sources).find(x=>x&&/bluesky/i.test(T(x.name)));
-  h+='<div class="sec-hd">Social signals<span class="cnt">'+soc.length+'</span></div>';
-  if(socShown.length)h+=socShown.map(socialCard).join('')+(socHidden&&!showSkipped?'<div class="def" style="font-size:11px;color:var(--text-3)">'+socHidden+' skipped (use “Show skipped” above)</div>':'');
-  else if(m.seed)h+='<div class="empty">Nothing yet.</div>';
-  else if(bsky&&bsky.status==='failed')h+='<div class="empty">Bluesky could not be reached in this run, so nothing is shown here.</div>';
-  else if(!bsky)h+='<div class="empty">Bluesky was not checked in this run.</div>';
-  else h+='<div class="empty">Nothing with traction that looked interesting.</div>';
-  // tools
-  h+='<div class="sec-hd">Tools &amp; resources<span class="cnt">'+b.tools.length+'</span></div>';
-  h+=b.tools.length?b.tools.map(toolCard).join(''):'<div class="empty">'+(m.seed?'Nothing yet.':'No new tools or resources.')+'</div>';
-  // skipped + window
-  const sk=b.skipped,w=O(m.window);
+  }
+  const seedMsg=function(had){return '<div class="empty">'+(m.seed?'Nothing yet.':(had?'All checked.':'Nothing in this run.'))+'</div>';};
+  h+=section('Urgent','urgent',urgentCard,function(had){return m.seed?'<div class="empty">No brief has been run yet.</div>':(had?'<div class="ok-line">Nothing urgent left unchecked</div>':'<div class="ok-line">Nothing urgent</div>');});
+  h+=section('Literature','literature',litCard,seedMsg);
+  h+=section('Social signals','social',socialCard,function(had){
+    const bsky=A(m.sources).find(x=>x&&/bluesky/i.test(T(x.name)));
+    if(m.seed)return '<div class="empty">Nothing yet.</div>';
+    if(had)return '<div class="empty">All checked.</div>';
+    if(bsky&&bsky.status==='failed')return '<div class="empty">Bluesky could not be reached in this run, so nothing is shown here.</div>';
+    if(!bsky)return '<div class="empty">Bluesky was not checked in this run.</div>';
+    return '<div class="empty">Nothing with traction that looked interesting.</div>';
+  });
+  h+=section('Beyond the lab','beyond',beyondCard,function(had){return '<div class="empty">'+(m.seed?'Nothing yet.':(had?'All checked.':'No attention-grabbing papers outside the lab this run.'))+'</div>';});
+  h+=section('Tools &amp; resources','tools',toolCard,seedMsg);
+  // near misses: what was dropped but was close, so the filter can be audited
+  const nm=b.skipped.near_misses;
+  if(nm.length){
+    h+='<details class="panel" style="margin-top:12px"><summary>Near misses<span class="cnt" style="margin-left:auto;font-weight:400;color:var(--text-3);font-size:11px">'+nm.length+'</span></summary><div class="body">'
+      +nm.map(n=>{n=O(n);const u=safeUrl(n.url);return '<div style="margin-bottom:6px">'+(u?'<a href="'+esc(u)+'" target="_blank" rel="noopener noreferrer">'+esc(n.title)+'</a>':esc(n.title))+'<div style="font-size:11.5px;color:var(--text-3)">'+esc(n.reason)+'</div></div>';}).join('')+'</div></details>';
+  }
+  const sk=b.skipped,w=O(m.windows),wk=Object.keys(w);
   if(!m.seed){
     h+='<div class="skipline">Screened '+(+sk.screened||0)+' · dropped '+(+sk.dropped||0)+(T(sk.note)?' · '+esc(sk.note):'')
-      +(w.from?' · window '+esc(fmtShort(w.from))+(w.to?' → '+esc(fmtShort(w.to)):''):'')+'</div>';
+      +(m.duplicates_dropped?' · '+esc(m.duplicates_dropped)+' duplicates':'')+'</div>';
+    if(wk.length){
+      h+='<div class="skipline" style="border-top:none;margin-top:4px">Scanned: '+wk.map(k=>{const x=O(w[k]),c=x.status==='ok'?'var(--green)':(x.status==='failed'?'var(--danger)':'var(--warning)');
+        return esc(k)+' '+esc(fmtShort(x.from))+'→'+esc(fmtShort(x.to))+' <b style="color:'+c+'">'+esc(x.status||'?')+'</b>'+(x.clamped?' <b style="color:var(--warning)" title="Gap since '+esc(fmtShort(x.gap_from))+' not covered">⚠ gap</b>':'');}).join(' · ')+'</div>';
+    }
   }
   const src=A(m.sources);
-  if(src.length){
-    h+='<div class="skipline" style="border-top:none;margin-top:4px">Sources: '+src.map(s=>esc(s.name)+' <b style="color:'+(s.status==='ok'?'var(--green)':(s.status==='failed'?'var(--danger)':'var(--warning)'))+'">'+esc(s.status)+'</b>').join(' · ')+'</div>';
-  }
+  if(src.length&&!wk.length)h+='<div class="skipline" style="border-top:none;margin-top:4px">Sources: '+src.map(s=>esc(s.name)+' <b style="color:'+(s.status==='ok'?'var(--green)':(s.status==='failed'?'var(--danger)':'var(--warning)'))+'">'+esc(s.status)+'</b>').join(' · ')+'</div>';
+  return h;
+}
+
+// ─── saved tab ────────────────────────────────────────────────────────────────
+function savedRows(){
+  const rows=[],seen={};
+  SECS.forEach(sec=>A(BRIEF&&BRIEF[sec]).forEach(it=>{
+    const id=T(it.id);
+    if(markOf(id)==='save'&&!seen[id]){seen[id]=1;rows.push({id:id,title:T(it.title)||T(it.gist),link:sec==='social'?safeUrl(it.url):linkOf(it),section:sec,on:'',projects:it.projects,pending:true});}
+  }));
+  A(STATE&&STATE.saved).slice().reverse().forEach(x=>{
+    x=O(x);if(!T(x.id)||seen[x.id])return;seen[x.id]=1;
+    rows.push({id:T(x.id),title:T(x.title),link:safeUrl(x.link),section:T(x.section),on:T(x.on),projects:x.projects,pending:false});
+  });
+  return rows;
+}
+function viewSaved(){
+  const rows=savedRows();
+  let h='<div class="sec-hd">Saved<span class="cnt">'+rows.length+'</span></div>';
+  if(!rows.length)return h+'<div class="empty">Nothing saved yet. Press Save on a card.</div>';
+  rows.forEach(r=>{
+    h+='<div class="card lit t4" data-id="'+esc(r.id)+'"><div class="row"><span class="chip src">'+esc(r.section||'item')+'</span>'+prjChips(r.projects)
+      +(r.pending?'<span class="chip unsaved">filed at the next run</span>':'<span style="font-size:11px;color:var(--text-3)">saved '+esc(fmtShort(r.on))+'</span>')+'</div>'
+      +(r.link?'<a class="ttl" href="'+esc(r.link)+'" target="_blank" rel="noopener noreferrer">'+esc(r.title||r.id)+'</a>':'<div class="ttl">'+esc(r.title||r.id)+'</div>')
+      +(r.pending?'<div class="acts"><button class="btn mini on-save" data-act="mark" data-id="'+esc(r.id)+'" data-v="save">Unsave</button></div>':'')+'</div>';
+  });
   return h;
 }
 
@@ -513,6 +590,16 @@ function viewWatch(){
     h+=it.map(x=>'<div class="ss" style="grid-template-columns:auto 1fr auto"><span class="chip src">'+esc(x.platform||'?')+'</span><span><b>'+esc(x.name)+'</b>'+(x.project?' '+prjChips([x.project]):'')+'</span><span class="'+(T(x.url)?'chip logged':'todo')+'">'+(T(x.url)?'tracked':'no URL yet')+'</span></div>').join('');
     h+='</div>';
   }
+  const rn=WL.run,by=WL.beyond;
+  if(Object.keys(rn).length){
+    h+='<div class="sec-hd">Daily run</div><div class="panel"><dl class="kv"><dt>Overlap</dt><dd>re-scan '+esc(rn.overlap_days)+' day before the last good scan</dd><dt>Catch-up cap</dt><dd>never look back more than '+esc(rn.max_backfill_days)+' days</dd><dt>First run</dt><dd>'+esc(rn.first_run_days)+' days, or the last-brief date you give</dd><dt>Backlog warning</dt><dd>above '+esc(rn.backlog_warn)+' unchecked items</dd></dl>'
+      +(rn.from_workbook?'':'<div class="todo" style="margin-top:6px">defaults</div>')+'<div class="def" style="font-size:11px;color:var(--text-3);margin-top:6px">Each source keeps its own cursor: a source that failed is re-scanned from where it last succeeded.</div></div>';
+  }
+  if(by.journals.length){
+    h+='<div class="sec-hd">Beyond the lab</div><div class="panel"><div class="lbl">Journals</div>'+kwList(by.journals.filter(j=>j.track!==false).map(j=>j.name))
+      +'<dl class="kv" style="margin-top:8px"><dt>Headlines per run</dt><dd>at most '+esc(by.max_per_run)+'</dd><dt>Attention</dt><dd>'+esc(by.min_outlets)+'+ news outlets'+(by.commentary_counts?', commentary':'')+(by.bluesky_counts?', Bluesky traction':'')+'</dd></dl>'
+      +'<div class="def" style="font-size:11px;color:var(--text-3);margin-top:6px">No project match needed. Close calls are included and marked borderline.</div></div>';
+  }
   if(WL.meta&&T(WL.meta.scope))h+='<div class="skipline">'+esc(WL.meta.scope)+'</div>';
   return h;
 }
@@ -564,9 +651,9 @@ function hdr(){
 }
 function tabs(){
   const open=WL?WL.decisions.filter(d=>!decAnswered(d)).length:0;
-  const marked=Object.keys(W.marks).filter(id=>markOf(id)).length;
-  const T3=[['brief','Brief',marked||''],['watch','Watchlists',''],['decide','Decisions',open||'']];
-  return '<div class="tabs ptabs">'+T3.map(t=>'<button class="tab'+(tab===t[0]?' on':'')+'" data-act="tab" data-v="'+t[0]+'">'+t[1]+(t[2]!==''?'<span class="n">'+t[2]+'</span>':'')+'</button>').join('')+'</div>';
+  const cu=BRIEF?counts().total:0,sv=BRIEF?savedRows().length:0;
+  const T4=[['brief','Brief',cu||''],['saved','Saved',sv||''],['watch','Watchlists',''],['decide','Decisions',open||'']];
+  return '<div class="tabs ptabs">'+T4.map(t=>'<button class="tab'+(tab===t[0]?' on':'')+'" data-act="tab" data-v="'+t[0]+'">'+t[1]+(t[2]!==''?'<span class="n">'+t[2]+'</span>':'')+'</button>').join('')+'</div>';
 }
 function renderSetup(){
   return '<div class="setup"><h2>brief</h2><p>Enter the private data repo and a GitHub token. If the ops dashboard is already set up on this device, these are picked up automatically. Stored only in this browser.</p>'
@@ -579,7 +666,7 @@ function render(keepScroll){
   if(view==='loading'||view==='boot'){app.innerHTML='<div class="spin" style="padding:40px;text-align:center;color:var(--text-3)">Loading…</div>';return;}
   if(view==='error'){app.innerHTML='<div style="padding:40px 16px;text-align:center;font-size:13px">Failed to load: '+esc(errMsg)+'<br><br><button class="btn" data-act="reload">Retry</button> <button class="btn" data-act="resetsetup">Change token / repo</button></div>';return;}
   const ae=document.activeElement,keep=ae&&ae.tagName==='TEXTAREA'?ae.getAttribute('data-id'):null;
-  app.innerHTML=hdr()+banners()+tabs()+(tab==='watch'?viewWatch():(tab==='decide'?viewDecide():viewBrief()))
+  app.innerHTML=hdr()+banners()+tabs()+(tab==='watch'?viewWatch():(tab==='decide'?viewDecide():(tab==='saved'?viewSaved():viewBrief())))
     +'<div class="footer">build '+esc(BUILD)+'</div>';
   if(keepScroll)window.scrollTo(0,y);
   if(keep){const t=app.querySelector('textarea[data-id="'+keep+'"]');if(t){t.focus();t.setSelectionRange(t.value.length,t.value.length);}}
@@ -593,7 +680,11 @@ document.addEventListener('click',function(e){
   if(a==='mark')setMark(id,v);
   else if(a==='tab'){tab=v;try{localStorage.setItem(LS_TAB,v);}catch(x){}render();window.scrollTo(0,0);}
   else if(a==='filter'){filter=v;render();}
-  else if(a==='showskip'){showSkipped=!showSkipped;render();}
+  else if(a==='readall'){
+    const ids=[];SECS.forEach(sec=>A(BRIEF[sec]).forEach(it=>{if(!isChecked(T(it.id)))ids.push(T(it.id));}));
+    if(!ids.length||!confirm('Mark '+ids.length+' unchecked item'+(ids.length>1?'s':'')+' as read?'))return;
+    const ts=new Date().toISOString();ids.forEach(id=>{W.marks[id]={status:'read',ts:ts};});touch();
+  }
   else if(a==='dw'){dismissedWarn[el.getAttribute('data-k')]=1;render(true);}
   else if(a==='dchoice')setDecision(id,decOf(id)===v?null:v);
   else if(a==='theme')themeNext();
