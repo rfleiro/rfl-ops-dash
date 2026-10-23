@@ -182,10 +182,10 @@ async function getFile(path){
 // ─── normalisers ──────────────────────────────────────────────────────────────
 function normBrief(b){
   b=O(b); b.meta=O(b.meta); b.meta.warnings=A(b.meta.warnings).map(T); b.meta.sources=A(b.meta.sources);
-  b.urgent=A(b.urgent); b.literature=A(b.literature); b.tools=A(b.tools); b.skipped=O(b.skipped);
+  b.urgent=A(b.urgent); b.literature=A(b.literature); b.tools=A(b.tools); b.social=A(b.social); b.skipped=O(b.skipped);
   // Backstop for the missing-id class of bug: never let an item arrive without a stable key.
   const seen={};
-  ['urgent','literature','tools'].forEach(k=>b[k].forEach((it,i)=>{
+  ['urgent','literature','tools','social'].forEach(k=>b[k].forEach((it,i)=>{
     if(!it||typeof it!=='object'){b[k][i]=it={};}
     if(!T(it.id)||seen[it.id]){console.error('digest: item without a unique id in',k,i,it.title);it.id=k+'-auto-'+i;}
     seen[it.id]=1;
@@ -199,6 +199,7 @@ function normWL(w){
   w.saved_searches=A(w.saved_searches); w.decisions=A(w.decisions); w.people=A(w.people).filter(p=>p&&typeof p==='object');
   w.context_rules=A(w.context_rules); w.feeds=O(w.feeds); w.social=O(w.social); w.social.items=A(w.social.items);
   w.relevance_order=A(w.relevance_order); w.meta=O(w.meta);
+  w.social.topics=A(w.social.topics); w.social.traction=O(w.social.traction);
   return w;
 }
 
@@ -345,6 +346,32 @@ function toolCard(t){
   return h+'</div></div>';
 }
 
+function socialCard(x){
+  const id=T(x.id),m=markOf(id),link=safeUrl(x.url),mt=O(x.metrics),lk=O(x.linked),lkLink=linkOf(lk);
+  const tp=A(WL&&WL.social.topics).find(t=>T(t.id)===T(x.topic));
+  const people=A(x.people).filter(p=>p&&typeof p==='object');
+  let h='<div class="card lit t4 soc'+(m?' m-'+m:'')+'" data-id="'+esc(id)+'"><div class="row">';
+  h+='<span class="chip src">'+esc(T(x.platform)||'Bluesky')+'</span><span class="chip prj">'+esc(tp?tp.name:T(x.topic))+'</span>';
+  people.forEach(p=>{h+='<span class="chip '+(T(p.role).toLowerCase()==='competitor'?'comp':'ppl')+'">'+esc(p.role||'watchlist')+' · '+esc(p.name)+'</span>';});
+  h+=x.verified===true?'<span class="chip sci-ok">verified · '+esc(T(lk.kind)||'source found')+'</span>':'<span class="chip sig">social signal, unverified</span>';
+  h+='</div>';
+  h+=link?'<a class="ttl" href="'+esc(link)+'" target="_blank" rel="noopener noreferrer">'+esc(x.gist)+'</a>':'<div class="ttl">'+esc(x.gist)+'</div>';
+  h+='<div class="by">'+esc(x.author)+(T(x.posted)?' · '+esc(fmtShort(x.posted)):'')+'</div>';
+  const eng=[];
+  if(mt.likes!=null)eng.push('♥ '+esc(mt.likes));
+  if(mt.reposts!=null)eng.push('↻ '+esc(mt.reposts));
+  if(mt.replies!=null)eng.push(esc(mt.replies)+' replies');
+  if(eng.length)h+='<div class="row eng" style="margin-top:6px"><span class="chip">'+eng.join(' · ')+'</span>'+(T(mt.as_of)?'<span style="font-size:11px;color:var(--text-3)">counts as of '+esc(fmtShort(mt.as_of))+'</span>':'')+'</div>';
+  if(T(x.why))h+='<div class="wy">'+esc(x.why)+'</div>';
+  if(lkLink)h+='<div class="cl"><b>Behind it'+(T(lk.kind)?' ('+esc(lk.kind)+')':'')+':</b> <a href="'+esc(lkLink)+'" target="_blank" rel="noopener noreferrer">'+esc(T(lk.title)||T(lk.doi)||lkLink)+'</a></div>';
+  if(T(x.uncertain))h+='<div class="cl"><b>Unsure:</b> '+esc(x.uncertain)+'</div>';
+  h+='<div class="acts">';
+  [['save','Save'],['dig','Dig deeper'],['skip','Skip']].forEach(a=>{
+    h+='<button class="btn mini'+(m===a[0]?' on-'+a[0]:'')+'" data-act="mark" data-id="'+esc(id)+'" data-v="'+a[0]+'">'+a[1]+'</button>';
+  });
+  return h+'</div></div>';
+}
+
 // ─── brief tab ────────────────────────────────────────────────────────────────
 function banners(){
   let h='';
@@ -388,10 +415,21 @@ function viewBrief(){
     [['all','All'],['proj','On a project'],['people','Watchlist people'],['pre','Preprints'],['marked','Marked']].forEach(f=>{
       h+='<button class="fbtn'+(filter===f[0]?' on':'')+'" data-act="filter" data-v="'+f[0]+'">'+f[1]+'</button>';
     });
-    if(hidden)h+='<button class="fbtn'+(showSkipped?' on':'')+'" data-act="showskip">'+(showSkipped?'Hide':'Show')+' skipped ('+hidden+')</button>';
+    const hiddenAll=hidden+b.social.filter(x=>markOf(T(x.id))==='skip').length;
+    if(hiddenAll)h+='<button class="fbtn'+(showSkipped?' on':'')+'" data-act="showskip">'+(showSkipped?'Hide':'Show')+' skipped ('+hiddenAll+')</button>';
     h+='</div>';
     h+=list.length?list.map(it=>litCard(it)).join(''):'<div class="empty">Nothing matches this filter.</div>';
   }else h+='<div class="empty">'+(m.seed?'Nothing yet.':'No literature items in this brief.')+'</div>';
+  // social signals
+  const soc=b.social,socHidden=soc.filter(x=>markOf(T(x.id))==='skip').length;
+  const socShown=showSkipped?soc:soc.filter(x=>markOf(T(x.id))!=='skip');
+  const bsky=A(m.sources).find(x=>x&&/bluesky/i.test(T(x.name)));
+  h+='<div class="sec-hd">Social signals<span class="cnt">'+soc.length+'</span></div>';
+  if(socShown.length)h+=socShown.map(socialCard).join('')+(socHidden&&!showSkipped?'<div class="def" style="font-size:11px;color:var(--text-3)">'+socHidden+' skipped (use “Show skipped” above)</div>':'');
+  else if(m.seed)h+='<div class="empty">Nothing yet.</div>';
+  else if(bsky&&bsky.status==='failed')h+='<div class="empty">Bluesky could not be reached in this run, so nothing is shown here.</div>';
+  else if(!bsky)h+='<div class="empty">Bluesky was not checked in this run.</div>';
+  else h+='<div class="empty">Nothing with traction that looked interesting.</div>';
   // tools
   h+='<div class="sec-hd">Tools &amp; resources<span class="cnt">'+b.tools.length+'</span></div>';
   h+=b.tools.length?b.tools.map(toolCard).join(''):'<div class="empty">'+(m.seed?'Nothing yet.':'No new tools or resources.')+'</div>';
@@ -463,7 +501,13 @@ function viewWatch(){
       +Object.keys(sg).sort((a,b)=>sg[b]-sg[a]).map(k=>'<dt>'+esc(k)+'</dt><dd>'+esc(sg[k])+'</dd>').join('')+'</dl>'
       +'<div class="def" style="font-size:11px;color:var(--text-3);margin-top:6px">My suggestions only. Decisions are made in the workbook&rsquo;s Feeds sheet.</div></div>';
   }
-  const so=WL.social,it=so.items;
+  const so=WL.social,it=so.items,tr=so.traction;
+  if(so.topics.length){
+    h+='<div class="sec-hd">Bluesky topics<span class="cnt">'+so.topics.length+'</span></div><div class="panel">';
+    so.topics.forEach(t=>{h+='<div class="lbl">'+esc(t.name)+(t.track===false?' · off':'')+'</div>'+kwList(t.terms)+(T(t.rule)?'<div class="def" style="font-size:11px;color:var(--text-3);margin-top:3px">'+esc(t.rule)+'</div>':'');});
+    h+='<div class="lbl">Traction</div>'+esc((+tr.min_likes||0)+' likes or '+(+tr.min_reposts||0)+' reposts'+(tr.watchlist_people_any?', or any post by someone on the People list':''))
+      +(tr.from_workbook?'':' <span class="todo">(defaults)</span>')+'<div class="def" style="font-size:11px;color:var(--text-3);margin-top:3px">Then judged for interest. Shown as unverified until the paper or repo behind it is found.</div></div>';
+  }
   if(it.length){
     h+='<div class="sec-hd">Social &amp; tools<span class="cnt">'+it.length+'</span></div><div class="panel">';
     h+=it.map(x=>'<div class="ss" style="grid-template-columns:auto 1fr auto"><span class="chip src">'+esc(x.platform||'?')+'</span><span><b>'+esc(x.name)+'</b>'+(x.project?' '+prjChips([x.project]):'')+'</span><span class="'+(T(x.url)?'chip logged':'todo')+'">'+(T(x.url)?'tracked':'no URL yet')+'</span></div>').join('');
