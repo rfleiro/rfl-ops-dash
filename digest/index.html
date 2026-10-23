@@ -544,7 +544,7 @@ function viewWatch(){
 
   h+='<div class="sec-hd">Saved searches</div><div class="panel">';
   WL.saved_searches.forEach(s=>{
-    const active=T(s.status).toLowerCase()==='existing';
+    const active=['existing','adopted'].indexOf(T(s.status).toLowerCase())>=0;
     const st=active?'active':'proposed';
     const chip=active?'chip logged':'chip';
     const q=T(s.edited_query)||(active?T(s.current):T(s.proposed))||T(s.current);
@@ -557,7 +557,7 @@ function viewWatch(){
   if(f.count){
     h+='<div class="sec-hd">Feeds</div><div class="panel"><dl class="kv"><dt>Feedly</dt><dd>'+esc(f.count)+' feeds · '+esc(f.decided||0)+' decided by you</dd>'
       +Object.keys(sg).sort((a,b)=>sg[b]-sg[a]).map(k=>'<dt>'+esc(k)+'</dt><dd>'+esc(sg[k])+'</dd>').join('')+'</dl>'
-      +'<div class="def" style="font-size:11px;color:var(--text-3);margin-top:6px">These are suggestions. Feed-by-feed decisions are kept in the workbook.</div></div>';
+      +'<div class="def" style="font-size:11px;color:var(--text-3);margin-top:6px">These are suggestions. Feed-by-feed decisions are recorded as you tell me.</div></div>';
   }
   const so=WL.social,it=so.items,tr=so.traction;
   if(so.topics.length){
@@ -565,7 +565,7 @@ function viewWatch(){
     so.topics.forEach(t=>{h+='<div class="lbl">'+esc(t.name)+(t.track===false?' · off':'')+'</div>'+kwList(t.terms)+(T(t.rule)?'<div class="def" style="font-size:11px;color:var(--text-3);margin-top:3px">'+esc(t.rule)+'</div>':'');});
     const fl=so.following;
     h+='<div class="lbl">Traction</div>'+esc((+tr.min_likes||0)+' likes or '+(+tr.min_reposts||0)+' reposts'+(tr.watchlist_people_any?', or any post by someone on the People list':''))
-      +(tr.from_workbook?'':' <span class="todo">(defaults)</span>')+'<div class="def" style="font-size:11px;color:var(--text-3);margin-top:3px">Then judged for interest. Shown as unverified until the paper or repo behind it is found.</div>'
+      +(tr.confirmed?'':' <span class="todo">(defaults)</span>')+'<div class="def" style="font-size:11px;color:var(--text-3);margin-top:3px">Then judged for interest. Shown as unverified until the paper or repo behind it is found.</div>'
       +(fl.enabled?'<div class="lbl">Accounts you follow</div>@'+esc(fl.handle)+(fl.tentative?' <span class="todo">(tentative)</span>':'')+'<div class="def" style="font-size:11px;color:var(--text-3);margin-top:3px">Their posts on these topics show at any traction; anything else needs the thresholds and has to look important. Needs the follow list to be readable without login.</div>':'')
       +'</div>';
   }
@@ -577,7 +577,7 @@ function viewWatch(){
   const rn=WL.run,by=WL.beyond;
   if(Object.keys(rn).length){
     h+='<div class="sec-hd">Daily run</div><div class="panel"><dl class="kv"><dt>Overlap</dt><dd>re-scan '+esc(rn.overlap_days)+' day before the last good scan</dd><dt>Catch-up cap</dt><dd>never look back more than '+esc(rn.max_backfill_days)+' days</dd><dt>First run</dt><dd>'+esc(rn.first_run_days)+' days, or the last-brief date you give</dd><dt>Backlog warning</dt><dd>above '+esc(rn.backlog_warn)+' unchecked items</dd></dl>'
-      +(rn.from_workbook?'':'<div class="todo" style="margin-top:6px">defaults</div>')+'<div class="def" style="font-size:11px;color:var(--text-3);margin-top:6px">Each source keeps its own cursor: a source that failed is re-scanned from where it last succeeded.</div></div>';
+      +(rn.confirmed?'':'<div class="todo" style="margin-top:6px">defaults</div>')+'<div class="def" style="font-size:11px;color:var(--text-3);margin-top:6px">Each source keeps its own cursor: a source that failed is re-scanned from where it last succeeded.</div></div>';
   }
   if(by.journals.length){
     h+='<div class="sec-hd">Beyond the lab</div><div class="panel"><div class="lbl">Journals</div>'+kwList(by.journals.filter(j=>j.track!==false).map(j=>j.name))
