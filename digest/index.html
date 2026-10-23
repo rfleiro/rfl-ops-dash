@@ -107,15 +107,6 @@ details.panel .body{margin-top:8px;font-size:12.5px;color:var(--text-2)}
 .ss .q{color:var(--text-3);font-size:11.5px;grid-column:2/-1}
 .todo{color:var(--warning);font-size:12px}
 
-.dec{padding:11px 13px}
-.dec .q{font-size:13px;font-weight:600}
-.dec .h{font-size:11.5px;color:var(--text-3);margin:2px 0 8px}
-.dec textarea,.dec input[type=date]{width:100%;font-family:inherit;font-size:13px;padding:7px 9px;border:1px solid var(--border);border-radius:var(--rs);background:var(--surface);color:var(--text)}
-.dec textarea{min-height:58px;resize:vertical}
-.dec .opts{display:flex;flex-wrap:wrap;gap:6px}
-.dec label.cb{display:flex;gap:7px;align-items:flex-start;font-size:12.5px;padding:3px 0}
-.dec .def{font-size:11px;color:var(--text-3);margin-top:5px}
-.dec.answered{border-left:3px solid var(--green)}
 
 .setup{max-width:380px;margin:60px auto;padding:0 16px}
 .setup h2{font-size:16px;margin-bottom:10px}
@@ -167,7 +158,7 @@ let BRIEF=null, WL=null;
 let JR=emptyJ();              // journal as last seen on GitHub
 let W=emptyJ();               // working copy: server journal overlaid with unsynced local edits
 let view='boot', errMsg='';
-let tab=['brief','saved','watch','decide'].includes(localStorage.getItem(LS_TAB))?localStorage.getItem(LS_TAB):'brief';
+let tab=['brief','saved','watch'].includes(localStorage.getItem(LS_TAB))?localStorage.getItem(LS_TAB):'brief';
 let filter='all';
 let STATE=null;
 let sync='saved', syncMsg='', dirty=false, saving=false, pushTimer=null, editSeq=0, offline=false;
@@ -264,16 +255,6 @@ function setMark(id,status){
   const cur=markOf(id);
   W.marks[id]={status:cur===status?'none':status,ts:new Date().toISOString()};
   touch();
-}
-function decOf(id){
-  const d=W.decisions[id];if(d)return d.value;
-  const def=WL&&WL.decisions.find(x=>T(x.id)===id);
-  return def&&def.answer!=null&&def.answer!==''?def.answer:undefined;   // answered in the workbook
-}
-function setDecision(id,value,quiet){
-  const empty=(value==null||value===''||(Array.isArray(value)&&!value.length));
-  W.decisions[id]={value:empty?null:value,ts:new Date().toISOString()};
-  touch(quiet);
 }
 function touch(quiet){editSeq++;dirty=true;sync='dirty';saveLocal();schedulePush(700);if(quiet)paintSync();else render(true);}
 function schedulePush(ms){clearTimeout(pushTimer);pushTimer=setTimeout(push,ms);}
@@ -417,7 +398,7 @@ function banners(){
   const m=BRIEF.meta,cu=counts();
   if(offline)h+='<div class="ban bad">Offline: showing the last copy stored on this device.</div>';
   if(m.seed){
-    h+='<div class="ban info"><b>No brief yet.</b> The first scheduled run will fill this in. Watchlists and Decisions are already live.</div>';
+    h+='<div class="ban info"><b>No brief yet.</b> The first scheduled run will fill this in. Watchlists are already live.</div>';
   }else{
     const age=dayDiff(T(BRIEF.date)||TODAY,TODAY);
     if(age>0)h+='<div class="ban">Last run: '+esc(fmtLong(BRIEF.date))+' ('+age+' day'+(age>1?'s':'')+' ago). Items you have not checked stay until you do. The next scheduled run will refresh it.</div>';
@@ -539,7 +520,6 @@ function personChip(p){
 }
 function viewWatch(){
   if(!WL||(!WL.people.length&&!WL.projects.length))return '<div class="empty">No watchlists found at '+esc(WL_PATH)+'.</div>';
-  const adopted=A(decOf('ss'));
   let h='';
   // people: the point of the brief
   const byRole={};WL.people.forEach(p=>{const r=T(p.role)||'Unassigned';(byRole[r]=byRole[r]||[]).push(p);});
@@ -564,8 +544,8 @@ function viewWatch(){
   h+='<div class="sec-hd">Saved searches</div><div class="panel">';
   WL.saved_searches.forEach(s=>{
     const active=T(s.status).toLowerCase()==='existing';
-    const st=active?'active':(adopted.indexOf(s.id)>=0?'adopt (pending)':'proposed');
-    const chip=active?'chip logged':(adopted.indexOf(s.id)>=0?'chip queued':'chip');
+    const st=active?'active':'proposed';
+    const chip=active?'chip logged':'chip';
     const q=T(s.edited_query)||(active?T(s.current):T(s.proposed))||T(s.current);
     h+='<div class="ss"><span class="id">'+esc(s.id)+'</span><span><b>'+esc(s.topic||s.name)+'</b>'+(s.project?' '+prjChips([s.project]):'')+(s.server?' <span class="chip src">'+esc(s.server)+'</span>':'')+'</span><span class="'+chip+'">'+st+'</span>'
       +'<span class="q">'+esc(q)+'</span></div>';
@@ -576,7 +556,7 @@ function viewWatch(){
   if(f.count){
     h+='<div class="sec-hd">Feeds</div><div class="panel"><dl class="kv"><dt>Feedly</dt><dd>'+esc(f.count)+' feeds · '+esc(f.decided||0)+' decided by you</dd>'
       +Object.keys(sg).sort((a,b)=>sg[b]-sg[a]).map(k=>'<dt>'+esc(k)+'</dt><dd>'+esc(sg[k])+'</dd>').join('')+'</dl>'
-      +'<div class="def" style="font-size:11px;color:var(--text-3);margin-top:6px">My suggestions only. Decisions are made in the workbook&rsquo;s Feeds sheet.</div></div>';
+      +'<div class="def" style="font-size:11px;color:var(--text-3);margin-top:6px">These are suggestions. Feed-by-feed decisions are kept in the workbook.</div></div>';
   }
   const so=WL.social,it=so.items,tr=so.traction;
   if(so.topics.length){
@@ -604,39 +584,6 @@ function viewWatch(){
   return h;
 }
 
-// ─── decisions tab ────────────────────────────────────────────────────────────
-function decOptions(d){
-  if(d.type==='multi'&&T(d.from)==='saved_searches:proposed')return WL.saved_searches.filter(s=>s.status==='proposed').map(s=>({v:s.id,t:s.name+(s.project?' ('+s.project+')':'')}));
-  return A(d.options);
-}
-function decCard(d){
-  const id=T(d.id),val=decOf(id),answered=val!=null&&val!==''&&!(Array.isArray(val)&&!val.length);
-  let h='<div class="card dec'+(answered?' answered':'')+'"><div class="q">'+esc(d.label)+'</div>'+(T(d.help)?'<div class="h">'+esc(d.help)+'</div>':'<div style="height:6px"></div>');
-  if(d.type==='text')h+='<textarea data-act="dtext" data-id="'+esc(id)+'">'+esc(val==null?'':val)+'</textarea>';
-  else if(d.type==='date')h+='<input type="date" data-act="ddate" data-id="'+esc(id)+'" value="'+esc(val==null?'':val)+'">';
-  else if(d.type==='choice'){
-    h+='<div class="opts">'+decOptions(d).map(o=>'<button class="btn mini'+(val===o.v?' btn-p':'')+'" data-act="dchoice" data-id="'+esc(id)+'" data-v="'+esc(o.v)+'">'+esc(o.t)+'</button>').join('')+'</div>';
-    if(T(d.default)&&!answered)h+='<div class="def">Default in use: '+esc((decOptions(d).find(o=>o.v===d.default)||{t:d.default}).t)+'</div>';
-  }else if(d.type==='multi'){
-    const sel=A(val),opts=decOptions(d);
-    h+=opts.length?opts.map(o=>'<label class="cb"><input type="checkbox" data-act="dmulti" data-id="'+esc(id)+'" data-v="'+esc(o.v)+'"'+(sel.indexOf(o.v)>=0?' checked':'')+'> <span>'+esc(o.t)+'</span></label>').join(''):'<div class="empty">Nothing to choose from.</div>';
-  }
-  return h+'</div>';
-}
-function decAnswered(d){const v=decOf(T(d.id));return v!=null&&v!==''&&!(Array.isArray(v)&&!v.length);}
-function viewDecide(){
-  if(!WL||!WL.decisions.length)return '<div class="empty">No open decisions defined in '+esc(WL_PATH)+'.</div>';
-  const open=WL.decisions.filter(d=>!decAnswered(d)),done=WL.decisions.filter(decAnswered);
-  let h='<div class="ban info" style="margin-bottom:10px">Answers are saved and the next run uses them as they are. There is nothing to tell me in chat.</div>';
-  h+='<div class="sec-hd">Open<span class="cnt">'+open.length+'</span></div>';
-  if(!open.length)h+='<div class="ok-line">All decisions answered</div>';
-  const groups=[];
-  open.forEach(d=>{const g=T(d.group)||'Other';let x=groups.find(y=>y.n===g);if(!x){x={n:g,l:[]};groups.push(x);}x.l.push(d);});
-  groups.forEach(g=>{h+='<div class="lbl" style="margin:12px 2px 6px">'+esc(g.n)+' · '+g.l.length+'</div>'+g.l.map(decCard).join('');});
-  if(done.length)h+='<div class="sec-hd">Answered<span class="cnt">'+done.length+'</span></div>'+done.map(decCard).join('');
-  return h;
-}
-
 // ─── shell ────────────────────────────────────────────────────────────────────
 function themeNext(){
   const C=['auto','light','dark'],cur=localStorage.getItem('dash:theme')||'auto',n=C[(C.indexOf(cur)+1)%3];
@@ -653,10 +600,9 @@ function hdr(){
     +'<button class="btn btn-icon" data-act="theme" title="Theme: '+th+'">◐</button></div>';
 }
 function tabs(){
-  const open=WL?WL.decisions.filter(d=>!decAnswered(d)).length:0;
   const cu=BRIEF?counts().total:0,sv=BRIEF?savedRows().length:0;
-  const T4=[['brief','Brief',cu||''],['saved','Saved',sv||''],['watch','Watchlists',''],['decide','Decisions',open||'']];
-  return '<div class="tabs ptabs">'+T4.map(t=>'<button class="tab'+(tab===t[0]?' on':'')+'" data-act="tab" data-v="'+t[0]+'">'+t[1]+(t[2]!==''?'<span class="n">'+t[2]+'</span>':'')+'</button>').join('')+'</div>';
+  const T3=[['brief','Brief',cu||''],['saved','Saved',sv||''],['watch','Watchlists','']];
+  return '<div class="tabs ptabs">'+T3.map(t=>'<button class="tab'+(tab===t[0]?' on':'')+'" data-act="tab" data-v="'+t[0]+'">'+t[1]+(t[2]!==''?'<span class="n">'+t[2]+'</span>':'')+'</button>').join('')+'</div>';
 }
 function renderSetup(){
   return '<div class="setup"><h2>brief</h2><p>Enter the private data repo and a GitHub token. If the ops dashboard is already set up on this device, these are picked up automatically. Stored only in this browser.</p>'
@@ -669,7 +615,7 @@ function render(keepScroll){
   if(view==='loading'||view==='boot'){app.innerHTML='<div class="spin" style="padding:40px;text-align:center;color:var(--text-3)">Loading…</div>';return;}
   if(view==='error'){app.innerHTML='<div style="padding:40px 16px;text-align:center;font-size:13px">Failed to load: '+esc(errMsg)+'<br><br><button class="btn" data-act="reload">Retry</button> <button class="btn" data-act="resetsetup">Change token / repo</button></div>';return;}
   const ae=document.activeElement,keep=ae&&ae.tagName==='TEXTAREA'?ae.getAttribute('data-id'):null;
-  app.innerHTML=hdr()+banners()+tabs()+(tab==='watch'?viewWatch():(tab==='decide'?viewDecide():(tab==='saved'?viewSaved():viewBrief())))
+  app.innerHTML=hdr()+banners()+tabs()+(tab==='watch'?viewWatch():(tab==='saved'?viewSaved():viewBrief()))
     +'<div class="footer">build '+esc(BUILD)+'</div>';
   if(keepScroll)window.scrollTo(0,y);
   if(keep){const t=app.querySelector('textarea[data-id="'+keep+'"]');if(t){t.focus();t.setSelectionRange(t.value.length,t.value.length);}}
@@ -689,7 +635,6 @@ document.addEventListener('click',function(e){
     const ts=new Date().toISOString();ids.forEach(id=>{W.marks[id]={status:'read',ts:ts};});touch();
   }
   else if(a==='dw'){dismissedWarn[el.getAttribute('data-k')]=1;render(true);}
-  else if(a==='dchoice')setDecision(id,decOf(id)===v?null:v);
   else if(a==='theme')themeNext();
   else if(a==='reload'){if(dirty){push().then(load);}else load();}
   else if(a==='syncnow'){if(dirty){schedulePush(0);}else load();}
@@ -699,17 +644,6 @@ document.addEventListener('click',function(e){
     localStorage.setItem(REPO_KEY,r);localStorage.setItem(PAT_KEY,p);REPO=r;PAT=p;load();
   }
   else if(a==='resetsetup'){localStorage.removeItem(PAT_KEY);localStorage.removeItem(REPO_KEY);PAT='';REPO='';view='setup';render();}
-});
-document.addEventListener('change',function(e){
-  const el=e.target,a=el.getAttribute&&el.getAttribute('data-act');if(!a)return;
-  const id=el.getAttribute('data-id');
-  if(a==='dtext')setDecision(id,el.value.trim(),true);   // quiet: a re-render here would swallow the click that caused the blur
-  else if(a==='ddate')setDecision(id,el.value,true);
-  else if(a==='dmulti'){
-    const cur=A(decOf(id)).slice(),v=el.getAttribute('data-v'),i=cur.indexOf(v);
-    if(el.checked&&i<0)cur.push(v);else if(!el.checked&&i>=0)cur.splice(i,1);
-    setDecision(id,cur);
-  }
 });
 document.addEventListener('visibilitychange',function(){
   if(document.hidden||view!=='ready')return;
