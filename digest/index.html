@@ -417,10 +417,10 @@ function banners(){
   const m=BRIEF.meta,cu=counts();
   if(offline)h+='<div class="ban bad">Offline: showing the last copy stored on this device.</div>';
   if(m.seed){
-    h+='<div class="ban info"><b>No brief yet.</b> Say <b>“brief me”</b> in the Morning Brief project to generate the first one. Watchlists and Decisions are already live.</div>';
+    h+='<div class="ban info"><b>No brief yet.</b> The first scheduled run will fill this in. Watchlists and Decisions are already live.</div>';
   }else{
     const age=dayDiff(T(BRIEF.date)||TODAY,TODAY);
-    if(age>0)h+='<div class="ban">Last run: '+esc(fmtLong(BRIEF.date))+' ('+age+' day'+(age>1?'s':'')+' ago). Items you have not checked stay until you do. Say “brief me” for a fresh run.</div>';
+    if(age>0)h+='<div class="ban">Last run: '+esc(fmtLong(BRIEF.date))+' ('+age+' day'+(age>1?'s':'')+' ago). Items you have not checked stay until you do. The next scheduled run will refresh it.</div>';
   }
   const warnAt=+O(WL&&WL.run).backlog_warn||0;
   if(warnAt&&cu.total>warnAt)h+='<div class="ban">Backlog: '+cu.total+' unchecked items (warning level '+warnAt+'). Nothing is dropped automatically. Use “Mark all as read” once you have skimmed.</div>';
@@ -627,10 +627,13 @@ function decAnswered(d){const v=decOf(T(d.id));return v!=null&&v!==''&&!(Array.i
 function viewDecide(){
   if(!WL||!WL.decisions.length)return '<div class="empty">No open decisions defined in '+esc(WL_PATH)+'.</div>';
   const open=WL.decisions.filter(d=>!decAnswered(d)),done=WL.decisions.filter(decAnswered);
-  let h='<div class="ban info" style="margin-bottom:10px">Answers are saved to the journal. Claude applies them to the watchlists and the prompt at the next run, then clears them.</div>';
+  let h='<div class="ban info" style="margin-bottom:10px">Answers are saved and the next run uses them as they are. There is nothing to tell me in chat.</div>';
   h+='<div class="sec-hd">Open<span class="cnt">'+open.length+'</span></div>';
-  h+=open.length?open.map(decCard).join(''):'<div class="ok-line">All decisions answered</div>';
-  if(done.length)h+='<div class="sec-hd">Answered, waiting to be applied<span class="cnt">'+done.length+'</span></div>'+done.map(decCard).join('');
+  if(!open.length)h+='<div class="ok-line">All decisions answered</div>';
+  const groups=[];
+  open.forEach(d=>{const g=T(d.group)||'Other';let x=groups.find(y=>y.n===g);if(!x){x={n:g,l:[]};groups.push(x);}x.l.push(d);});
+  groups.forEach(g=>{h+='<div class="lbl" style="margin:12px 2px 6px">'+esc(g.n)+' · '+g.l.length+'</div>'+g.l.map(decCard).join('');});
+  if(done.length)h+='<div class="sec-hd">Answered<span class="cnt">'+done.length+'</span></div>'+done.map(decCard).join('');
   return h;
 }
 
