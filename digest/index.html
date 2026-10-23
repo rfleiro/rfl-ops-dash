@@ -204,7 +204,7 @@ function normWL(w){
   w.saved_searches=A(w.saved_searches); w.decisions=A(w.decisions); w.people=A(w.people).filter(p=>p&&typeof p==='object');
   w.context_rules=A(w.context_rules); w.feeds=O(w.feeds); w.social=O(w.social); w.social.items=A(w.social.items);
   w.relevance_order=A(w.relevance_order); w.meta=O(w.meta);
-  w.social.topics=A(w.social.topics); w.social.traction=O(w.social.traction);
+  w.social.topics=A(w.social.topics); w.social.traction=O(w.social.traction); w.social.following=O(w.social.following);
   w.run=O(w.run); w.beyond=O(w.beyond); w.beyond.journals=A(w.beyond.journals);
   return w;
 }
@@ -353,7 +353,8 @@ function socialCard(x){
   const tp=A(WL&&WL.social.topics).find(t=>T(t.id)===T(x.topic));
   const people=A(x.people).filter(p=>p&&typeof p==='object');
   let h='<div class="card lit t4 soc'+(m?' m-'+m:'')+(x.borderline===true?' bl':'')+'" data-id="'+esc(id)+'"><div class="row">';
-  h+='<span class="chip src">'+esc(T(x.platform)||'Bluesky')+'</span><span class="chip prj">'+esc(tp?tp.name:T(x.topic))+'</span>';
+  h+='<span class="chip src">'+esc(T(x.platform)||'Bluesky')+'</span><span class="chip prj">'+esc(tp?tp.name:(T(x.topic)==='other'?'Other':T(x.topic)))+'</span>';
+  if(x.via==='following')h+='<span class="chip ppl" title="Posted by an account you follow">from your follows</span>';
   people.forEach(p=>{h+='<span class="chip '+(T(p.role).toLowerCase()==='competitor'?'comp':'ppl')+'">'+esc(p.role||'watchlist')+' · '+esc(p.name)+'</span>';});
   h+=x.verified===true?'<span class="chip sci-ok">verified · '+esc(T(lk.kind)||'source found')+'</span>':'<span class="chip sig">social signal, unverified</span>';
   h+=stampChips(x)+'</div>';
@@ -562,8 +563,11 @@ function viewWatch(){
   if(so.topics.length){
     h+='<div class="sec-hd">Bluesky topics<span class="cnt">'+so.topics.length+'</span></div><div class="panel">';
     so.topics.forEach(t=>{h+='<div class="lbl">'+esc(t.name)+(t.track===false?' · off':'')+'</div>'+kwList(t.terms)+(T(t.rule)?'<div class="def" style="font-size:11px;color:var(--text-3);margin-top:3px">'+esc(t.rule)+'</div>':'');});
+    const fl=so.following;
     h+='<div class="lbl">Traction</div>'+esc((+tr.min_likes||0)+' likes or '+(+tr.min_reposts||0)+' reposts'+(tr.watchlist_people_any?', or any post by someone on the People list':''))
-      +(tr.from_workbook?'':' <span class="todo">(defaults)</span>')+'<div class="def" style="font-size:11px;color:var(--text-3);margin-top:3px">Then judged for interest. Shown as unverified until the paper or repo behind it is found.</div></div>';
+      +(tr.from_workbook?'':' <span class="todo">(defaults)</span>')+'<div class="def" style="font-size:11px;color:var(--text-3);margin-top:3px">Then judged for interest. Shown as unverified until the paper or repo behind it is found.</div>'
+      +(fl.enabled?'<div class="lbl">Accounts you follow</div>@'+esc(fl.handle)+(fl.tentative?' <span class="todo">(tentative)</span>':'')+'<div class="def" style="font-size:11px;color:var(--text-3);margin-top:3px">Their posts on these topics show at any traction; anything else needs the thresholds and has to look important. Needs the follow list to be readable without login.</div>':'')
+      +'</div>';
   }
   if(it.length){
     h+='<div class="sec-hd">Social &amp; tools<span class="cnt">'+it.length+'</span></div><div class="panel">';
