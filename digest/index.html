@@ -1,0 +1,576 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#F7F6F3" media="(prefers-color-scheme:light)">
+<meta name="theme-color" content="#141412" media="(prefers-color-scheme:dark)">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="brief">
+<meta name="robots" content="noindex,nofollow">
+<title>brief</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%230891B2'/><rect x='24' y='26' width='52' height='8' rx='4' fill='white'/><rect x='24' y='46' width='36' height='8' rx='4' fill='white' opacity='.7'/><rect x='24' y='66' width='44' height='8' rx='4' fill='white' opacity='.45'/></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600&family=Barlow+Condensed:wght@500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../shared/style.css?v=20261006-2230">
+<script>(function(){var t=localStorage.getItem('dash:theme');if(t&&t!=='auto')document.documentElement.setAttribute('data-theme',t);})()</script>
+<style>
+.page{max-width:760px;margin:0 auto;padding:14px 14px 90px;padding-top:calc(14px + env(safe-area-inset-top,0px))}
+.fh{display:flex;align-items:center;gap:8px;margin-bottom:12px}
+.fh h1{font-family:var(--f-num);font-size:21px;font-weight:600;letter-spacing:.01em;flex:1}
+.fh .sub{font-size:12px;color:var(--text-3);font-variant-numeric:tabular-nums}
+.sync{font-size:11px;padding:3px 8px;border-radius:99px;border:1px solid var(--border);color:var(--text-3);cursor:pointer;background:none;font-family:inherit}
+.sync.dirty,.sync.saving{color:var(--warning);border-color:var(--warning-border);background:var(--warning-bg)}
+.sync.error,.sync.offline{color:var(--danger);border-color:var(--danger-border);background:var(--danger-bg)}
+.sync.saved{color:var(--green);border-color:var(--green-border);background:var(--green-bg)}
+
+.ban{background:var(--warning-bg);border:1px solid var(--warning-border);color:var(--text);border-radius:var(--r);padding:9px 12px;margin-bottom:8px;font-size:12px}
+.ban.bad{background:var(--danger-bg);border-color:var(--danger-border)}
+.ban.info{background:var(--accent-bg);border-color:var(--accent-border)}
+.tabs.ptabs{width:max-content;max-width:100%;margin-bottom:12px}
+.tab .n{font-size:10px;color:var(--text-3);margin-left:4px;font-variant-numeric:tabular-nums}
+.tab.on .n{color:var(--accent)}
+
+.sec-hd{font-size:11px;font-weight:600;color:var(--text-3);letter-spacing:.05em;margin:16px 0 8px;display:flex;align-items:center;gap:8px;text-transform:uppercase}
+.sec-hd .sp{flex:1}
+.sec-hd .cnt{font-weight:500;letter-spacing:0;text-transform:none}
+
+.empty{font-size:13px;color:var(--text-3);padding:10px 12px;border:1px dashed var(--border-strong);border-radius:var(--r)}
+.ok-line{font-size:13px;color:var(--green);padding:9px 12px;background:var(--green-bg);border:1px solid var(--green-border);border-radius:var(--r)}
+
+.lit{padding:11px 13px}
+.lit.t1{border-left-color:var(--danger)}
+.lit.t2{border-left-color:var(--accent)}
+.lit.t3{border-left-color:var(--green)}
+.lit.t4{border-left-color:var(--text-3)}
+.lit.urg{border-left-color:var(--danger);background:var(--danger-bg);border-color:var(--danger-border)}
+.lit.m-skip{opacity:.5}
+.lit.m-save{box-shadow:inset 0 0 0 1px var(--green-border)}
+.lit.m-dig{box-shadow:inset 0 0 0 1px var(--accent-border)}
+.row{display:flex;gap:5px;flex-wrap:wrap;align-items:center}
+.lit .ttl{font-size:14px;font-weight:600;line-height:1.35;margin:6px 0 2px;color:var(--text);text-decoration:none;display:block}
+a.ttl:hover{color:var(--accent)}
+.lit .by{font-size:12px;color:var(--text-2)}
+.lit .sm{font-size:13px;margin-top:6px}
+.lit .wy{font-size:12.5px;color:var(--text-2);margin-top:4px}
+.lit .cl{font-size:12px;margin-top:5px;color:var(--text-2)}
+.lit .cl b{color:var(--text);font-weight:600}
+.lit .acts{display:flex;gap:6px;flex-wrap:wrap;margin-top:9px;align-items:center}
+.btn.mini{font-size:11px;padding:4px 9px}
+.btn.on-save{background:var(--green-bg);border-color:var(--green-border);color:var(--green)}
+.btn.on-dig{background:var(--accent-bg);border-color:var(--accent-border);color:var(--accent)}
+.btn.on-skip{background:var(--surface2);border-color:var(--border-strong);color:var(--text)}
+.rk{font-family:var(--f-num);font-size:12px;color:var(--text-3);font-weight:600}
+.chip.pre{background:var(--warning-bg);color:var(--warning);border:1px solid var(--warning-border)}
+.chip.comp{background:var(--danger-bg);color:var(--danger);border:1px solid var(--danger-border)}
+.chip.ppl{background:var(--accent-bg);color:var(--accent);border:1px solid var(--accent-border)}
+.chip.sig{background:var(--surface2);color:var(--text-2);border:1px dashed var(--border-strong)}
+.chip.sci-ok{background:var(--green-bg);color:var(--green)}
+.chip.sci-bad{background:var(--danger-bg);color:var(--danger)}
+.chip.prj{background:var(--surface2);color:var(--text-2);font-weight:600}
+.chip.tier{font-weight:600}
+
+.filters{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px;align-items:center}
+.fbtn{font-family:inherit;font-size:11px;padding:3px 9px;border-radius:99px;border:1px solid var(--border);background:var(--surface);color:var(--text-2);cursor:pointer}
+.fbtn.on{background:var(--accent-bg);border-color:var(--accent-border);color:var(--accent)}
+
+.skipline{font-size:12px;color:var(--text-3);margin-top:14px;padding-top:10px;border-top:1px solid var(--border)}
+
+.panel{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:11px 13px;margin-bottom:8px}
+.panel h3{font-size:13px;font-weight:600;margin-bottom:6px}
+details.panel>summary{cursor:pointer;list-style:none;display:flex;align-items:center;gap:8px;font-size:13px;font-weight:600}
+details.panel>summary::-webkit-details-marker{display:none}
+details.panel>summary::before{content:'▸';color:var(--text-3);font-size:11px;transition:transform .12s}
+details.panel[open]>summary::before{transform:rotate(90deg)}
+details.panel .body{margin-top:8px;font-size:12.5px;color:var(--text-2)}
+.kw{display:flex;flex-wrap:wrap;gap:4px;margin-top:4px}
+.kw span{font-size:11px;padding:2px 7px;border-radius:99px;background:var(--surface2);color:var(--text-2)}
+.lbl{font-size:10px;font-weight:600;letter-spacing:.05em;text-transform:uppercase;color:var(--text-3);margin:8px 0 3px}
+.kv{display:grid;grid-template-columns:auto 1fr;gap:3px 12px;font-size:12.5px}
+.kv dt{color:var(--text-3)}
+.ss{display:grid;grid-template-columns:auto 1fr auto;gap:4px 10px;align-items:baseline;font-size:12.5px;padding:6px 0;border-bottom:1px solid var(--border)}
+.ss:last-child{border-bottom:none}
+.ss .id{font-family:var(--f-num);font-weight:600;color:var(--text-2)}
+.ss .q{color:var(--text-3);font-size:11.5px;grid-column:2/-1}
+.todo{color:var(--warning);font-size:12px}
+
+.dec{padding:11px 13px}
+.dec .q{font-size:13px;font-weight:600}
+.dec .h{font-size:11.5px;color:var(--text-3);margin:2px 0 8px}
+.dec textarea,.dec input[type=date]{width:100%;font-family:inherit;font-size:13px;padding:7px 9px;border:1px solid var(--border);border-radius:var(--rs);background:var(--surface);color:var(--text)}
+.dec textarea{min-height:58px;resize:vertical}
+.dec .opts{display:flex;flex-wrap:wrap;gap:6px}
+.dec label.cb{display:flex;gap:7px;align-items:flex-start;font-size:12.5px;padding:3px 0}
+.dec .def{font-size:11px;color:var(--text-3);margin-top:5px}
+.dec.answered{border-left:3px solid var(--green)}
+
+.setup{max-width:380px;margin:60px auto;padding:0 16px}
+.setup h2{font-size:16px;margin-bottom:10px}
+.setup input{width:100%;margin:6px 0;padding:8px;border:1px solid var(--border);border-radius:var(--rs);background:var(--surface);color:var(--text);font-family:inherit}
+.setup p{font-size:12px;color:var(--text-2);margin-bottom:8px}
+.footer{font-size:10px;color:var(--text-3);text-align:center;margin-top:24px}
+</style>
+</head>
+<body>
+<div class="page" id="app"></div>
+<script>
+// ─── config ───────────────────────────────────────────────────────────────────
+// Code only. All data is read at runtime from the private data repo with the
+// token the user enters; nothing private is committed here.
+const PAT_KEY='dash:digest:pat',  PAT_FALL='dash:ops:pat';
+const REPO_KEY='dash:digest:repo', REPO_FALL='dash:ops:repo';
+const LS_STATE='dash:digest:state', LS_CACHE='dash:digest:cache', LS_TAB='dash:digest:tab';
+const BRIEF_PATH='brief/digest/today.json';
+const JOURNAL_PATH='brief/digest/today_changes.json';
+const WL_PATH='data/digest/watchlists.json';
+const BUILD='20261023-1200';
+const TIERS={1:{t:'Watchlist person',c:'var(--danger)'},2:{t:'Project',c:'var(--accent)'},3:{t:'Method',c:'var(--green)'},4:{t:'Topic',c:'var(--text-3)'}};
+
+// ─── helpers (every optional field is guarded at the point of use) ────────────
+const pad=n=>String(n).padStart(2,'0');
+const esc=s=>String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+const T=x=>typeof x==='string'?x:(x==null?'':String(x));
+const A=x=>Array.isArray(x)?x:[];
+const O=x=>(x&&typeof x==='object'&&!Array.isArray(x))?x:{};
+function localDate(d){return d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate());}
+function parseDate(s){const p=T(s).split('-').map(Number);return new Date(p[0],(p[1]||1)-1,p[2]||1,12,0,0);}
+function dayDiff(a,b){return Math.round((parseDate(b)-parseDate(a))/864e5);}
+function fmtLong(s){return /^\d{4}-\d{2}-\d{2}$/.test(T(s))?parseDate(s).toLocaleDateString('en-GB',{weekday:'short',day:'numeric',month:'short',year:'numeric'}):T(s);}
+function fmtShort(s){return /^\d{4}-\d{2}-\d{2}$/.test(T(s))?parseDate(s).toLocaleDateString('en-GB',{day:'numeric',month:'short'}):T(s);}
+function b64utf8(b64){const bin=atob(String(b64).replace(/\s/g,''));const b=new Uint8Array(bin.length);for(let i=0;i<bin.length;i++)b[i]=bin.charCodeAt(i);return new TextDecoder('utf-8').decode(b);}
+function utf8b64(str){const bytes=new TextEncoder().encode(str);let bin='';for(let i=0;i<bytes.length;i++)bin+=String.fromCharCode(bytes[i]);return btoa(bin);}
+function safeUrl(u){u=T(u).trim();return /^https?:\/\//i.test(u)?u:'';}
+function linkOf(it){const u=safeUrl(it.url);if(u)return u;const d=T(it.doi).replace(/^https?:\/\/(dx\.)?doi\.org\//i,'').trim();return d?'https://doi.org/'+encodeURI(d):'';}
+const clone=x=>JSON.parse(JSON.stringify(x));
+
+// ─── state ────────────────────────────────────────────────────────────────────
+const TODAY=localDate(new Date());
+let PAT=localStorage.getItem(PAT_KEY)||localStorage.getItem(PAT_FALL)||'';
+let REPO=localStorage.getItem(REPO_KEY)||localStorage.getItem(REPO_FALL)||'';
+let BRIEF=null, WL=null;
+let JR=emptyJ();              // journal as last seen on GitHub
+let W=emptyJ();               // working copy: server journal overlaid with unsynced local edits
+let view='boot', errMsg='';
+let tab=['brief','watch','decide'].includes(localStorage.getItem(LS_TAB))?localStorage.getItem(LS_TAB):'brief';
+let filter='all', showSkipped=false;
+let sync='saved', syncMsg='', dirty=false, saving=false, pushTimer=null, editSeq=0, offline=false;
+let dismissedWarn={};
+
+function emptyJ(){return {updated:null,marks:{},decisions:{}};}
+function normJ(j){j=O(j);return {updated:j.updated||null,marks:O(j.marks),decisions:O(j.decisions)};}
+
+// ─── api ──────────────────────────────────────────────────────────────────────
+async function api(path,method,body){
+  const opts={method:method||'GET',headers:{'Authorization':'token '+PAT,'Accept':'application/vnd.github.v3+json'}};
+  if(body){opts.headers['Content-Type']='application/json';opts.body=JSON.stringify(body);}
+  let r;
+  try{r=await fetch('https://api.github.com'+path,opts);}
+  catch(e){const er=new Error('offline');er.offline=true;throw er;}
+  if(!r.ok){const er=new Error(r.status+' '+r.statusText);er.status=r.status;throw er;}
+  return r.status===204?null:r.json();
+}
+async function getFile(path){
+  try{
+    const f=await api('/repos/'+REPO+'/contents/'+path+'?ref=HEAD&t='+Date.now());
+    return {sha:f.sha,data:JSON.parse(b64utf8(f.content))};
+  }catch(e){ if(e.status===404) return null; throw e; }
+}
+
+// ─── normalisers ──────────────────────────────────────────────────────────────
+function normBrief(b){
+  b=O(b); b.meta=O(b.meta); b.meta.warnings=A(b.meta.warnings).map(T); b.meta.sources=A(b.meta.sources);
+  b.urgent=A(b.urgent); b.literature=A(b.literature); b.tools=A(b.tools); b.skipped=O(b.skipped);
+  // Backstop for the missing-id class of bug: never let an item arrive without a stable key.
+  const seen={};
+  ['urgent','literature','tools'].forEach(k=>b[k].forEach((it,i)=>{
+    if(!it||typeof it!=='object'){b[k][i]=it={};}
+    if(!T(it.id)||seen[it.id]){console.error('digest: item without a unique id in',k,i,it.title);it.id=k+'-auto-'+i;}
+    seen[it.id]=1;
+  }));
+  b.literature.sort((x,y)=>(+x.rank||999)-(+y.rank||999));
+  return b;
+}
+function normWL(w){
+  w=O(w); w.projects=A(w.projects); w.saved_searches=A(w.saved_searches); w.decisions=A(w.decisions);
+  w.people=O(w.people); w.journals=O(w.journals); w.funders=A(w.funders); w.context_rules=A(w.context_rules);
+  w.tier2=O(w.tier2); w.feeds=O(w.feeds); w.social=O(w.social); w.relevance_order=A(w.relevance_order);
+  return w;
+}
+
+// ─── load ─────────────────────────────────────────────────────────────────────
+function loadLocal(){try{return JSON.parse(localStorage.getItem(LS_STATE)||'null');}catch(e){return null;}}
+function saveLocal(){try{localStorage.setItem(LS_STATE,JSON.stringify({dirty:dirty,w:W}));}catch(e){}}
+function initWorking(){
+  W=clone(JR);
+  const loc=loadLocal();
+  if(loc&&loc.dirty&&loc.w){W=mergeJ(JR,normJ(loc.w));dirty=true;sync='dirty';schedulePush(300);}
+  saveLocal();
+}
+async function load(){
+  if(!PAT||!REPO){view='setup';render();return;}
+  view='loading';render();
+  try{
+    const r=await Promise.all([getFile(BRIEF_PATH),getFile(WL_PATH),getFile(JOURNAL_PATH)]);
+    if(!r[0]) throw new Error('404: '+BRIEF_PATH+' not found in '+REPO);
+    BRIEF=normBrief(r[0].data); WL=normWL(r[1]?r[1].data:{}); JR=r[2]?normJ(r[2].data):emptyJ();
+    try{localStorage.setItem(LS_CACHE,JSON.stringify({brief:r[0].data,wl:r[1]?r[1].data:{},journal:r[2]?r[2].data:{}}));}catch(e){}
+    offline=false; initWorking(); view='ready';
+  }catch(e){
+    const cached=e.offline?localStorage.getItem(LS_CACHE):null;
+    if(cached){
+      const c=JSON.parse(cached); BRIEF=normBrief(c.brief); WL=normWL(c.wl); JR=normJ(c.journal);
+      offline=true; initWorking(); sync='offline'; view='ready';
+    }else{ errMsg=e.message||String(e); view='error'; }
+  }
+  render();
+}
+
+// ─── journal: marks and decisions (written only here, merged per key by newest ts) ───
+function mergeJ(a,b){
+  const out={updated:new Date().toISOString(),marks:{},decisions:{}};
+  ['marks','decisions'].forEach(k=>{
+    const keys=Object.keys(O(a[k])).concat(Object.keys(O(b[k])));
+    keys.forEach(id=>{
+      const x=O(a[k])[id],y=O(b[k])[id];
+      out[k][id]=!x?y:(!y?x:(T(y.ts)>=T(x.ts)?y:x));
+    });
+  });
+  return out;
+}
+function markOf(id){const m=W.marks[id];return m&&m.status!=='none'?m.status:'';}
+function setMark(id,status){
+  const cur=markOf(id);
+  W.marks[id]={status:cur===status?'none':status,ts:new Date().toISOString()};
+  touch();
+}
+function decOf(id){const d=W.decisions[id];return d?d.value:undefined;}
+function setDecision(id,value,quiet){
+  const empty=(value==null||value===''||(Array.isArray(value)&&!value.length));
+  W.decisions[id]={value:empty?null:value,ts:new Date().toISOString()};
+  touch(quiet);
+}
+function touch(quiet){editSeq++;dirty=true;sync='dirty';saveLocal();schedulePush(700);if(quiet)paintSync();else render(true);}
+function schedulePush(ms){clearTimeout(pushTimer);pushTimer=setTimeout(push,ms);}
+async function push(){
+  if(saving||!dirty||view!=='ready')return;
+  saving=true;sync='saving';paintSync();
+  const seq=editSeq;
+  try{
+    const f=await getFile(JOURNAL_PATH);
+    const latest=f?normJ(f.data):emptyJ();
+    const merged=mergeJ(latest,W);
+    const body={message:'digest: journal '+TODAY,content:utf8b64(JSON.stringify(merged,null,2)+'\n')};
+    if(f)body.sha=f.sha;
+    await api('/repos/'+REPO+'/contents/'+JOURNAL_PATH,'PUT',body);
+    JR=merged;W=mergeJ(merged,W);
+    if(seq===editSeq){dirty=false;sync='saved';syncMsg='';offline=false;}
+    else{schedulePush(200);}
+  }catch(e){
+    if(e.status===409||e.status===422){saving=false;schedulePush(400);return;}   // lost a race: re-read and merge again
+    sync=e.offline?'offline':'error';syncMsg=e.message||'';
+  }
+  saving=false;saveLocal();paintSync();
+}
+function paintSync(){
+  const b=document.getElementById('sync');if(!b)return;
+  const L={saved:'synced',dirty:'unsaved',saving:'saving…',offline:'offline',error:'error'};
+  b.className='sync '+sync;b.textContent=L[sync]||sync;b.title=syncMsg||'';
+}
+
+// ─── pieces ───────────────────────────────────────────────────────────────────
+function projectMap(){const m={};A(WL&&WL.projects).forEach(p=>{m[T(p.id)]=p;});return m;}
+function prjChips(list){
+  const pm=projectMap();
+  return A(list).map(id=>{const p=pm[T(id)];return '<span class="chip prj" title="'+esc(p?p.name:'')+'">'+esc(id)+(p&&p.short?' · '+esc(p.short):'')+'</span>';}).join('');
+}
+function litCard(it,urgent){
+  const id=T(it.id),m=markOf(id),tier=TIERS[it.tier]?+it.tier:4,link=linkOf(it);
+  const people=A(it.people).filter(p=>p&&typeof p==='object');
+  const comp=people.filter(p=>p.role==='competitor'),oth=people.filter(p=>p.role!=='competitor');
+  const sc=O(it.scite),contra=+sc.contrasting||0,supp=+sc.supporting||0;
+  const isPre=it.peer_reviewed===false;
+  let h='<div class="card lit t'+tier+(m?' m-'+m:'')+'" data-id="'+esc(id)+'">';
+  h+='<div class="row">';
+  if(it.rank!=null)h+='<span class="rk">#'+esc(it.rank)+'</span>';
+  h+='<span class="chip tier" style="color:'+TIERS[tier].c+'">'+esc(TIERS[tier].t)+'</span>';
+  comp.forEach(p=>{h+='<span class="chip comp">competitor · '+esc(p.name)+'</span>';});
+  oth.forEach(p=>{h+='<span class="chip ppl">'+esc(p.role||'watchlist')+' · '+esc(p.name)+'</span>';});
+  if(isPre)h+='<span class="chip pre">preprint · not peer reviewed</span>';
+  if(T(it.signal))h+='<span class="chip sig">'+esc(it.signal)+'</span>';
+  if(contra>0)h+='<span class="chip sci-bad">⚠ '+contra+' contrasting</span>';
+  else if(sc&&(supp||sc.mentioning||sc.note))h+='<span class="chip sci-ok">Scite · '+supp+' supporting</span>';
+  h+=prjChips(it.projects)+'</div>';
+  h+=link?'<a class="ttl" href="'+esc(link)+'" target="_blank" rel="noopener noreferrer">'+esc(it.title)+'</a>':'<div class="ttl">'+esc(it.title)+'</div>';
+  h+='<div class="by">'+esc(it.authors)+(T(it.venue)?' · '+esc(it.venue):'')+(T(it.date)?' · '+esc(fmtShort(it.date)):'')+'</div>';
+  if(T(it.summary))h+='<div class="sm">'+esc(it.summary)+'</div>';
+  if(T(it.why))h+='<div class="wy">'+esc(it.why)+'</div>';
+  if(T(it.claims))h+='<div class="cl"><b>Paper claims:</b> '+esc(it.claims)+'</div>';
+  if(T(it.inference))h+='<div class="cl"><b>My inference:</b> '+esc(it.inference)+'</div>';
+  if(T(it.uncertain))h+='<div class="cl"><b>Unsure:</b> '+esc(it.uncertain)+'</div>';
+  if(T(sc.note))h+='<div class="cl"><b>Scite:</b> '+esc(sc.note)+'</div>';
+  h+='<div class="acts">';
+  [['save','Save'],['dig','Dig deeper'],['skip','Skip']].forEach(a=>{
+    h+='<button class="btn mini'+(m===a[0]?' on-'+a[0]:'')+'" data-act="mark" data-id="'+esc(id)+'" data-v="'+a[0]+'">'+a[1]+'</button>';
+  });
+  if(T(it.doi))h+='<span class="chip dl">DOI '+esc(T(it.doi).replace(/^https?:\/\/(dx\.)?doi\.org\//i,''))+'</span>';
+  h+='</div></div>';
+  return h;
+}
+function urgentCard(u){
+  const id=T(u.id),link=safeUrl(u.url);
+  let h='<div class="card lit urg" data-id="'+esc(id)+'"><div class="row"><span class="chip comp">'+esc(u.kind||'urgent')+'</span>';
+  if(T(u.deadline))h+='<span class="chip dl overdue">deadline '+esc(fmtShort(u.deadline))+'</span>';
+  h+='</div>'+(link?'<a class="ttl" href="'+esc(link)+'" target="_blank" rel="noopener noreferrer">'+esc(u.title)+'</a>':'<div class="ttl">'+esc(u.title)+'</div>');
+  if(T(u.why))h+='<div class="sm">'+esc(u.why)+'</div>';
+  if(T(u.action))h+='<div class="wy"><b>Action:</b> '+esc(u.action)+'</div>';
+  return h+'</div>';
+}
+function toolCard(t){
+  const id=T(t.id),m=markOf(id),link=safeUrl(t.url);
+  let h='<div class="card lit t3'+(m?' m-'+m:'')+'" data-id="'+esc(id)+'"><div class="row"><span class="chip src">'+esc(t.kind||'tool')+'</span>'+prjChips(t.projects)+'</div>';
+  h+=link?'<a class="ttl" href="'+esc(link)+'" target="_blank" rel="noopener noreferrer">'+esc(t.title)+'</a>':'<div class="ttl">'+esc(t.title)+'</div>';
+  if(T(t.reason))h+='<div class="sm">'+esc(t.reason)+'</div>';
+  h+='<div class="acts">';
+  [['save','Save'],['dig','Dig deeper'],['skip','Skip']].forEach(a=>{
+    h+='<button class="btn mini'+(m===a[0]?' on-'+a[0]:'')+'" data-act="mark" data-id="'+esc(id)+'" data-v="'+a[0]+'">'+a[1]+'</button>';
+  });
+  return h+'</div></div>';
+}
+
+// ─── brief tab ────────────────────────────────────────────────────────────────
+function banners(){
+  let h='';
+  const m=BRIEF.meta;
+  if(offline)h+='<div class="ban bad">Offline: showing the last copy stored on this device.</div>';
+  if(m.seed){
+    h+='<div class="ban info"><b>No brief yet.</b> Say <b>“brief me”</b> in the Morning Brief project to generate the first one. Watchlists and Decisions are already live.</div>';
+  }else{
+    const age=dayDiff(T(BRIEF.date)||TODAY,TODAY);
+    if(age>0)h+='<div class="ban">This brief is from '+esc(fmtLong(BRIEF.date))+' ('+age+' day'+(age>1?'s':'')+' ago). Say “brief me” for a fresh one.</div>';
+  }
+  m.warnings.forEach((w,i)=>{if(!dismissedWarn[i+w])h+='<div class="ban" style="display:flex;gap:8px"><span style="flex:1">'+esc(w)+'</span><button class="btn mini" data-act="dw" data-k="'+esc(i+w)+'">✕</button></div>';});
+  A(m.sources).filter(s=>s&&(s.status==='failed'||s.status==='partial')).forEach(s=>{
+    h+='<div class="ban bad"><b>'+esc(s.name)+'</b> '+(s.status==='failed'?'could not be reached':'only partly reached')+(T(s.note)?': '+esc(s.note):'')+'</div>';
+  });
+  return h;
+}
+function passFilter(it){
+  if(filter==='proj')return A(it.projects).length>0;
+  if(filter==='people')return A(it.people).length>0;
+  if(filter==='pre')return it.peer_reviewed===false;
+  if(filter==='marked')return !!markOf(T(it.id));
+  return true;
+}
+function viewBrief(){
+  const b=BRIEF,m=b.meta;
+  let h='';
+  if(T(m.summary))h+='<div class="panel" style="font-size:13px">'+esc(m.summary)+'</div>';
+  // urgent
+  h+='<div class="sec-hd">Urgent</div>';
+  if(b.urgent.length)h+=b.urgent.map(urgentCard).join('');
+  else h+=m.seed?'<div class="empty">No brief has been run yet.</div>':'<div class="ok-line">Nothing urgent</div>';
+  // literature
+  const lit=b.literature;
+  const hidden=lit.filter(x=>markOf(T(x.id))==='skip').length;
+  let list=lit.filter(passFilter);
+  if(!showSkipped&&filter!=='marked')list=list.filter(x=>markOf(T(x.id))!=='skip');
+  h+='<div class="sec-hd">Literature<span class="cnt">'+lit.length+'</span><span class="sp"></span></div>';
+  if(lit.length){
+    h+='<div class="filters">';
+    [['all','All'],['proj','On a project'],['people','Watchlist people'],['pre','Preprints'],['marked','Marked']].forEach(f=>{
+      h+='<button class="fbtn'+(filter===f[0]?' on':'')+'" data-act="filter" data-v="'+f[0]+'">'+f[1]+'</button>';
+    });
+    if(hidden)h+='<button class="fbtn'+(showSkipped?' on':'')+'" data-act="showskip">'+(showSkipped?'Hide':'Show')+' skipped ('+hidden+')</button>';
+    h+='</div>';
+    h+=list.length?list.map(it=>litCard(it)).join(''):'<div class="empty">Nothing matches this filter.</div>';
+  }else h+='<div class="empty">'+(m.seed?'Nothing yet.':'No literature items in this brief.')+'</div>';
+  // tools
+  h+='<div class="sec-hd">Tools &amp; resources<span class="cnt">'+b.tools.length+'</span></div>';
+  h+=b.tools.length?b.tools.map(toolCard).join(''):'<div class="empty">'+(m.seed?'Nothing yet.':'No new tools or resources.')+'</div>';
+  // skipped + window
+  const sk=b.skipped,w=O(m.window);
+  if(!m.seed){
+    h+='<div class="skipline">Screened '+(+sk.screened||0)+' · dropped '+(+sk.dropped||0)+(T(sk.note)?' · '+esc(sk.note):'')
+      +(w.from?' · window '+esc(fmtShort(w.from))+(w.to?' → '+esc(fmtShort(w.to)):''):'')+'</div>';
+  }
+  const src=A(m.sources);
+  if(src.length){
+    h+='<div class="skipline" style="border-top:none;margin-top:4px">Sources: '+src.map(s=>esc(s.name)+' <b style="color:'+(s.status==='ok'?'var(--green)':(s.status==='failed'?'var(--danger)':'var(--warning)'))+'">'+esc(s.status)+'</b>').join(' · ')+'</div>';
+  }
+  return h;
+}
+
+// ─── watchlists tab (read-only) ───────────────────────────────────────────────
+function kwList(a){return '<div class="kw">'+A(a).map(x=>'<span>'+esc(x)+'</span>').join('')+'</div>';}
+function viewWatch(){
+  if(!WL||(!WL.projects.length&&!WL.saved_searches.length))return '<div class="empty">No watchlists found at '+esc(WL_PATH)+'.</div>';
+  const adopted=A(decOf('d4'));
+  let h='';
+  h+='<div class="sec-hd">Projects</div>';
+  WL.projects.forEach(p=>{
+    h+='<details class="panel"><summary><span class="chip prj">'+esc(p.id)+'</span>'+esc(p.name)+'</summary><div class="body">';
+    if(A(p.grants).length)h+='<div class="lbl">Grants</div>'+A(p.grants).map(g=>esc(g)).join(' · ');
+    h+='<div class="lbl">Keywords</div>'+kwList(p.keywords);
+    h+='</div></details>';
+  });
+  const t2=WL.tier2;
+  if(Object.keys(t2).length){
+    h+='<details class="panel"><summary>Tier 2 · boost only with a project term</summary><div class="body">';
+    ['techniques','delivery','computing','other'].forEach(k=>{if(A(t2[k]).length)h+='<div class="lbl">'+esc(k)+'</div>'+kwList(t2[k]);});
+    if(T(t2.broad_disease_terms))h+='<div class="lbl">Broad disease terms</div>'+esc(t2.broad_disease_terms);
+    h+='</div></details>';
+  }
+  if(WL.context_rules.length)h+='<details class="panel"><summary>Ambiguous-term rules</summary><div class="body">'+WL.context_rules.map(r=>'<div>• '+esc(r)+'</div>').join('')+'</div></details>';
+
+  h+='<div class="sec-hd">People</div><div class="panel">';
+  const ppl=WL.people,groups=[['collaborators','Collaborators'],['advisory','Advisory'],['field','Field']];
+  groups.forEach(g=>{if(A(ppl[g[0]]).length)h+='<div class="lbl">'+g[1]+'</div>'+kwList(ppl[g[0]]);});
+  if(T(ppl.field_note))h+='<div class="def" style="font-size:11px;color:var(--text-3);margin-top:4px">'+esc(ppl.field_note)+'</div>';
+  h+='<div class="lbl">Competitors</div>';
+  h+=A(ppl.competitors).length?kwList(A(ppl.competitors).map(c=>typeof c==='object'?(T(c.name)+(c.project?' · '+c.project:'')):c)):'<div class="todo">None recorded yet. Add them in Decisions.</div>';
+  h+='</div>';
+
+  h+='<div class="sec-hd">Saved searches</div><div class="panel">';
+  WL.saved_searches.forEach(s=>{
+    const st=s.status==='active'?'active':(adopted.indexOf(s.id)>=0?'adopt (pending)':'proposed');
+    const chip=s.status==='active'?'chip logged':(adopted.indexOf(s.id)>=0?'chip queued':'chip');
+    h+='<div class="ss"><span class="id">'+esc(s.id)+'</span><span><b>'+esc(s.name)+'</b>'+(s.server?' <span class="chip src">'+esc(s.server)+'</span>':'')+'</span><span class="'+chip+'">'+st+'</span>'
+      +'<span class="q">'+esc(s.query)+(T(s.note)?' · '+esc(s.note):'')+'</span></div>';
+  });
+  h+='</div>';
+
+  h+='<div class="sec-hd">Funders &amp; calls</div><div class="panel"><dl class="kv">';
+  WL.funders.forEach(f=>{
+    let when='';
+    if(T(f.deadline)){
+      const d=/^\d{4}-\d{2}$/.test(f.deadline)?f.deadline+'-01':f.deadline,n=dayDiff(TODAY,d);
+      when=esc(f.deadline_text||f.deadline)+(n>=0?' · about '+n+' days to the 1st of the month':' · passed');
+    }else when='<span style="color:var(--text-3)">no deadline recorded</span>';
+    h+='<dt>'+esc(f.name)+'</dt><dd>'+when+'</dd>';
+  });
+  h+='</dl></div>';
+
+  h+='<div class="sec-hd">Journals, feeds, social</div><div class="panel">';
+  const j=WL.journals;
+  h+='<div class="lbl">Journals (priority)</div>'+(A(j.priority).length?kwList(j.priority):'<div class="todo">Not decided yet.</div>');
+  if(A(j.provisional).length)h+='<div class="lbl">Provisional, from feeds</div>'+kwList(j.provisional);
+  const f=WL.feeds;
+  if(f.source)h+='<div class="lbl">Feeds</div>'+esc(f.source)+' · '+esc(f.count)+' feeds · '+esc(f.status);
+  const so=WL.social;
+  if(so.status)h+='<div class="lbl">Social &amp; early signal</div>'+esc(so.status)+(A(so.accounts).length+A(so.repos).length===0?' <span class="todo">No accounts or repos listed yet.</span>':'');
+  h+='</div>';
+  if(WL.meta&&T(WL.meta.source))h+='<div class="skipline">'+esc(WL.meta.source)+(T(WL.meta.note)?' '+esc(WL.meta.note):'')+'</div>';
+  return h;
+}
+
+// ─── decisions tab ────────────────────────────────────────────────────────────
+function decOptions(d){
+  if(d.type==='multi'&&T(d.from)==='saved_searches:proposed')return WL.saved_searches.filter(s=>s.status==='proposed').map(s=>({v:s.id,t:s.name+(s.project?' ('+s.project+')':'')}));
+  return A(d.options);
+}
+function decCard(d){
+  const id=T(d.id),val=decOf(id),answered=val!=null&&val!==''&&!(Array.isArray(val)&&!val.length);
+  let h='<div class="card dec'+(answered?' answered':'')+'"><div class="q">'+esc(d.label)+'</div>'+(T(d.help)?'<div class="h">'+esc(d.help)+'</div>':'<div style="height:6px"></div>');
+  if(d.type==='text')h+='<textarea data-act="dtext" data-id="'+esc(id)+'">'+esc(val==null?'':val)+'</textarea>';
+  else if(d.type==='date')h+='<input type="date" data-act="ddate" data-id="'+esc(id)+'" value="'+esc(val==null?'':val)+'">';
+  else if(d.type==='choice'){
+    h+='<div class="opts">'+decOptions(d).map(o=>'<button class="btn mini'+(val===o.v?' btn-p':'')+'" data-act="dchoice" data-id="'+esc(id)+'" data-v="'+esc(o.v)+'">'+esc(o.t)+'</button>').join('')+'</div>';
+    if(T(d.default)&&!answered)h+='<div class="def">Default in use: '+esc((decOptions(d).find(o=>o.v===d.default)||{t:d.default}).t)+'</div>';
+  }else if(d.type==='multi'){
+    const sel=A(val),opts=decOptions(d);
+    h+=opts.length?opts.map(o=>'<label class="cb"><input type="checkbox" data-act="dmulti" data-id="'+esc(id)+'" data-v="'+esc(o.v)+'"'+(sel.indexOf(o.v)>=0?' checked':'')+'> <span>'+esc(o.t)+'</span></label>').join(''):'<div class="empty">Nothing to choose from.</div>';
+  }
+  return h+'</div>';
+}
+function decAnswered(d){const v=decOf(T(d.id));return v!=null&&v!==''&&!(Array.isArray(v)&&!v.length);}
+function viewDecide(){
+  if(!WL||!WL.decisions.length)return '<div class="empty">No open decisions defined in '+esc(WL_PATH)+'.</div>';
+  const open=WL.decisions.filter(d=>!decAnswered(d)),done=WL.decisions.filter(decAnswered);
+  let h='<div class="ban info" style="margin-bottom:10px">Answers are saved to the journal. Claude applies them to the watchlists and the prompt at the next run, then clears them.</div>';
+  h+='<div class="sec-hd">Open<span class="cnt">'+open.length+'</span></div>';
+  h+=open.length?open.map(decCard).join(''):'<div class="ok-line">All decisions answered</div>';
+  if(done.length)h+='<div class="sec-hd">Answered, waiting to be applied<span class="cnt">'+done.length+'</span></div>'+done.map(decCard).join('');
+  return h;
+}
+
+// ─── shell ────────────────────────────────────────────────────────────────────
+function themeNext(){
+  const C=['auto','light','dark'],cur=localStorage.getItem('dash:theme')||'auto',n=C[(C.indexOf(cur)+1)%3];
+  localStorage.setItem('dash:theme',n);
+  if(n==='auto')document.documentElement.removeAttribute('data-theme');else document.documentElement.setAttribute('data-theme',n);
+  render();
+}
+function hdr(){
+  const th=localStorage.getItem('dash:theme')||'auto';
+  const date=BRIEF&&!BRIEF.meta.seed?fmtLong(BRIEF.date):fmtLong(TODAY);
+  return '<div class="fh"><a class="btn btn-icon" href="../" title="All dashboards" style="text-decoration:none">‹</a><h1>brief</h1><span class="sub">'+esc(date)+'</span>'
+    +'<button class="sync '+sync+'" id="sync" data-act="syncnow"></button>'
+    +'<button class="btn btn-icon" data-act="reload" title="Reload">↻</button>'
+    +'<button class="btn btn-icon" data-act="theme" title="Theme: '+th+'">◐</button></div>';
+}
+function tabs(){
+  const open=WL?WL.decisions.filter(d=>!decAnswered(d)).length:0;
+  const marked=Object.keys(W.marks).filter(id=>markOf(id)).length;
+  const T3=[['brief','Brief',marked||''],['watch','Watchlists',''],['decide','Decisions',open||'']];
+  return '<div class="tabs ptabs">'+T3.map(t=>'<button class="tab'+(tab===t[0]?' on':'')+'" data-act="tab" data-v="'+t[0]+'">'+t[1]+(t[2]!==''?'<span class="n">'+t[2]+'</span>':'')+'</button>').join('')+'</div>';
+}
+function renderSetup(){
+  return '<div class="setup"><h2>brief</h2><p>Enter the private data repo and a GitHub token. If the ops dashboard is already set up on this device, these are picked up automatically. Stored only in this browser.</p>'
+    +'<input id="repo-in" placeholder="owner/repo" value="'+esc(REPO)+'" autocomplete="off"><input id="pat-in" type="password" placeholder="github_pat_…" autocomplete="off">'
+    +'<button class="btn btn-p" data-act="savesetup">Save</button></div>';
+}
+function render(keepScroll){
+  const app=document.getElementById('app'),y=window.scrollY;
+  if(view==='setup'){app.innerHTML=renderSetup();return;}
+  if(view==='loading'||view==='boot'){app.innerHTML='<div class="spin" style="padding:40px;text-align:center;color:var(--text-3)">Loading…</div>';return;}
+  if(view==='error'){app.innerHTML='<div style="padding:40px 16px;text-align:center;font-size:13px">Failed to load: '+esc(errMsg)+'<br><br><button class="btn" data-act="reload">Retry</button> <button class="btn" data-act="resetsetup">Change token / repo</button></div>';return;}
+  const ae=document.activeElement,keep=ae&&ae.tagName==='TEXTAREA'?ae.getAttribute('data-id'):null;
+  app.innerHTML=hdr()+banners()+tabs()+(tab==='watch'?viewWatch():(tab==='decide'?viewDecide():viewBrief()))
+    +'<div class="footer">build '+esc(BUILD)+'</div>';
+  if(keepScroll)window.scrollTo(0,y);
+  if(keep){const t=app.querySelector('textarea[data-id="'+keep+'"]');if(t){t.focus();t.setSelectionRange(t.value.length,t.value.length);}}
+  paintSync();
+}
+
+// ─── events (delegated, so no ids are ever baked into inline handlers) ────────
+document.addEventListener('click',function(e){
+  const el=e.target.closest('[data-act]');if(!el)return;
+  const a=el.getAttribute('data-act'),id=el.getAttribute('data-id'),v=el.getAttribute('data-v');
+  if(a==='mark')setMark(id,v);
+  else if(a==='tab'){tab=v;try{localStorage.setItem(LS_TAB,v);}catch(x){}render();window.scrollTo(0,0);}
+  else if(a==='filter'){filter=v;render();}
+  else if(a==='showskip'){showSkipped=!showSkipped;render();}
+  else if(a==='dw'){dismissedWarn[el.getAttribute('data-k')]=1;render(true);}
+  else if(a==='dchoice')setDecision(id,decOf(id)===v?null:v);
+  else if(a==='theme')themeNext();
+  else if(a==='reload'){if(dirty){push().then(load);}else load();}
+  else if(a==='syncnow'){if(dirty){schedulePush(0);}else load();}
+  else if(a==='savesetup'){
+    const r=document.getElementById('repo-in').value.trim(),p=document.getElementById('pat-in').value.trim();
+    if(!r||!p)return;
+    localStorage.setItem(REPO_KEY,r);localStorage.setItem(PAT_KEY,p);REPO=r;PAT=p;load();
+  }
+  else if(a==='resetsetup'){localStorage.removeItem(PAT_KEY);localStorage.removeItem(REPO_KEY);PAT='';REPO='';view='setup';render();}
+});
+document.addEventListener('change',function(e){
+  const el=e.target,a=el.getAttribute&&el.getAttribute('data-act');if(!a)return;
+  const id=el.getAttribute('data-id');
+  if(a==='dtext')setDecision(id,el.value.trim(),true);   // quiet: a re-render here would swallow the click that caused the blur
+  else if(a==='ddate')setDecision(id,el.value,true);
+  else if(a==='dmulti'){
+    const cur=A(decOf(id)).slice(),v=el.getAttribute('data-v'),i=cur.indexOf(v);
+    if(el.checked&&i<0)cur.push(v);else if(!el.checked&&i>=0)cur.splice(i,1);
+    setDecision(id,cur);
+  }
+});
+document.addEventListener('visibilitychange',function(){
+  if(document.hidden||view!=='ready')return;
+  if(dirty)schedulePush(200);
+  else if(!document.querySelector('textarea:focus'))load();      // pick up a fresh brief or edits from another device
+});
+window.addEventListener('online',function(){if(view==='ready'&&dirty)schedulePush(200);});
+load();
+</script>
+</body>
+</html>
