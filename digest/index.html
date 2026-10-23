@@ -86,6 +86,8 @@ details.panel[open]>summary::before{transform:rotate(90deg)}
 details.panel .body{margin-top:8px;font-size:12.5px;color:var(--text-2)}
 .kw{display:flex;flex-wrap:wrap;gap:4px;margin-top:4px}
 .kw span{font-size:11px;padding:2px 7px;border-radius:99px;background:var(--surface2);color:var(--text-2)}
+.kw span.t2{opacity:.6;font-style:italic}
+.kw.comp span{background:var(--danger-bg);color:var(--danger)}
 .lbl{font-size:10px;font-weight:600;letter-spacing:.05em;text-transform:uppercase;color:var(--text-3);margin:8px 0 3px}
 .kv{display:grid;grid-template-columns:auto 1fr;gap:3px 12px;font-size:12.5px}
 .kv dt{color:var(--text-3)}
@@ -192,9 +194,11 @@ function normBrief(b){
   return b;
 }
 function normWL(w){
-  w=O(w); w.projects=A(w.projects); w.saved_searches=A(w.saved_searches); w.decisions=A(w.decisions);
-  w.people=O(w.people); w.journals=O(w.journals); w.funders=A(w.funders); w.context_rules=A(w.context_rules);
-  w.tier2=O(w.tier2); w.feeds=O(w.feeds); w.social=O(w.social); w.relevance_order=A(w.relevance_order);
+  w=O(w); w.projects=A(w.projects).map(p=>{p=O(p);p.keywords=A(p.keywords).map(k=>typeof k==='string'?{term:k}:O(k));return p;});
+  w.technique_terms=A(w.technique_terms).map(k=>typeof k==='string'?{term:k}:O(k));
+  w.saved_searches=A(w.saved_searches); w.decisions=A(w.decisions); w.people=A(w.people).filter(p=>p&&typeof p==='object');
+  w.context_rules=A(w.context_rules); w.feeds=O(w.feeds); w.social=O(w.social); w.social.items=A(w.social.items);
+  w.relevance_order=A(w.relevance_order); w.meta=O(w.meta);
   return w;
 }
 
@@ -244,7 +248,11 @@ function setMark(id,status){
   W.marks[id]={status:cur===status?'none':status,ts:new Date().toISOString()};
   touch();
 }
-function decOf(id){const d=W.decisions[id];return d?d.value:undefined;}
+function decOf(id){
+  const d=W.decisions[id];if(d)return d.value;
+  const def=WL&&WL.decisions.find(x=>T(x.id)===id);
+  return def&&def.answer!=null&&def.answer!==''?def.answer:undefined;   // answered in the workbook
+}
 function setDecision(id,value,quiet){
   const empty=(value==null||value===''||(Array.isArray(value)&&!value.length));
   W.decisions[id]={value:empty?null:value,ts:new Date().toISOString()};
@@ -320,7 +328,6 @@ function litCard(it,urgent){
 function urgentCard(u){
   const id=T(u.id),link=safeUrl(u.url);
   let h='<div class="card lit urg" data-id="'+esc(id)+'"><div class="row"><span class="chip comp">'+esc(u.kind||'urgent')+'</span>';
-  if(T(u.deadline))h+='<span class="chip dl overdue">deadline '+esc(fmtShort(u.deadline))+'</span>';
   h+='</div>'+(link?'<a class="ttl" href="'+esc(link)+'" target="_blank" rel="noopener noreferrer">'+esc(u.title)+'</a>':'<div class="ttl">'+esc(u.title)+'</div>');
   if(T(u.why))h+='<div class="sm">'+esc(u.why)+'</div>';
   if(T(u.action))h+='<div class="wy"><b>Action:</b> '+esc(u.action)+'</div>';
@@ -402,65 +409,67 @@ function viewBrief(){
 }
 
 // ─── watchlists tab (read-only) ───────────────────────────────────────────────
+const ROLE_ORDER=['Competitor','Collaborator','Advisory','Field','Friend'];
 function kwList(a){return '<div class="kw">'+A(a).map(x=>'<span>'+esc(x)+'</span>').join('')+'</div>';}
+function kwObjs(a){
+  return '<div class="kw">'+A(a).map(k=>{
+    const tip=[T(k.rule),T(k.variants)?'also: '+T(k.variants):''].filter(Boolean).join(' · ');
+    return '<span'+(+k.tier===2?' class="t2"':'')+(tip?' title="'+esc(tip)+'"':'')+'>'+esc(k.term)+'</span>';
+  }).join('')+'</div>';
+}
+function personChip(p){
+  const prj=A(p.projects);
+  const tip=[prj.length?'projects '+prj.join(', '):'',p.priority!=null?'priority '+p.priority:'',T(p.group),T(p.note)].filter(Boolean).join(' · ');
+  return '<span'+(tip?' title="'+esc(tip)+'"':'')+'>'+esc(p.name)+(p.priority!=null?' · P'+esc(p.priority):'')+(prj.length?' · '+esc(prj.join('')):'')+'</span>';
+}
 function viewWatch(){
-  if(!WL||(!WL.projects.length&&!WL.saved_searches.length))return '<div class="empty">No watchlists found at '+esc(WL_PATH)+'.</div>';
-  const adopted=A(decOf('d4'));
+  if(!WL||(!WL.people.length&&!WL.projects.length))return '<div class="empty">No watchlists found at '+esc(WL_PATH)+'.</div>';
+  const adopted=A(decOf('ss'));
   let h='';
+  // people: the point of the brief
+  const byRole={};WL.people.forEach(p=>{const r=T(p.role)||'Unassigned';(byRole[r]=byRole[r]||[]).push(p);});
+  const roles=ROLE_ORDER.filter(r=>byRole[r]).concat(Object.keys(byRole).filter(r=>ROLE_ORDER.indexOf(r)<0));
+  h+='<div class="sec-hd">People<span class="cnt">'+WL.people.length+'</span></div><div class="panel">';
+  roles.forEach(r=>{h+='<div class="lbl">'+esc(r)+' · '+byRole[r].length+'</div><div class="kw'+(r==='Competitor'?' comp':'')+'">'+byRole[r].map(personChip).join('')+'</div>';});
+  const noMeta=WL.people.filter(p=>p.priority==null&&!A(p.projects).length).length;
+  if(noMeta)h+='<div class="todo" style="margin-top:8px">'+noMeta+' of '+WL.people.length+' have no priority or linked project yet.</div>';
+  h+='</div>';
+
   h+='<div class="sec-hd">Projects</div>';
   WL.projects.forEach(p=>{
-    h+='<details class="panel"><summary><span class="chip prj">'+esc(p.id)+'</span>'+esc(p.name)+'</summary><div class="body">';
-    if(A(p.grants).length)h+='<div class="lbl">Grants</div>'+A(p.grants).map(g=>esc(g)).join(' · ');
-    h+='<div class="lbl">Keywords</div>'+kwList(p.keywords);
+    h+='<details class="panel"><summary><span class="chip prj">'+esc(p.id)+'</span>'+esc(p.name)+'<span class="cnt" style="margin-left:auto;font-weight:400;color:var(--text-3);font-size:11px">'+p.keywords.length+' terms</span></summary><div class="body">';
+    if(T(p.collaborators))h+='<div class="lbl">Collaborators</div>'+esc(p.collaborators);
+    h+='<div class="lbl">Keywords</div>'+kwObjs(p.keywords);
     h+='</div></details>';
   });
-  const t2=WL.tier2;
-  if(Object.keys(t2).length){
-    h+='<details class="panel"><summary>Tier 2 · boost only with a project term</summary><div class="body">';
-    ['techniques','delivery','computing','other'].forEach(k=>{if(A(t2[k]).length)h+='<div class="lbl">'+esc(k)+'</div>'+kwList(t2[k]);});
-    if(T(t2.broad_disease_terms))h+='<div class="lbl">Broad disease terms</div>'+esc(t2.broad_disease_terms);
-    h+='</div></details>';
-  }
-  if(WL.context_rules.length)h+='<details class="panel"><summary>Ambiguous-term rules</summary><div class="body">'+WL.context_rules.map(r=>'<div>• '+esc(r)+'</div>').join('')+'</div></details>';
-
-  h+='<div class="sec-hd">People</div><div class="panel">';
-  const ppl=WL.people,groups=[['collaborators','Collaborators'],['advisory','Advisory'],['field','Field']];
-  groups.forEach(g=>{if(A(ppl[g[0]]).length)h+='<div class="lbl">'+g[1]+'</div>'+kwList(ppl[g[0]]);});
-  if(T(ppl.field_note))h+='<div class="def" style="font-size:11px;color:var(--text-3);margin-top:4px">'+esc(ppl.field_note)+'</div>';
-  h+='<div class="lbl">Competitors</div>';
-  h+=A(ppl.competitors).length?kwList(A(ppl.competitors).map(c=>typeof c==='object'?(T(c.name)+(c.project?' · '+c.project:'')):c)):'<div class="todo">None recorded yet. Add them in Decisions.</div>';
-  h+='</div>';
+  if(WL.technique_terms.length)h+='<details class="panel"><summary>Techniques &amp; delivery · boost only with a project term<span class="cnt" style="margin-left:auto;font-weight:400;color:var(--text-3);font-size:11px">'+WL.technique_terms.length+' terms</span></summary><div class="body">'+kwObjs(WL.technique_terms)+'</div></details>';
+  h+='<div class="def" style="font-size:11px;color:var(--text-3);margin:2px 2px 8px">Italic = tier 2 (boost only). Hover a term for its context rule.</div>';
+  if(WL.context_rules.length)h+='<details class="panel"><summary>Ambiguous-term rules<span class="cnt" style="margin-left:auto;font-weight:400;color:var(--text-3);font-size:11px">'+WL.context_rules.length+'</span></summary><div class="body">'+WL.context_rules.map(r=>'<div style="margin-bottom:4px">• '+esc(r)+'</div>').join('')+'</div></details>';
 
   h+='<div class="sec-hd">Saved searches</div><div class="panel">';
   WL.saved_searches.forEach(s=>{
-    const st=s.status==='active'?'active':(adopted.indexOf(s.id)>=0?'adopt (pending)':'proposed');
-    const chip=s.status==='active'?'chip logged':(adopted.indexOf(s.id)>=0?'chip queued':'chip');
-    h+='<div class="ss"><span class="id">'+esc(s.id)+'</span><span><b>'+esc(s.name)+'</b>'+(s.server?' <span class="chip src">'+esc(s.server)+'</span>':'')+'</span><span class="'+chip+'">'+st+'</span>'
-      +'<span class="q">'+esc(s.query)+(T(s.note)?' · '+esc(s.note):'')+'</span></div>';
+    const active=T(s.status).toLowerCase()==='existing';
+    const st=active?'active':(adopted.indexOf(s.id)>=0?'adopt (pending)':'proposed');
+    const chip=active?'chip logged':(adopted.indexOf(s.id)>=0?'chip queued':'chip');
+    const q=T(s.edited_query)||(active?T(s.current):T(s.proposed))||T(s.current);
+    h+='<div class="ss"><span class="id">'+esc(s.id)+'</span><span><b>'+esc(s.topic||s.name)+'</b>'+(s.project?' '+prjChips([s.project]):'')+(s.server?' <span class="chip src">'+esc(s.server)+'</span>':'')+'</span><span class="'+chip+'">'+st+'</span>'
+      +'<span class="q">'+esc(q)+'</span></div>';
   });
   h+='</div>';
 
-  h+='<div class="sec-hd">Funders &amp; calls</div><div class="panel"><dl class="kv">';
-  WL.funders.forEach(f=>{
-    let when='';
-    if(T(f.deadline)){
-      const d=/^\d{4}-\d{2}$/.test(f.deadline)?f.deadline+'-01':f.deadline,n=dayDiff(TODAY,d);
-      when=esc(f.deadline_text||f.deadline)+(n>=0?' · about '+n+' days to the 1st of the month':' · passed');
-    }else when='<span style="color:var(--text-3)">no deadline recorded</span>';
-    h+='<dt>'+esc(f.name)+'</dt><dd>'+when+'</dd>';
-  });
-  h+='</dl></div>';
-
-  h+='<div class="sec-hd">Journals, feeds, social</div><div class="panel">';
-  const j=WL.journals;
-  h+='<div class="lbl">Journals (priority)</div>'+(A(j.priority).length?kwList(j.priority):'<div class="todo">Not decided yet.</div>');
-  if(A(j.provisional).length)h+='<div class="lbl">Provisional, from feeds</div>'+kwList(j.provisional);
-  const f=WL.feeds;
-  if(f.source)h+='<div class="lbl">Feeds</div>'+esc(f.source)+' · '+esc(f.count)+' feeds · '+esc(f.status);
-  const so=WL.social;
-  if(so.status)h+='<div class="lbl">Social &amp; early signal</div>'+esc(so.status)+(A(so.accounts).length+A(so.repos).length===0?' <span class="todo">No accounts or repos listed yet.</span>':'');
-  h+='</div>';
-  if(WL.meta&&T(WL.meta.source))h+='<div class="skipline">'+esc(WL.meta.source)+(T(WL.meta.note)?' '+esc(WL.meta.note):'')+'</div>';
+  const f=WL.feeds,sg=O(f.by_suggestion);
+  if(f.count){
+    h+='<div class="sec-hd">Feeds</div><div class="panel"><dl class="kv"><dt>Feedly</dt><dd>'+esc(f.count)+' feeds · '+esc(f.decided||0)+' decided by you</dd>'
+      +Object.keys(sg).sort((a,b)=>sg[b]-sg[a]).map(k=>'<dt>'+esc(k)+'</dt><dd>'+esc(sg[k])+'</dd>').join('')+'</dl>'
+      +'<div class="def" style="font-size:11px;color:var(--text-3);margin-top:6px">My suggestions only. Decisions are made in the workbook&rsquo;s Feeds sheet.</div></div>';
+  }
+  const so=WL.social,it=so.items;
+  if(it.length){
+    h+='<div class="sec-hd">Social &amp; tools<span class="cnt">'+it.length+'</span></div><div class="panel">';
+    h+=it.map(x=>'<div class="ss" style="grid-template-columns:auto 1fr auto"><span class="chip src">'+esc(x.platform||'?')+'</span><span><b>'+esc(x.name)+'</b>'+(x.project?' '+prjChips([x.project]):'')+'</span><span class="'+(T(x.url)?'chip logged':'todo')+'">'+(T(x.url)?'tracked':'no URL yet')+'</span></div>').join('');
+    h+='</div>';
+  }
+  if(WL.meta&&T(WL.meta.scope))h+='<div class="skipline">'+esc(WL.meta.scope)+'</div>';
   return h;
 }
 
