@@ -88,7 +88,7 @@ const REPO_KEY  = "dash:people:repo", REPO_FALL = "dash:ops:repo";
 let REPO = localStorage.getItem(REPO_KEY) || localStorage.getItem(REPO_FALL) || "";
 const CSVPATH = "data/people.csv";
 let GH_ISS = REPO ? "https://github.com/"+REPO+"/issues/" : "";
-const BUILD   = "20261018-2130";
+const BUILD   = "20261104-0735";
 
 let persons = [], selected = null, showAlumni = false;
 
@@ -255,7 +255,8 @@ function updateHL(){
 
 /* ── full render ─────────────────────────────────────────── */
 function render(){
-  const curr=persons.filter(p=>p.isCurrent||p.isFuture);
+  const curr=persons.filter(p=>p.isCurrent&&!p.isFuture);
+  const planned=persons.filter(p=>p.isFuture);
   const alum=persons.filter(p=>!p.isCurrent&&!p.isFuture);
 
   document.getElementById("app").innerHTML=`
@@ -268,13 +269,15 @@ function render(){
   </button>
 </div></div>
 <div class="page">
-  <div class="page-sub">lab since 2017 · ${curr.length} current · ${alum.length} alumni</div>
+  <div class="page-sub">lab since 2017 · ${curr.length} current · ${planned.length} planned · ${alum.length} alumni</div>
 
   <div class="tl-wrap">${buildTimeline(persons)}</div>
   <div class="legend">${TIER.map(t=>`<span class="leg"><span class="leg-dot" style="background:${t.color}"></span>${t.label}</span>`).join("")}</div>
 
   <div class="sec-hd">current &middot; ${curr.length}</div>
   <div class="grid">${curr.map(cardHTML).join("")}</div>
+
+  ${planned.length?`<div class="sec-hd">planned &middot; ${planned.length}</div><div class="grid">${planned.map(cardHTML).join("")}</div>`:""}
 
   <button class="alum-btn" id="alum-btn">
     <svg width="10" height="10" viewBox="0 0 10 10"><path d="${showAlumni?"M2 4l3 3 3-3":"M2 3l3 3 3-3"}" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" fill="none"/></svg>
