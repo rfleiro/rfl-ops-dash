@@ -41,6 +41,7 @@
 .cbadge-active{background:var(--green-bg);color:var(--green);border:1px solid var(--green-border)}
 .cbadge-waiting{background:var(--warning-bg);color:var(--warning);border:1px solid var(--warning-border)}
 .cbadge-eval{background:var(--accent-bg);color:var(--accent);border:1px solid var(--accent-border)}
+.cbadge-planned{background:transparent;color:var(--text-2);border:1px dashed var(--border-strong)}
 .cbadge-done{background:var(--surface2);color:var(--text-3);border:1px solid var(--border)}
 .cbadge-declined{background:var(--surface2);color:var(--text-3);border:1px solid var(--border)}
 
@@ -86,7 +87,7 @@ const PAT_KEY = "dash:grants:pat";
 const REPO_KEY  = "dash:grants:repo", REPO_FALL = "dash:ops:repo";
 let REPO = localStorage.getItem(REPO_KEY) || localStorage.getItem(REPO_FALL) || "";
 const CSVPATH = "data/grants.csv";
-const BUILD   = "20261018-2130";
+const BUILD   = "20261104-0735";
 
 let grants = [], selected = null, showPast = false;
 
@@ -247,6 +248,7 @@ function render(){
   const active  = grants.filter(g=>g.Status==="active");
   const waiting = grants.filter(g=>g.Status==="waiting");
   const evaluat = grants.filter(g=>g.Status==="evaluation");
+  const planned = grants.filter(g=>g.Status==="planned");
   const past    = grants.filter(g=>g.Status==="done");
   const grantedPast  = past.filter(g=>g.Result==="granted");
   const declinedPast = past.filter(g=>g.Result!=="granted");
@@ -263,7 +265,7 @@ function render(){
   </button>
 </div></div>
 <div class="page">
-  <div class="page-sub">since 2017 · ${totalActive} active/pending · ${past.length} past</div>
+  <div class="page-sub">since 2017 · ${totalActive} active/pending · ${planned.length} planned · ${past.length} past</div>
 
   <div class="tl-wrap">${buildTimeline(grants)}</div>
   <div class="legend">
@@ -279,6 +281,7 @@ function render(){
   ${active.length?`<div class="sec-hd">active · ${active.length}</div><div class="grid">${active.map(cardHTML).join("")}</div>`:""}
   ${waiting.length?`<div class="sec-hd">waiting · ${waiting.length}</div><div class="grid">${waiting.map(cardHTML).join("")}</div>`:""}
   ${evaluat.length?`<div class="sec-hd">under evaluation · ${evaluat.length}</div><div class="grid">${evaluat.map(cardHTML).join("")}</div>`:""}
+  ${planned.length?`<div class="sec-hd">planned · ${planned.length}</div><div class="grid">${planned.map(cardHTML).join("")}</div>`:""}
 
   <button class="past-btn" id="past-btn">
     <svg width="10" height="10" viewBox="0 0 10 10"><path d="${showPast?"M2 4l3 3 3-3":"M2 3l3 3 3-3"}" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" fill="none"/></svg>
