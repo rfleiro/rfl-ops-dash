@@ -374,7 +374,7 @@ function beyondCard(b){
   const id=T(b.id),m=markOf(id),link=linkOf(b),at=O(b.attention);
   let h='<div class="card lit t4 bey'+(m?' m-'+m:'')+(b.borderline===true?' bl':'')+'" data-id="'+esc(id)+'"><div class="row"><span class="chip src">'+esc(b.venue)+'</span>';
   if(b.peer_reviewed===false)h+='<span class="chip pre">preprint · not peer reviewed</span>';
-  if(b.type==='news')h+='<span class="chip sig">news</span>';
+  if(b.type==='news'||b.type==='blog')h+='<span class="chip sig">'+esc(b.type)+'</span>';
   h+='<span class="chip ppl" title="'+esc(at.detail)+'">attention · '+esc(at.kind||'?')+'</span>'+stampChips(b)+'</div>';
   h+=link?'<a class="ttl" href="'+esc(link)+'" target="_blank" rel="noopener noreferrer">'+esc(b.title)+'</a>':'<div class="ttl">'+esc(b.title)+'</div>';
   h+='<div class="by">'+(T(b.authors)?esc(b.authors)+' · ':'')+esc(fmtShort(b.date))+'</div>';
